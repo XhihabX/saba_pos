@@ -90,24 +90,24 @@ class ShiftController extends Controller
             ->where('tenant_id', $tenantId)
             ->firstOrFail();
 
-        // Calculate sales during this shift period
-        $cashSales = Order::where('tenant_id', $tenantId)
-            ->where('store_id', $shift->store_id)
-            ->whereBetween('created_at', [$shift->opened_at, now()])
-            ->where('payment_method', 'cash')
-            ->sum('paid_amount');
+        // Calculate sales during this shift period, specific to the cashier (user_id), using OrderPayments for accurate splits.
+        $cashSales = \App\Models\OrderPayment::whereHas('order', function($q) use ($shift) {
+            $q->where('store_id', $shift->store_id)
+              ->where('user_id', $shift->user_id)
+              ->whereBetween('created_at', [$shift->opened_at, now()]);
+        })->where('payment_method', 'cash')->sum('amount');
 
-        $cardSales = Order::where('tenant_id', $tenantId)
-            ->where('store_id', $shift->store_id)
-            ->whereBetween('created_at', [$shift->opened_at, now()])
-            ->where('payment_method', 'card')
-            ->sum('paid_amount');
+        $cardSales = \App\Models\OrderPayment::whereHas('order', function($q) use ($shift) {
+            $q->where('store_id', $shift->store_id)
+              ->where('user_id', $shift->user_id)
+              ->whereBetween('created_at', [$shift->opened_at, now()]);
+        })->where('payment_method', 'card')->sum('amount');
 
-        $mobileSales = Order::where('tenant_id', $tenantId)
-            ->where('store_id', $shift->store_id)
-            ->whereBetween('created_at', [$shift->opened_at, now()])
-            ->where('payment_method', 'mobile_wallet')
-            ->sum('paid_amount');
+        $mobileSales = \App\Models\OrderPayment::whereHas('order', function($q) use ($shift) {
+            $q->where('store_id', $shift->store_id)
+              ->where('user_id', $shift->user_id)
+              ->whereBetween('created_at', [$shift->opened_at, now()]);
+        })->where('payment_method', 'mobile_wallet')->sum('amount');
 
         $expectedCash = $shift->opening_cash + $cashSales;
         $cashDiff = $validated['closing_cash_counted'] - $expectedCash;

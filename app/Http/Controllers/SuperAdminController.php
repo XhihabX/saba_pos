@@ -198,6 +198,8 @@ class SuperAdminController extends Controller
         $merchantUser = User::where('tenant_id', $tenant->id)->where('role', 'merchant')->first();
 
         if ($merchantUser) {
+            // FIX: Don't destroy the admin session! Store original ID in session so they can return.
+            session()->put('impersonated_by', auth()->id());
             Auth::login($merchantUser);
             return redirect()->route('merchant.dashboard')->with('success', "Impersonating merchant {$tenant->name}.");
         }

@@ -103,12 +103,20 @@ Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () 
     Route::post('/pos/park', [PosController::class, 'parkOrder'])->name('pos.park');
     Route::get('/pos/parked-orders', [PosController::class, 'getParkedOrders'])->name('pos.parked');
     Route::delete('/pos/parked-orders/{id}', [PosController::class, 'deleteParkedOrder'])->name('pos.parked.delete');
+    Route::post('/pos/verify-pin', [PosController::class, 'verifyPin'])->name('pos.verify-pin');
 
     // Register Shift Endpoints
     Route::get('/pos/shift/status', [ShiftController::class, 'currentShiftStatus'])->name('pos.shift.status');
     Route::post('/pos/shift/open', [ShiftController::class, 'openShift'])->name('pos.shift.open');
     Route::post('/pos/shift/close', [ShiftController::class, 'closeShift'])->name('pos.shift.close');
 
+    // HRM Staff Attendance & Clock In/Out
+    Route::get('/hrm/attendance', [AttendanceController::class, 'index'])->name('hrm.attendance');
+    Route::post('/hrm/attendance/toggle', [AttendanceController::class, 'toggleClock'])->name('hrm.attendance.toggle');
+});
+
+// 7. Core ERP Operations (Protected for Store Managers & Merchants)
+Route::middleware(['auth', EnsureStoreManager::class, EnsureActiveSubscription::class])->group(function () {
     // General ERP Overview & Inventory
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
@@ -118,10 +126,6 @@ Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () 
     Route::delete('/products/{id}', [ProductController::class, 'delete'])->name('products.delete');
     Route::get('/products/barcodes', [BarcodeController::class, 'index'])->name('products.barcodes');
     Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
-
-    // HRM Staff Attendance & Clock In/Out
-    Route::get('/hrm/attendance', [AttendanceController::class, 'index'])->name('hrm.attendance');
-    Route::post('/hrm/attendance/toggle', [AttendanceController::class, 'toggleClock'])->name('hrm.attendance.toggle');
 
     // Store Expenses Management
     Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');

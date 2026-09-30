@@ -16,7 +16,7 @@ def main():
     print("==========================================================\n")
 
     # 1. Front-end Asset Build
-    run_command("cmd /c npm run build", "Compiling Production Vite Assets")
+    run_command("npm run build", "Compiling Production Vite Assets")
 
     # 2. Run PHP Artisan Tests
     run_command("php artisan test", "Executing Automated PHP Unit Tests")
