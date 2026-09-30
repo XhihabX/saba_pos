@@ -53,6 +53,24 @@ return new class extends Migration
             $table->foreignId('tenant_id')->nullable()->after('id')->constrained('tenants')->cascadeOnDelete();
         });
 
+        // 3.5 Add Tenant ID to missing Core Models
+        Schema::table('customers', function (Blueprint $table) {
+            $table->foreignId('tenant_id')->nullable()->after('id')->constrained('tenants')->cascadeOnDelete();
+        });
+
+        Schema::table('suppliers', function (Blueprint $table) {
+            $table->foreignId('tenant_id')->nullable()->after('id')->constrained('tenants')->cascadeOnDelete();
+        });
+
+        Schema::table('brands', function (Blueprint $table) {
+            $table->foreignId('tenant_id')->nullable()->after('id')->constrained('tenants')->cascadeOnDelete();
+        });
+
+        Schema::table('units', function (Blueprint $table) {
+            $table->foreignId('tenant_id')->nullable()->after('id')->constrained('tenants')->cascadeOnDelete();
+        });
+
+
         // 4. Register Shifts (Cashier Open/Close Register & Cash Reconciliation)
         Schema::create('register_shifts', function (Blueprint $table) {
             $table->id();
@@ -79,6 +97,26 @@ return new class extends Migration
         Schema::dropIfExists('register_shifts');
 
         Schema::table('expenses', function (Blueprint $table) {
+            $table->dropForeign(['tenant_id']);
+            $table->dropColumn('tenant_id');
+        });
+
+        Schema::table('customers', function (Blueprint $table) {
+            $table->dropForeign(['tenant_id']);
+            $table->dropColumn('tenant_id');
+        });
+
+        Schema::table('suppliers', function (Blueprint $table) {
+            $table->dropForeign(['tenant_id']);
+            $table->dropColumn('tenant_id');
+        });
+
+        Schema::table('brands', function (Blueprint $table) {
+            $table->dropForeign(['tenant_id']);
+            $table->dropColumn('tenant_id');
+        });
+
+        Schema::table('units', function (Blueprint $table) {
             $table->dropForeign(['tenant_id']);
             $table->dropColumn('tenant_id');
         });

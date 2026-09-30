@@ -611,13 +611,24 @@ const pressPin = (num) => {
   }
 };
 
-const unlockTerminal = () => {
-  if (pinEntered.value === '1234' || pinEntered.value.length >= 4) {
-    showLockModal.value = false;
-    pinEntered.value = '';
-  } else {
-    alert('Incorrect Cashier PIN. Try 1234.');
-    pinEntered.value = '';
+const unlockTerminal = async () => {
+  if (pinEntered.value.length < 4) {
+      alert('PIN must be at least 4 digits.');
+      return;
+  }
+  
+  try {
+      const res = await window.axios.post(route('pos.verify-pin'), { pin: pinEntered.value });
+      if (res.data.success) {
+          showLockModal.value = false;
+          pinEntered.value = '';
+      } else {
+          alert('Incorrect Cashier PIN.');
+          pinEntered.value = '';
+      }
+  } catch (e) {
+      alert('Network error verifying PIN.');
+      pinEntered.value = '';
   }
 };
 

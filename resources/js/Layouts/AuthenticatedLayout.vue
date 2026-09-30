@@ -13,7 +13,7 @@
     >
       <!-- Sidebar Header / Branding -->
       <div class="h-16 px-4 flex items-center justify-between border-b border-slate-200 shrink-0 bg-white">
-        <Link href="/" class="flex items-center gap-3 overflow-hidden">
+        <Link :href="route('landing')" class="flex items-center gap-3 overflow-hidden">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center font-black text-xl text-white shadow-md shadow-emerald-600/20 shrink-0">
             S
           </div>
@@ -66,7 +66,7 @@
           </div>
           <div class="space-y-1">
             <Link 
-              href="/super-admin/dashboard"
+              :href="route('superadmin.dashboard')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'SuperAdmin/Dashboard' ? 'bg-rose-50 text-rose-800 border-rose-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -76,7 +76,7 @@
               <span v-if="!sidebarCollapsed">Command Center</span>
             </Link>
             <Link 
-              href="/super-admin/stores"
+              :href="route('superadmin.stores')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'SuperAdmin/Stores' ? 'bg-rose-50 text-rose-800 border-rose-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -86,7 +86,7 @@
               <span v-if="!sidebarCollapsed">Global Store Outlets</span>
             </Link>
             <Link 
-              href="/super-admin/users"
+              :href="route('superadmin.users')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'SuperAdmin/Users' ? 'bg-rose-50 text-rose-800 border-rose-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -96,7 +96,7 @@
               <span v-if="!sidebarCollapsed">Platform Users & Access</span>
             </Link>
             <Link 
-              href="/super-admin/transactions"
+              :href="route('superadmin.transactions')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'SuperAdmin/Transactions' ? 'bg-rose-50 text-rose-800 border-rose-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -106,7 +106,7 @@
               <span v-if="!sidebarCollapsed">Subscription Payment Ledger</span>
             </Link>
             <Link 
-              href="/super-admin/plans"
+              :href="route('superadmin.plans')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'SuperAdmin/Plans' ? 'bg-rose-50 text-rose-800 border-rose-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -116,7 +116,7 @@
               <span v-if="!sidebarCollapsed">SaaS Pricing Plans</span>
             </Link>
             <Link 
-              href="/super-admin/analytics"
+              :href="route('superadmin.analytics')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'SuperAdmin/Analytics' ? 'bg-rose-50 text-rose-800 border-rose-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -126,7 +126,7 @@
               <span v-if="!sidebarCollapsed">Platform Analytics</span>
             </Link>
             <Link 
-              href="/super-admin/audit-logs"
+              :href="route('superadmin.auditlogs')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'SuperAdmin/AuditLogs' ? 'bg-rose-50 text-rose-800 border-rose-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -136,7 +136,7 @@
               <span v-if="!sidebarCollapsed">Security Audit Trail</span>
             </Link>
             <Link 
-              href="/super-admin/settings"
+              :href="route('superadmin.settings')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'SuperAdmin/Settings' ? 'bg-rose-50 text-rose-800 border-rose-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -155,7 +155,7 @@
           </div>
           <div class="space-y-1">
             <Link 
-              href="/merchant/dashboard"
+              :href="route('merchant.dashboard')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Merchant/Dashboard' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -165,7 +165,7 @@
               <span v-if="!sidebarCollapsed">Executive BI Overview</span>
             </Link>
             <Link 
-              href="/merchant/stores"
+              :href="route('merchant.stores')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Merchant/Stores' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -175,7 +175,7 @@
               <span v-if="!sidebarCollapsed">Store Outlets Manager</span>
             </Link>
             <Link 
-              href="/merchant/users"
+              :href="route('merchant.users')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Merchant/Users' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -185,7 +185,7 @@
               <span v-if="!sidebarCollapsed">Staff & Role Access</span>
             </Link>
             <Link 
-              href="/products"
+              :href="route('products.index')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Products/Index' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -195,7 +195,7 @@
               <span v-if="!sidebarCollapsed">Products Catalog</span>
             </Link>
             <Link 
-              href="/products/barcodes"
+              :href="route('products.barcodes')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Products/Barcodes' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -205,7 +205,7 @@
               <span v-if="!sidebarCollapsed">Barcode Label Generator</span>
             </Link>
             <Link 
-              href="/merchant/suppliers"
+              :href="route('merchant.suppliers')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Merchant/Suppliers' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -215,7 +215,7 @@
               <span v-if="!sidebarCollapsed">Supplier Directory</span>
             </Link>
             <Link 
-              href="/merchant/purchases"
+              :href="route('merchant.purchases')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Merchant/Purchases' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -225,7 +225,7 @@
               <span v-if="!sidebarCollapsed">Inventory Purchases</span>
             </Link>
             <Link 
-              href="/sales/quotations"
+              :href="route('sales.quotations')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Sales/Quotations' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -235,7 +235,7 @@
               <span v-if="!sidebarCollapsed">Sales Quotations</span>
             </Link>
             <Link 
-              href="/expenses"
+              :href="route('expenses.index')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Expenses/Index' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -245,7 +245,7 @@
               <span v-if="!sidebarCollapsed">Store Expenses</span>
             </Link>
             <Link 
-              href="/hrm/attendance"
+              :href="route('hrm.attendance')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'HRM/Attendance' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -255,7 +255,7 @@
               <span v-if="!sidebarCollapsed">Staff Attendance & Clock</span>
             </Link>
             <Link 
-              href="/reports/profit-loss"
+              :href="route('reports.profit-loss')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Reports/ProfitLoss' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -265,7 +265,7 @@
               <span v-if="!sidebarCollapsed">Profit & Loss Accounting</span>
             </Link>
             <Link 
-              href="/merchant/subscription"
+              :href="route('merchant.subscription')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Merchant/Subscription' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -284,7 +284,7 @@
           </div>
           <div class="space-y-1">
             <Link 
-              href="/manager/dashboard"
+              :href="route('manager.dashboard')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Manager/Dashboard' ? 'bg-cyan-50 text-cyan-900 border-cyan-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -294,7 +294,7 @@
               <span v-if="!sidebarCollapsed">Branch Overview</span>
             </Link>
             <Link 
-              href="/manager/shifts"
+              :href="route('manager.shifts')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Manager/Shifts' ? 'bg-cyan-50 text-cyan-900 border-cyan-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -304,7 +304,7 @@
               <span v-if="!sidebarCollapsed">Register Shift Audits</span>
             </Link>
             <Link 
-              href="/manager/transfers"
+              :href="route('manager.transfers')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Manager/Transfers' ? 'bg-cyan-50 text-cyan-900 border-cyan-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -314,7 +314,7 @@
               <span v-if="!sidebarCollapsed">Stock Transfers</span>
             </Link>
             <Link 
-              href="/manager/returns"
+              :href="route('manager.returns')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Manager/Returns' ? 'bg-cyan-50 text-cyan-900 border-cyan-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -324,7 +324,7 @@
               <span v-if="!sidebarCollapsed">Returns & Refunds</span>
             </Link>
             <Link 
-              href="/sales/quotations"
+              :href="route('sales.quotations')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Sales/Quotations' ? 'bg-cyan-50 text-cyan-900 border-cyan-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -334,7 +334,7 @@
               <span v-if="!sidebarCollapsed">Sales Quotations</span>
             </Link>
             <Link 
-              href="/expenses"
+              :href="route('expenses.index')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'Expenses/Index' ? 'bg-cyan-50 text-cyan-900 border-cyan-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -344,7 +344,7 @@
               <span v-if="!sidebarCollapsed">Store Expenses</span>
             </Link>
             <Link 
-              href="/hrm/attendance"
+              :href="route('hrm.attendance')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'HRM/Attendance' ? 'bg-cyan-50 text-cyan-900 border-cyan-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -363,7 +363,7 @@
           </div>
           <div class="space-y-1">
             <Link 
-              href="/pos"
+              :href="route('pos.index')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border bg-emerald-50 text-emerald-900 border-emerald-300 font-extrabold shadow-2xs'
               ]"
@@ -372,7 +372,7 @@
               <span v-if="!sidebarCollapsed">POS Terminal Workstation</span>
             </Link>
             <Link 
-              href="/hrm/attendance"
+              :href="route('hrm.attendance')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
                 $page.component === 'HRM/Attendance' ? 'bg-emerald-50 text-emerald-900 border-emerald-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -390,7 +390,7 @@
       <!-- Sidebar Bottom Action (POS Workstation Launcher) -->
       <div v-if="userRole !== 'super_admin'" class="p-3 border-t border-slate-200 shrink-0 bg-white">
         <Link 
-          href="/pos" 
+          :href="route('pos.index')" 
           class="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
         >
           <Zap class="w-4 h-4 text-amber-300 fill-amber-300 shrink-0" />
@@ -423,7 +423,7 @@
           </button>
 
           <!-- Top Brand Header for non-sidebar mode (POS Terminal) -->
-          <Link v-if="!isSidebarLayout" href="/" class="flex items-center gap-2.5">
+          <Link v-if="!isSidebarLayout" :href="route('landing')" class="flex items-center gap-2.5">
             <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center font-bold text-lg text-white shadow-md">
               S
             </div>
@@ -491,7 +491,7 @@
               </div>
               <div class="border-t border-slate-100 my-1"></div>
               <Link 
-                href="/logout" 
+                :href="route('logout')" 
                 method="post" 
                 as="button"
                 @click="showRoleDropdown = false"
@@ -506,7 +506,7 @@
           <!-- Direct POS Counter Shortcut (if in non-POS layout) -->
           <Link 
             v-if="isSidebarLayout && userRole !== 'super_admin'"
-            href="/pos" 
+            :href="route('pos.index')" 
             class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
           >
             <Zap class="w-3.5 h-3.5 text-amber-300" />

@@ -63,7 +63,7 @@ def main():
 
     # 1. Compile Vite Production Assets
     print("--> Step 1: Building production frontend bundle...")
-    subprocess.run("cmd /c npm run build", shell=True, check=True)
+    subprocess.run("npm run build", shell=True, check=True)
 
     # 2. Package Subdomain Public Assets (subdomain_public.zip)
     print("--> Step 2: Preparing Subdomain Public Document Root ZIP...")
