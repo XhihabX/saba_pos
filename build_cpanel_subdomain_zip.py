@@ -64,7 +64,16 @@ def main():
 
     # 1. Compile Vite Production Assets
     print("--> Step 1: Building production frontend bundle...")
-    subprocess.run("npm run build", shell=True, check=True)
+    env = os.environ.copy()
+    node_paths = [
+        os.path.expanduser("~/.nvm/versions/node/v20.20.2/bin"),
+        os.path.expanduser("~/.nvm/versions/node/v22.23.3/bin"),
+        os.path.expanduser("~/.nvm/versions/node/v26.10.0/bin"),
+        "/opt/homebrew/bin",
+        "/usr/local/bin"
+    ]
+    env["PATH"] = ":".join(node_paths) + ":" + env.get("PATH", "")
+    subprocess.run("npm run build", shell=True, check=True, env=env)
 
     # 2. Package Subdomain Public Assets (subdomain_public.zip)
     print("--> Step 2: Preparing Subdomain Public Document Root ZIP...")

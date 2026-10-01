@@ -58,9 +58,12 @@ Route::prefix('super-admin')->middleware(['auth', EnsureSuperAdmin::class])->gro
     Route::get('/analytics', [SuperAdminController::class, 'analyticsIndex'])->name('superadmin.analytics');
     Route::get('/audit-logs', [SuperAdminController::class, 'auditLogsIndex'])->name('superadmin.auditlogs');
     Route::get('/recycle-bin', [SuperAdminController::class, 'recycleBinIndex'])->name('superadmin.recyclebin');
+    Route::get('/system-health', [SuperAdminController::class, 'systemHealthIndex'])->name('superadmin.systemhealth');
+    Route::get('/announcements', [SuperAdminController::class, 'announcementsIndex'])->name('superadmin.announcements');
     Route::get('/settings', [SuperAdminController::class, 'settingsIndex'])->name('superadmin.settings');
     Route::post('/settings', [SuperAdminController::class, 'updateSettings'])->name('superadmin.settings.update');
 });
+
 
 // 4. Merchant HQ Portal Layer (Business CEO & Chain Owner)
 Route::prefix('merchant')->middleware(['auth', EnsureMerchant::class, EnsureActiveSubscription::class])->group(function () {

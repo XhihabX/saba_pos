@@ -1,30 +1,129 @@
 <template>
   <AuthenticatedLayout>
-    <div class="p-4 sm:p-6 w-full space-y-6 bg-slate-100 min-h-screen">
-      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <h1 class="text-2xl font-extrabold font-heading text-slate-900">SaaS Subscription & Billing</h1>
-        <p class="text-xs text-slate-500 mt-1">Manage your merchant SaaS subscription tier and renewal status</p>
+    <div class="p-4 sm:p-6 w-full space-y-6 bg-slate-900 min-h-screen text-slate-100 selection:bg-indigo-500 selection:text-white">
+      <!-- Dark Hero Banner -->
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/20 p-6 sm:p-8 shadow-2xl">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 font-mono text-xs font-bold uppercase tracking-wider mb-3">
+              <CreditCard class="w-4 h-4" />
+              <span>SaaS Merchant Account</span>
+            </div>
+            <h1 class="text-3xl font-black font-heading tracking-tight text-white">Subscription & Billing Control</h1>
+            <p class="text-slate-400 text-xs sm:text-sm mt-1 max-w-2xl">
+              Monitor active SaaS plan tier, monthly recurring payments (MRR), license renewals, and billing history.
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="px-4 py-2 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-extrabold text-xs flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              STATUS: {{ (tenant?.subscription_status || 'ACTIVE').toUpperCase() }}
+            </span>
+          </div>
+        </div>
       </div>
 
-      <div class="p-8 rounded-2xl bg-white border border-slate-200 shadow-xs space-y-6 max-w-4xl">
-        <div class="flex items-center justify-between pb-6 border-b border-slate-200">
-          <div>
-            <div class="text-xs text-slate-500 uppercase font-bold">Active Plan Tier</div>
-            <div class="text-2xl font-extrabold font-heading text-indigo-700">{{ tenant.plan_name || 'Growth Multi-Store' }}</div>
+      <!-- Plan Cards Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Growth Plan Card -->
+        <div class="bg-slate-800/90 border-2 border-indigo-500 rounded-3xl p-6 relative flex flex-col justify-between shadow-2xl">
+          <div class="absolute -top-3.5 right-6 px-3 py-1 rounded-full bg-indigo-500 text-white font-extrabold text-[10px] uppercase tracking-wider shadow-lg">
+            ACTIVE PLAN
           </div>
-          <span :class="['px-3 py-1 rounded-full text-xs font-extrabold uppercase', tenant.subscription_status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200']">
-            {{ tenant.subscription_status || 'active' }}
-          </span>
+          <div>
+            <div class="text-xs font-bold text-indigo-400 uppercase tracking-wider">Growth Multi-Store</div>
+            <div class="text-3xl font-black font-heading text-white mt-2">৳3,999 <span class="text-xs font-semibold text-slate-400">/ mo</span></div>
+            <p class="text-slate-400 text-xs mt-2 border-b border-slate-700/60 pb-4">Ideal for multi-outlet retail chains requiring real-time inventory sync and cashier staff management.</p>
+            
+            <ul class="mt-4 space-y-2.5 text-xs text-slate-300 font-medium">
+              <li class="flex items-center gap-2">
+                <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Up to 5 Store Outlet Branches</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Unlimited Cashier Terminal Logins</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Offline PWA Selling & Local Cache</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <CheckCircle2 class="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>SMS Gateway & Thermal Printers</span>
+              </li>
+            </ul>
+          </div>
+          <div class="mt-6 pt-4 border-t border-slate-700/60">
+            <button class="w-full py-3 rounded-2xl bg-indigo-500 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/20 cursor-default">
+              Current Active Tier
+            </button>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+        <!-- Enterprise Tier Card -->
+        <div class="bg-slate-800/80 border border-slate-700/80 rounded-3xl p-6 flex flex-col justify-between shadow-lg">
           <div>
-            <span class="text-slate-500 text-xs block mb-1 font-semibold">Monthly Billing Fee</span>
-            <span class="font-bold text-slate-900 font-mono text-lg">৳{{ tenant.mrr_amount || 3999 }}.00 / mo</span>
+            <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Enterprise Unlimited</div>
+            <div class="text-3xl font-black font-heading text-white mt-2">৳8,999 <span class="text-xs font-semibold text-slate-400">/ mo</span></div>
+            <p class="text-slate-400 text-xs mt-2 border-b border-slate-700/60 pb-4">Designed for mega retail brands requiring custom API integrations, dedicated DB, and 24/7 priority support.</p>
+            
+            <ul class="mt-4 space-y-2.5 text-xs text-slate-400 font-medium">
+              <li class="flex items-center gap-2">
+                <CheckCircle2 class="w-4 h-4 text-indigo-400 shrink-0" />
+                <span>Unlimited Store Outlets</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <CheckCircle2 class="w-4 h-4 text-indigo-400 shrink-0" />
+                <span>Dedicated Cloud Server & DB</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <CheckCircle2 class="w-4 h-4 text-indigo-400 shrink-0" />
+                <span>Custom ERP & Accounting Sync</span>
+              </li>
+              <li class="flex items-center gap-2">
+                <CheckCircle2 class="w-4 h-4 text-indigo-400 shrink-0" />
+                <span>24/7 VIP Phone Support</span>
+              </li>
+            </ul>
           </div>
+          <div class="mt-6 pt-4 border-t border-slate-700/60">
+            <button class="w-full py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-extrabold text-xs transition-colors">
+              Upgrade to Enterprise
+            </button>
+          </div>
+        </div>
+
+        <!-- Billing Summary Card -->
+        <div class="bg-slate-800/80 border border-slate-700/80 rounded-3xl p-6 flex flex-col justify-between shadow-lg">
           <div>
-            <span class="text-slate-500 text-xs block mb-1 font-semibold">Renewal Due Date</span>
-            <span class="font-bold text-slate-800 font-mono text-lg">30 Days Remaining</span>
+            <div class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+              <Zap class="w-4 h-4" />
+              <span>Billing Cycle & Invoices</span>
+            </div>
+
+            <div class="mt-4 space-y-3">
+              <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+                <span class="text-slate-400 text-[10px] uppercase font-bold block">Next Renewal Date</span>
+                <span class="text-lg font-black text-white font-mono mt-0.5 block">30 October 2026</span>
+                <span class="text-emerald-400 text-xs font-bold mt-1 inline-block">● Auto-renew Enabled</span>
+              </div>
+
+              <div class="bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+                <span class="text-slate-400 text-[10px] uppercase font-bold block">Payment Method</span>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="px-2.5 py-1 rounded bg-rose-500/10 text-rose-400 border border-rose-500/30 font-bold text-xs font-mono">bKash Merchant</span>
+                  <span class="text-xs text-slate-300 font-mono">017****8899</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-700/60">
+            <button class="w-full py-3 rounded-2xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-extrabold text-xs transition-colors">
+              Download Latest PDF Invoice
+            </button>
           </div>
         </div>
       </div>
@@ -34,8 +133,9 @@
 
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { CreditCard, CheckCircle2, Zap } from 'lucide-vue-next';
 
 defineProps({
-  tenant: Object,
+  tenant: { type: Object, default: () => ({}) },
 });
 </script>

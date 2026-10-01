@@ -146,6 +146,26 @@
               <span v-if="!sidebarCollapsed">SaaS Recycle Bin</span>
             </Link>
             <Link 
+              :href="route('superadmin.systemhealth')"
+              :class="[
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
+                $page.component === 'SuperAdmin/SystemHealth' ? 'bg-rose-50 text-rose-800 border-rose-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              ]"
+            >
+              <Activity class="w-4 h-4 text-rose-600 shrink-0" />
+              <span v-if="!sidebarCollapsed">System Telemetry</span>
+            </Link>
+            <Link 
+              :href="route('superadmin.announcements')"
+              :class="[
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
+                $page.component === 'SuperAdmin/Announcements' ? 'bg-rose-50 text-rose-800 border-rose-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              ]"
+            >
+              <Megaphone class="w-4 h-4 text-rose-600 shrink-0" />
+              <span v-if="!sidebarCollapsed">Announcements</span>
+            </Link>
+            <Link 
               :href="route('superadmin.settings')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
@@ -157,6 +177,7 @@
             </Link>
           </div>
         </div>
+
 
         <!-- 🏢 MERCHANT HQ PORTAL MENU -->
         <div v-if="userRole === 'merchant'">
@@ -599,8 +620,11 @@ import {
   CreditCard,
   BarChart3,
   Trash2,
-  Settings
+  Settings,
+  Activity,
+  Megaphone
 } from 'lucide-vue-next';
+
 
 const page = usePage();
 const sidebarCollapsed = ref(false);
