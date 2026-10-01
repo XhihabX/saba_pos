@@ -12,8 +12,12 @@ class EnsureMerchant
     {
         $user = $request->user();
 
-        if (!$user || !in_array($user->role, ['super_admin', 'merchant'])) {
-            abort(403, 'Unauthorized access to Merchant HQ Portal.');
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        if (!in_array($user->role, ['super_admin', 'merchant'])) {
+            return redirect()->route('login')->with('error', 'Unauthorized access to Merchant HQ Portal.');
         }
 
         return $next($request);

@@ -12,8 +12,12 @@ class EnsureSuperAdmin
     {
         $user = $request->user();
 
-        if (!$user || $user->role !== 'super_admin') {
-            abort(403, 'Unauthorized access to SaaS Super Admin Portal.');
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
+        if ($user->role !== 'super_admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access to SaaS Super Admin Portal.');
         }
 
         return $next($request);
