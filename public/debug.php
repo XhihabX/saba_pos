@@ -54,7 +54,7 @@ header('Content-Type: text/html; charset=utf-8');
         <li>PDO MySQL Extension: <?= extension_loaded('pdo_mysql') ? '<span class="pass">INSTALLED</span>' : '<span class="fail">MISSING</span>' ?></li>
         <li>PDO SQLite Extension: <?= extension_loaded('pdo_sqlite') ? '<span class="pass">INSTALLED</span>' : '<span class="fail">MISSING</span>' ?></li>
         <li>Mbstring Extension: <?= extension_loaded('mbstring') ? '<span class="pass">INSTALLED</span>' : '<span class="fail">MISSING</span>' ?></li>
-        <li>Fileinfo Extension: <?= extension_loaded('fileinfo') ? '<span class="pass">INSTALLED</span>' : '<span class="fail">MISSING</span>' ?></li>
+        <li>Fileinfo Extension: <?= extension_loaded('fileinfo') ? '<span class="pass">INSTALLED</span>' : '<span class="fail">MISSING (Enable fileinfo in cPanel -> Select PHP Version)</span>' ?></li>
         <li>OpenSSL Extension: <?= extension_loaded('openssl') ? '<span class="pass">INSTALLED</span>' : '<span class="fail">MISSING</span>' ?></li>
     </ul>
 
@@ -81,8 +81,9 @@ try {
     $app = require_once $backendPath . '/bootstrap/app.php';
     $app->usePublicPath(__DIR__);
     $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
+    $kernel->bootstrap();
 
-    echo "[OK] Laravel App Booted Successfully!\n";
+    echo "[OK] Laravel App & Kernel Booted Successfully!\n";
     echo "App Name: " . config('app.name') . "\n";
     echo "App Env: " . config('app.env') . "\n";
     echo "App Debug: " . (config('app.debug') ? 'TRUE' : 'FALSE') . "\n";
@@ -94,7 +95,7 @@ try {
 
     echo "\n--> Testing Database Query...\n";
     $userCount = \App\Models\User::count();
-    echo "[OK] DB Query Success! Total Users: " . $userCount . "\n";
+    echo "[OK] DB Query Success! Total Users in Database: " . $userCount . "\n";
 
 } catch (\Throwable $e) {
     echo "[ERROR THROWN]:\n" . $e->getMessage() . "\n\nFile: " . $e->getFile() . ":" . $e->getLine() . "\n\nTrace:\n" . $e->getTraceAsString();
