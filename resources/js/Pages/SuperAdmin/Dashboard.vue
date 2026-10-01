@@ -458,12 +458,13 @@ const editForm = useForm({
 });
 
 const filteredTenants = computed(() => {
-  if (!searchQuery.value) return props.tenants;
+  const tenantsList = props.tenants || [];
+  if (!searchQuery.value) return tenantsList;
   const q = searchQuery.value.toLowerCase();
-  return props.tenants.filter(t => 
-    t.name.toLowerCase().includes(q) || 
-    t.code.toLowerCase().includes(q) || 
-    t.email.toLowerCase().includes(q)
+  return tenantsList.filter(t => 
+    (t.name || '').toLowerCase().includes(q) || 
+    (t.code || '').toLowerCase().includes(q) || 
+    (t.email || '').toLowerCase().includes(q)
   );
 });
 
