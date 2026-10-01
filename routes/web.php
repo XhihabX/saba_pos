@@ -50,10 +50,14 @@ Route::prefix('super-admin')->middleware(['auth', EnsureSuperAdmin::class])->gro
     Route::get('/stores', [SuperAdminController::class, 'storesIndex'])->name('superadmin.stores');
     Route::post('/stores/{id}/toggle', [SuperAdminController::class, 'toggleStoreStatus'])->name('superadmin.stores.toggle');
     Route::get('/users', [SuperAdminController::class, 'usersIndex'])->name('superadmin.users');
+    Route::post('/users', [SuperAdminController::class, 'storeUser'])->name('superadmin.users.store');
+    Route::post('/users/{id}/update', [SuperAdminController::class, 'updateUser'])->name('superadmin.users.update');
+    Route::delete('/users/{id}', [SuperAdminController::class, 'deleteUser'])->name('superadmin.users.delete');
     Route::post('/users/{id}/reset-password', [SuperAdminController::class, 'resetUserPassword'])->name('superadmin.users.reset-password');
     Route::get('/transactions', [SuperAdminController::class, 'transactionsIndex'])->name('superadmin.transactions');
     Route::get('/analytics', [SuperAdminController::class, 'analyticsIndex'])->name('superadmin.analytics');
     Route::get('/audit-logs', [SuperAdminController::class, 'auditLogsIndex'])->name('superadmin.auditlogs');
+    Route::get('/recycle-bin', [SuperAdminController::class, 'recycleBinIndex'])->name('superadmin.recyclebin');
     Route::get('/settings', [SuperAdminController::class, 'settingsIndex'])->name('superadmin.settings');
     Route::post('/settings', [SuperAdminController::class, 'updateSettings'])->name('superadmin.settings.update');
 });
