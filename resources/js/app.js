@@ -39,6 +39,7 @@ createInertiaApp({
         'superadmin.transactions': '/super-admin/transactions',
         'superadmin.analytics': '/super-admin/analytics',
         'superadmin.auditlogs': '/super-admin/audit-logs',
+        'superadmin.recyclebin': '/super-admin/recycle-bin',
         'superadmin.settings': '/super-admin/settings',
         'merchant.dashboard': '/merchant/dashboard',
         'merchant.stores': '/merchant/stores',
