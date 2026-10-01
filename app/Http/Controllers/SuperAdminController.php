@@ -513,4 +513,15 @@ class SuperAdminController extends Controller
             'inactiveStores' => $inactiveStores,
         ]);
     }
+
+    public function systemHealthIndex()
+    {
+        return Inertia::render('SuperAdmin/SystemHealth');
+    }
+
+    public function announcementsIndex()
+    {
+        return Inertia::render('SuperAdmin/Announcements');
+    }
 }
+
