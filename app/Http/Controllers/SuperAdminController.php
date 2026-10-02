@@ -346,6 +346,33 @@ class SuperAdminController extends Controller
         return Inertia::render('SuperAdmin/Stores', ['stores' => $stores]);
     }
 
+    public function storeStore(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => 'required|string|max:50',
+            'address' => 'nullable|string',
+            'default_tax_rate' => 'required|numeric|min:0',
+        ]);
+
+        $tenant = Tenant::first();
+        if (!$tenant) {
+            return redirect()->back()->with('error', 'No merchant tenant found to attach store.');
+        }
+
+        Store::create([
+            'tenant_id' => $tenant->id,
+            'name' => $validated['name'],
+            'code' => $validated['code'],
+            'address' => $validated['address'] ?? null,
+            'default_tax_rate' => $validated['default_tax_rate'],
+            'currency_symbol' => '৳',
+            'is_active' => true,
+        ]);
+
+        return redirect()->back()->with('success', "Store outlet '{$validated['name']}' created successfully.");
+    }
+
     public function toggleStoreStatus($id)
     {
         $store = Store::findOrFail($id);

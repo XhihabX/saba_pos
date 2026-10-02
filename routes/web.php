@@ -48,6 +48,7 @@ Route::prefix('super-admin')->middleware(['auth', EnsureSuperAdmin::class])->gro
     Route::post('/plans/{id}/update', [SuperAdminController::class, 'updatePlan'])->name('superadmin.plans.update');
     Route::delete('/plans/{id}', [SuperAdminController::class, 'deletePlan'])->name('superadmin.plans.delete');
     Route::get('/stores', [SuperAdminController::class, 'storesIndex'])->name('superadmin.stores');
+    Route::post('/stores', [SuperAdminController::class, 'storeStore'])->name('superadmin.stores.store');
     Route::post('/stores/{id}/toggle', [SuperAdminController::class, 'toggleStoreStatus'])->name('superadmin.stores.toggle');
     Route::get('/users', [SuperAdminController::class, 'usersIndex'])->name('superadmin.users');
     Route::post('/users', [SuperAdminController::class, 'storeUser'])->name('superadmin.users.store');
