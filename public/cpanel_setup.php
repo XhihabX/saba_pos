@@ -65,6 +65,18 @@ if ($action) {
             
             Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
             $outputLog[] = "--> [SUCCESS] Database Seeding: " . trim(Illuminate\Support\Facades\Artisan::output());
+        } elseif ($action === 'wipe_tables') {
+            Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS = 0;');
+            $tables = Illuminate\Support\Facades\DB::select('SHOW TABLES');
+            $droppedCount = 0;
+            foreach ($tables as $table) {
+                $tableArray = (array)$table;
+                $tableName = current($tableArray);
+                Illuminate\Support\Facades\Schema::dropIfExists($tableName);
+                $droppedCount++;
+            }
+            Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS = 1;');
+            $outputLog[] = "--> [SUCCESS] Wiped $droppedCount existing database tables cleanly!";
         } elseif ($action === 'migrate_seed') {
             Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
             $outputLog[] = "--> [SUCCESS] Database Migration: " . trim(Illuminate\Support\Facades\Artisan::output());
@@ -95,6 +107,9 @@ if ($action) {
         }
     } catch (\Throwable $e) {
         $outputLog[] = "--> [ERROR] Execution Exception: " . $e->getMessage();
+        if (str_contains($e->getMessage(), '42S01') || str_contains($e->getMessage(), 'already exists')) {
+            $outputLog[] = "--> [TIP] Pre-existing tables detected in 'sababill_pos'. Click '🔥 Fresh Migration & Seed' or '💣 Force Wipe All Tables' above!";
+        }
     }
 }
 ?>
@@ -114,6 +129,8 @@ if ($action) {
     .btn { display: flex; items-center; justify-content: center; padding: 14px 20px; border-radius: 14px; text-decoration: none; font-weight: 800; font-size: 13px; border: none; cursor: pointer; transition: all 0.2s; text-align: center; }
     .btn-danger { background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; box-shadow: 0 10px 15px -3px rgba(225, 29, 72, 0.3); grid-column: span 2; }
     .btn-danger:hover { transform: translateY(-2px); opacity: 0.95; }
+    .btn-warning { background: linear-gradient(135deg, #d97706, #b45309); color: #ffffff; grid-column: span 2; }
+    .btn-warning:hover { transform: translateY(-2px); opacity: 0.95; }
     .btn-primary { background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3); }
     .btn-primary:hover { transform: translateY(-2px); opacity: 0.95; }
     .btn-secondary { background: #334155; color: #f8fafc; border: 1px solid #475569; }
@@ -131,6 +148,7 @@ if ($action) {
 
     <div class="grid">
       <a href="?action=fresh_seed" onclick="return confirm('🔥 Warning: This will wipe all existing tables in database \'sababill_pos\' and recreate them from scratch. Proceed?')" class="btn btn-danger">🔥 Fresh Migration & Seed (Wipe & Re-create DB)</a>
+      <a href="?action=wipe_tables" onclick="return confirm('💣 Warning: This will drop ALL tables in your database. Proceed?')" class="btn btn-warning">💣 Force Wipe All Database Tables</a>
       <a href="?action=migrate_seed" class="btn btn-primary">⚡ Standard Migrate & Seed</a>
       <a href="?action=clear_cache" class="btn btn-secondary">🧹 Clear System Caches</a>
       <a href="?action=optimize" class="btn btn-secondary">🚀 Cache & Optimize Routes</a>
