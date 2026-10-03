@@ -22,6 +22,12 @@ createInertiaApp({
       if (typeof window !== 'undefined' && typeof window.route === 'function') {
         try {
           url = window.route(name, params, absolute);
+          if (typeof url === 'string' && url.startsWith('http')) {
+            try {
+              const parsed = new URL(url);
+              url = parsed.pathname + parsed.search + parsed.hash;
+            } catch (err) {}
+          }
         } catch (e) {
           console.warn(`Ziggy route [${name}] error:`, e);
         }
