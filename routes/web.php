@@ -1,12 +1,16 @@
 <?php
 
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BarcodeController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\MerchantController;
 use App\Http\Controllers\MerchantStoreController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\QuotationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ReturnController;
 use App\Http\Controllers\ShiftController;
@@ -110,11 +114,6 @@ Route::prefix('manager')->middleware(['auth', EnsureStoreManager::class, EnsureA
     Route::get('/quotations', [QuotationController::class, 'index'])->name('manager.quotations');
     Route::get('/reports', [ReportController::class, 'profitLoss'])->name('manager.reports');
 });
-
-use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\BarcodeController;
-use App\Http\Controllers\ExpenseController;
-use App\Http\Controllers\QuotationController;
 
 // 6. Cashier Terminal Layer & Operational ERP Operations (Protected)
 Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () {
