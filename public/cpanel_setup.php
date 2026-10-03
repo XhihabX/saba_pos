@@ -78,8 +78,26 @@ if ($action) {
             Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS = 1;');
             $outputLog[] = "--> [SUCCESS] Wiped $droppedCount existing database tables cleanly!";
         } elseif ($action === 'migrate_seed') {
-            Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
-            $outputLog[] = "--> [SUCCESS] Database Migration: " . trim(Illuminate\Support\Facades\Artisan::output());
+            try {
+                Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+                $outputLog[] = "--> [SUCCESS] Database Migration: " . trim(Illuminate\Support\Facades\Artisan::output());
+            } catch (\Throwable $migErr) {
+                if (str_contains($migErr->getMessage(), '42S01') || str_contains($migErr->getMessage(), 'already exists')) {
+                    $outputLog[] = "--> [INFO] Pre-existing tables detected. Auto-wiping database and retrying fresh migration...";
+                    Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS = 0;');
+                    $tables = Illuminate\Support\Facades\DB::select('SHOW TABLES');
+                    foreach ($tables as $table) {
+                        $tableArray = (array)$table;
+                        $tableName = current($tableArray);
+                        Illuminate\Support\Facades\Schema::dropIfExists($tableName);
+                    }
+                    Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS = 1;');
+                    Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+                    $outputLog[] = "--> [SUCCESS] Auto-recovered & Fresh Migration: " . trim(Illuminate\Support\Facades\Artisan::output());
+                } else {
+                    throw $migErr;
+                }
+            }
             
             Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
             $outputLog[] = "--> [SUCCESS] Database Seeding: " . trim(Illuminate\Support\Facades\Artisan::output());
