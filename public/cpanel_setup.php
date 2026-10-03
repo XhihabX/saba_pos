@@ -45,7 +45,13 @@ $outputLog = [];
 
 if ($action) {
     try {
-        if ($action === 'migrate_seed') {
+        if ($action === 'fresh_seed') {
+            Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--force' => true]);
+            $outputLog[] = "--> [SUCCESS] Fresh Migration (Dropped existing tables & recreated): " . trim(Illuminate\Support\Facades\Artisan::output());
+            
+            Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+            $outputLog[] = "--> [SUCCESS] Database Seeding: " . trim(Illuminate\Support\Facades\Artisan::output());
+        } elseif ($action === 'migrate_seed') {
             Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
             $outputLog[] = "--> [SUCCESS] Database Migration: " . trim(Illuminate\Support\Facades\Artisan::output());
             
@@ -86,17 +92,19 @@ if ($action) {
   <title>Saba POS - Web cPanel Deployment Runner</title>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #f8fafc; margin: 0; padding: 24px; }
-    .card { max-width: 720px; margin: 0 auto; background: #1e293b; border: 1px solid #334155; border-radius: 24px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+    .card { max-width: 760px; margin: 0 auto; background: #1e293b; border: 1px solid #334155; border-radius: 24px; padding: 32px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
     h1 { font-size: 24px; font-weight: 900; margin: 0 0 8px 0; color: #ffffff; }
     p { color: #94a3b8; font-size: 13px; line-height: 1.5; margin: 0 0 24px 0; }
     .badge { display: inline-block; padding: 4px 12px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; font-size: 11px; font-weight: 800; border-radius: 9999px; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
     .grid { display: grid; grid-template-cols: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
-    .btn { display: flex; align-items: center; justify-content: center; padding: 14px 20px; border-radius: 14px; text-decoration: none; font-weight: 800; font-size: 13px; border: none; cursor: pointer; transition: all 0.2s; }
+    .btn { display: flex; items-center; justify-content: center; padding: 14px 20px; border-radius: 14px; text-decoration: none; font-weight: 800; font-size: 13px; border: none; cursor: pointer; transition: all 0.2s; text-align: center; }
+    .btn-danger { background: linear-gradient(135deg, #e11d48, #be123c); color: #ffffff; box-shadow: 0 10px 15px -3px rgba(225, 29, 72, 0.3); grid-column: span 2; }
+    .btn-danger:hover { transform: translateY(-2px); opacity: 0.95; }
     .btn-primary { background: linear-gradient(135deg, #10b981, #059669); color: #ffffff; box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.3); }
     .btn-primary:hover { transform: translateY(-2px); opacity: 0.95; }
     .btn-secondary { background: #334155; color: #f8fafc; border: 1px solid #475569; }
     .btn-secondary:hover { background: #475569; }
-    .terminal { background: #090d16; border: 1px solid #1e293b; border-radius: 16px; padding: 16px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; color: #38bdf8; min-h: 120px; overflow-x: auto; white-space: pre-wrap; }
+    .terminal { background: #090d16; border: 1px solid #1e293b; border-radius: 16px; padding: 16px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px; color: #38bdf8; min-height: 120px; overflow-x: auto; white-space: pre-wrap; }
     .success { color: #34d399; }
     .error { color: #f43f5e; }
   </style>
@@ -108,7 +116,8 @@ if ($action) {
     <p>Run database migrations, seeds, and cache clearings directly from your browser without SSH terminal access.</p>
 
     <div class="grid">
-      <a href="?action=migrate_seed" class="btn btn-primary">⚡ Migrate & Seed Database</a>
+      <a href="?action=fresh_seed" onclick="return confirm('🔥 Warning: This will wipe all existing tables in database \'sababill_pos\' and recreate them from scratch. Proceed?')" class="btn btn-danger">🔥 Fresh Migration & Seed (Wipe & Re-create DB)</a>
+      <a href="?action=migrate_seed" class="btn btn-primary">⚡ Standard Migrate & Seed</a>
       <a href="?action=clear_cache" class="btn btn-secondary">🧹 Clear System Caches</a>
       <a href="?action=optimize" class="btn btn-secondary">🚀 Cache & Optimize Routes</a>
       <a href="?action=storage_link" class="btn btn-secondary">🔗 Create Storage Link</a>
