@@ -4,13 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Traits\Tenantable;
 
 class Customer extends Model
 {
-    use HasFactory, Tenantable;
+    use HasFactory, Tenantable, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'name', 'phone', 'email', 'address', 'due_balance'];
+    protected $fillable = ['tenant_id', 'name', 'phone', 'email', 'address', 'due_balance', 'points'];
 
     public function orders()
     {

@@ -88,6 +88,13 @@ Route::prefix('merchant')->middleware(['auth', EnsureMerchant::class, EnsureActi
     Route::post('/purchases', [SupplierController::class, 'purchasesStore'])->name('merchant.purchases.store');
     Route::delete('/purchases/{id}', [SupplierController::class, 'deletePurchase'])->name('merchant.purchases.delete');
     Route::get('/subscription', [MerchantController::class, 'subscription'])->name('merchant.subscription');
+    Route::get('/settings', [MerchantController::class, 'settings'])->name('merchant.settings');
+    Route::post('/settings', [MerchantController::class, 'updateSettings'])->name('merchant.settings.update');
+    Route::get('/customers', [MerchantController::class, 'customersIndex'])->name('merchant.customers');
+    Route::post('/customers', [MerchantController::class, 'storeCustomer'])->name('merchant.customers.store');
+    Route::post('/customers/{id}/update', [MerchantController::class, 'updateCustomer'])->name('merchant.customers.update');
+    Route::delete('/customers/{id}', [MerchantController::class, 'deleteCustomer'])->name('merchant.customers.delete');
+    Route::get('/orders', [MerchantController::class, 'ordersIndex'])->name('merchant.orders');
 });
 
 // 5. Store Manager Portal Layer (Branch Operations & Shift Audit)
@@ -99,6 +106,9 @@ Route::prefix('manager')->middleware(['auth', EnsureStoreManager::class, EnsureA
     Route::post('/transfers', [StockTransferController::class, 'store'])->name('manager.transfers.store');
     Route::get('/returns', [ReturnController::class, 'index'])->name('manager.returns');
     Route::post('/returns', [ReturnController::class, 'store'])->name('manager.returns.store');
+    Route::get('/expenses', [ExpenseController::class, 'index'])->name('manager.expenses');
+    Route::get('/quotations', [QuotationController::class, 'index'])->name('manager.quotations');
+    Route::get('/reports', [ReportController::class, 'profitLoss'])->name('manager.reports');
 });
 
 use App\Http\Controllers\AttendanceController;

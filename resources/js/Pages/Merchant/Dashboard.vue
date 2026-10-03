@@ -1,6 +1,6 @@
 <template>
   <AuthenticatedLayout>
-    <div class="p-4 sm:p-6 lg:p-8 w-full space-y-8 bg-slate-50/70 min-h-screen">
+    <div class="p-4 sm:p-6 lg:p-8 w-full space-y-8 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen transition-colors">
       <!-- 🏢 Hero Header Banner -->
       <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-6 sm:p-8 shadow-xl border border-slate-800">
         <div class="absolute -top-24 -right-24 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
@@ -34,62 +34,62 @@
 
       <!-- 📊 Business Performance Cards Grid -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div class="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm space-y-3">
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 shadow-xs dark:shadow-xl dark:shadow-black/20 space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Consolidated Chain Revenue</span>
-            <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Consolidated Chain Revenue</span>
+            <div class="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center font-bold">
               <DollarSign class="w-5 h-5" />
             </div>
           </div>
-          <div class="text-3xl font-black font-heading text-emerald-700">৳{{ formatMoney(totalSales) }}</div>
-          <div class="text-[11px] font-semibold text-emerald-600 flex items-center gap-1">
+          <div class="text-3xl font-black font-heading text-emerald-700 dark:text-emerald-400">৳{{ formatMoney(totalSales) }}</div>
+          <div class="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
             <TrendingUp class="w-3.5 h-3.5" />
             <span>Across all retail registers</span>
           </div>
         </div>
 
-        <div class="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm space-y-3">
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 shadow-xs dark:shadow-xl dark:shadow-black/20 space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Active Store Outlets</span>
-            <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Store Outlets</span>
+            <div class="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 flex items-center justify-center font-bold">
               <Store class="w-5 h-5" />
             </div>
           </div>
-          <div class="text-3xl font-black font-heading text-indigo-700">{{ stores ? stores.length : 1 }} Outlets</div>
-          <div class="text-[11px] font-semibold text-indigo-600">Configured branch locations</div>
+          <div class="text-3xl font-black font-heading text-indigo-700 dark:text-indigo-400">{{ stores ? stores.length : 1 }} Outlets</div>
+          <div class="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400">Configured branch locations</div>
         </div>
 
-        <div class="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm space-y-3">
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 shadow-xs dark:shadow-xl dark:shadow-black/20 space-y-3">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Staff & RBAC Accounts</span>
-            <div class="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Staff & RBAC Accounts</span>
+            <div class="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 flex items-center justify-center font-bold">
               <Users class="w-5 h-5" />
             </div>
           </div>
-          <div class="text-3xl font-black font-heading text-slate-900">{{ totalStaff }} Accounts</div>
-          <div class="text-[11px] font-semibold text-rose-600">Managers & Cashier terminals</div>
+          <div class="text-3xl font-black font-heading text-slate-900 dark:text-slate-100">{{ totalStaff }} Accounts</div>
+          <div class="text-[11px] font-semibold text-rose-600 dark:text-rose-400">Managers & Cashier terminals</div>
         </div>
       </div>
 
       <!-- 🏬 Chain Store Outlets Performance Table -->
-      <div class="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-sm space-y-6">
+      <div class="p-6 sm:p-8 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 shadow-xs dark:shadow-xl dark:shadow-black/20 space-y-6">
         <div class="flex items-center justify-between">
-          <h3 class="font-black text-xl font-heading text-slate-900 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <h3 class="font-black text-xl font-heading text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
               <Store class="w-5 h-5" />
             </div>
             <span>Chain Store Outlets Overview</span>
           </h3>
 
-          <Link href="/merchant/stores" class="text-xs font-extrabold text-indigo-600 hover:text-indigo-800">
+          <Link href="/merchant/stores" class="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 hover:underline">
             View All Branches &rarr;
           </Link>
         </div>
 
-        <div class="overflow-x-auto rounded-2xl border border-slate-200/80">
+        <div class="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-slate-800/80">
           <table class="w-full text-left text-xs">
             <thead>
-              <tr class="text-slate-500 border-b border-slate-200 uppercase text-[10px] bg-slate-50/80 font-bold tracking-wider">
+              <tr class="text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase text-[10px] bg-slate-50/80 dark:bg-slate-800/60 font-bold tracking-wider">
                 <th class="py-4 px-4">Branch Outlet Name</th>
                 <th class="py-4 px-4">Branch Code</th>
                 <th class="py-4 px-4">Location / Address</th>
@@ -97,21 +97,21 @@
                 <th class="py-4 px-4 text-center">Status</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 font-sans">
-              <tr v-for="store in stores" :key="store.id" class="hover:bg-slate-50/80 transition-colors">
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60 font-sans">
+              <tr v-for="store in stores" :key="store.id" class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                 <td class="py-4 px-4">
-                  <div class="font-bold text-slate-900 text-sm font-heading">{{ store.name }}</div>
-                  <div class="text-[10px] text-slate-500 font-mono">VAT #: {{ store.vat_number || 'Standard 5%' }}</div>
+                  <div class="font-bold text-slate-900 dark:text-slate-100 text-sm font-heading">{{ store.name }}</div>
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono">VAT #: {{ store.vat_number || 'Standard 5%' }}</div>
                 </td>
-                <td class="py-4 px-4 font-mono font-extrabold text-indigo-700">{{ store.code }}</td>
-                <td class="py-4 px-4 text-slate-700 font-medium">{{ store.address || 'Dhaka, Bangladesh' }}</td>
-                <td class="py-4 px-4 text-center font-bold text-emerald-700 font-mono text-sm">
-                  <span class="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200">
+                <td class="py-4 px-4 font-mono font-extrabold text-indigo-600 dark:text-indigo-400">{{ store.code }}</td>
+                <td class="py-4 px-4 text-slate-700 dark:text-slate-300 font-medium">{{ store.address || 'Dhaka, Bangladesh' }}</td>
+                <td class="py-4 px-4 text-center font-bold text-emerald-600 dark:text-emerald-400 font-mono text-sm">
+                  <span class="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200">
                     {{ store.orders_count || 0 }} Orders
                   </span>
                 </td>
                 <td class="py-4 px-4 text-center">
-                  <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
                     Active Branch
                   </span>
                 </td>
