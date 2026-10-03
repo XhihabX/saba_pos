@@ -82,7 +82,7 @@ class SabaPosSeeder extends Seeder
         User::create([
             'name' => 'Super Admin Platform CEO',
             'email' => 'admin@sabapos.com',
-            'password' => Hash::make('123456'),
+            'password' => Hash::make('password123'),
             'role' => 'super_admin',
             'tenant_id' => null,
             'store_id' => null,
@@ -92,7 +92,7 @@ class SabaPosSeeder extends Seeder
         User::create([
             'name' => 'Merchant Business Owner',
             'email' => 'merchant@sabapos.com',
-            'password' => Hash::make('123456'),
+            'password' => Hash::make('password123'),
             'role' => 'merchant',
             'tenant_id' => $tenant->id,
             'store_id' => $mainStore->id,
@@ -102,7 +102,7 @@ class SabaPosSeeder extends Seeder
         User::create([
             'name' => 'Banani Branch Supervisor',
             'email' => 'manager@sabapos.com',
-            'password' => Hash::make('123456'),
+            'password' => Hash::make('password123'),
             'role' => 'store_manager',
             'tenant_id' => $tenant->id,
             'store_id' => $mainStore->id,
@@ -112,7 +112,7 @@ class SabaPosSeeder extends Seeder
         $cashier = User::create([
             'name' => 'Front-Desk Cashier',
             'email' => 'cashier@sabapos.com',
-            'password' => Hash::make('123456'),
+            'password' => Hash::make('password123'),
             'role' => 'cashier',
             'tenant_id' => $tenant->id,
             'store_id' => $mainStore->id,
