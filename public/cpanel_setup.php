@@ -5,6 +5,7 @@
  */
 
 define('LARAVEL_START', microtime(true));
+@ini_set('memory_limit', '512M');
 
 // Auto-detect sabapos_backend path across all cPanel directory structures
 $possiblePaths = [
