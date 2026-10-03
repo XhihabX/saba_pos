@@ -88,8 +88,8 @@
                 <td class="py-3.5 px-3 font-extrabold text-slate-900 dark:text-slate-100">{{ cust.name }}</td>
                 <td class="py-3.5 px-3 font-mono text-slate-600 dark:text-slate-400">{{ cust.phone || '-' }}</td>
                 <td class="py-3.5 px-3 text-slate-600 dark:text-slate-400">{{ cust.email || '-' }}</td>
-                <td class="py-3.5 px-3 font-black font-mono" :class="cust.due > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'">
-                  ৳{{ (cust.due || 0).toLocaleString() }}
+                <td class="py-3.5 px-3 font-black font-mono" :class="(cust.due_balance || cust.due) > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-500 dark:text-slate-400'">
+                  ৳{{ ((cust.due_balance || cust.due) || 0).toLocaleString() }}
                 </td>
                 <td class="py-3.5 px-3 font-bold font-mono text-amber-600 dark:text-amber-400">
                   {{ cust.points || 0 }} pts
@@ -188,7 +188,7 @@ const form = ref({
   name: '',
   phone: '',
   email: '',
-  due: 0,
+  due_balance: 0,
   points: 0,
   address: '',
 });
@@ -204,29 +204,33 @@ const filteredCustomers = computed(() => {
 
 const openCreateModal = () => {
   isEditing.value = false;
-  form.value = { id: null, name: '', phone: '', email: '', due: 0, points: 0, address: '' };
+  form.value = { id: null, name: '', phone: '', email: '', due_balance: 0, points: 0, address: '' };
   showModal.value = true;
 };
 
 const openEditModal = (cust) => {
   isEditing.value = true;
-  form.value = { ...cust };
+  form.value = { ...cust, due_balance: cust.due_balance ?? cust.due ?? 0 };
   showModal.value = true;
 };
 
 const submitForm = () => {
+  const payload = {
+    ...form.value,
+    due_balance: form.value.due_balance ?? 0,
+  };
   if (isEditing.value) {
-    const url = window.safeRoute ? window.safeRoute('merchant.customers.update', form.value.id) : `/merchant/customers/${form.value.id}`;
-    router.put(url, form.value, { onSuccess: () => { showModal.value = false; } });
+    const url = window.safeRoute ? window.safeRoute('merchant.customers.update', form.value.id) : `/merchant/customers/${form.value.id}/update`;
+    router.post(url, payload, { onSuccess: () => { showModal.value = false; } });
   } else {
     const url = window.safeRoute ? window.safeRoute('merchant.customers.store') : '/merchant/customers';
-    router.post(url, form.value, { onSuccess: () => { showModal.value = false; } });
+    router.post(url, payload, { onSuccess: () => { showModal.value = false; } });
   }
 };
 
 const deleteCustomer = (cust) => {
   if (confirm(`Are you sure you want to delete customer ${cust.name}?`)) {
-    const url = window.safeRoute ? window.safeRoute('merchant.customers.destroy', cust.id) : `/merchant/customers/${cust.id}`;
+    const url = window.safeRoute ? window.safeRoute('merchant.customers.delete', cust.id) : `/merchant/customers/${cust.id}`;
     router.delete(url);
   }
 };
