@@ -46,8 +46,22 @@ $outputLog = [];
 if ($action) {
     try {
         if ($action === 'fresh_seed') {
-            Illuminate\Support\Facades\Artisan::call('migrate:fresh', ['--force' => true]);
-            $outputLog[] = "--> [SUCCESS] Fresh Migration (Dropped existing tables & recreated): " . trim(Illuminate\Support\Facades\Artisan::output());
+            try {
+                Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS = 0;');
+                $tables = Illuminate\Support\Facades\DB::select('SHOW TABLES');
+                foreach ($tables as $table) {
+                    $tableArray = (array)$table;
+                    $tableName = current($tableArray);
+                    Illuminate\Support\Facades\Schema::dropIfExists($tableName);
+                }
+                Illuminate\Support\Facades\DB::statement('SET FOREIGN_KEY_CHECKS = 1;');
+                $outputLog[] = "--> [SUCCESS] Pre-cleared all existing database tables cleanly.";
+            } catch (\Throwable $e) {
+                $outputLog[] = "--> [INFO] Table cleanup fallback: " . $e->getMessage();
+            }
+
+            Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            $outputLog[] = "--> [SUCCESS] Fresh Migration: " . trim(Illuminate\Support\Facades\Artisan::output());
             
             Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
             $outputLog[] = "--> [SUCCESS] Database Seeding: " . trim(Illuminate\Support\Facades\Artisan::output());
