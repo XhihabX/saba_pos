@@ -38,5 +38,14 @@ class AppServiceProvider extends ServiceProvider
         if (request()->isSecure() || app()->environment('production')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
+
+        // Auto-Migration Resilience Guard for cPanel & Shared Hosting
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('users') && !\Illuminate\Support\Facades\Schema::hasColumn('users', 'deleted_at')) {
+                \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            }
+        } catch (\Throwable $e) {
+            // Ignore error if DB connection is not initialized
+        }
     }
 }

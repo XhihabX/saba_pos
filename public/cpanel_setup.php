@@ -66,8 +66,9 @@ try {
     Illuminate\Support\Facades\Artisan::call('route:clear');
     Illuminate\Support\Facades\Artisan::call('config:clear');
     Illuminate\Support\Facades\Artisan::call('cache:clear');
+    Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
 } catch (\Throwable $e) {
-    // Ignore initial bootstrap cache clear exception
+    // Ignore initial bootstrap cache clear / migrate exception
 }
 
 $action = $_GET['action'] ?? null;
