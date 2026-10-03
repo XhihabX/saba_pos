@@ -5,10 +5,11 @@ namespace App\Models;
 use App\Traits\Tenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Store extends Model
 {
-    use HasFactory, Tenantable;
+    use HasFactory, Tenantable, SoftDeletes;
 
     protected $fillable = [
         'tenant_id',
@@ -23,6 +24,7 @@ class Store extends Model
         'receipt_header',
         'receipt_footer',
         'is_active',
+        'allow_negative_stock',
     ];
 
     public function tenant()

@@ -22,9 +22,9 @@ use Illuminate\Support\Facades\Route;
 
 // 1. Authentication Routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:30,1');
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:6,1');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:15,1');
 Route::get('/pending-approval', [AuthController::class, 'showPendingApproval'])->middleware('auth')->name('pending.approval');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
@@ -40,6 +40,7 @@ Route::prefix('super-admin')->middleware(['auth', EnsureSuperAdmin::class])->gro
     Route::post('/tenants/{id}/update', [SuperAdminController::class, 'updateTenant'])->name('superadmin.tenants.update');
     Route::post('/tenants/{id}/approve', [SuperAdminController::class, 'approveTenant'])->name('superadmin.tenants.approve');
     Route::post('/tenants/{id}/reject', [SuperAdminController::class, 'rejectTenant'])->name('superadmin.tenants.reject');
+    Route::post('/tenants/{id}/restore', [SuperAdminController::class, 'restoreTenant'])->name('superadmin.tenants.restore');
     Route::delete('/tenants/{id}', [SuperAdminController::class, 'deleteTenant'])->name('superadmin.tenants.delete');
     Route::post('/tenants/{id}/impersonate', [SuperAdminController::class, 'impersonateTenant'])->name('superadmin.tenants.impersonate');
     Route::post('/tenants/{id}/extend', [SuperAdminController::class, 'extendSubscription'])->name('superadmin.tenants.extend');
@@ -50,6 +51,7 @@ Route::prefix('super-admin')->middleware(['auth', EnsureSuperAdmin::class])->gro
     Route::get('/stores', [SuperAdminController::class, 'storesIndex'])->name('superadmin.stores');
     Route::post('/stores', [SuperAdminController::class, 'storeStore'])->name('superadmin.stores.store');
     Route::post('/stores/{id}/toggle', [SuperAdminController::class, 'toggleStoreStatus'])->name('superadmin.stores.toggle');
+    Route::post('/stores/{id}/restore', [SuperAdminController::class, 'restoreStore'])->name('superadmin.stores.restore');
     Route::get('/users', [SuperAdminController::class, 'usersIndex'])->name('superadmin.users');
     Route::post('/users', [SuperAdminController::class, 'storeUser'])->name('superadmin.users.store');
     Route::post('/users/{id}/update', [SuperAdminController::class, 'updateUser'])->name('superadmin.users.update');

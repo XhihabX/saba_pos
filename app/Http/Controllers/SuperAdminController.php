@@ -532,13 +532,49 @@ class SuperAdminController extends Controller
 
     public function recycleBinIndex()
     {
-        $suspendedTenants = Tenant::whereIn('subscription_status', ['suspended', 'rejected'])->latest()->get();
-        $inactiveStores = Store::where('is_active', false)->with('tenant')->latest()->get();
+        $suspendedTenants = Tenant::whereIn('subscription_status', ['suspended', 'rejected'])->orWhereNotNull('deleted_at')->withTrashed()->latest()->get();
+        $inactiveStores = Store::where('is_active', false)->orWhereNotNull('deleted_at')->withTrashed()->with('tenant')->latest()->get();
+        $trashedUsers = User::onlyTrashed()->with(['tenant', 'store'])->latest()->get();
+        $trashedProducts = Product::onlyTrashed()->with(['category'])->latest()->get();
 
         return Inertia::render('SuperAdmin/RecycleBin', [
             'suspendedTenants' => $suspendedTenants,
             'inactiveStores' => $inactiveStores,
+            'trashedUsers' => $trashedUsers,
+            'trashedProducts' => $trashedProducts,
         ]);
+    }
+
+    public function restoreTenant($id)
+    {
+        $tenant = Tenant::withTrashed()->findOrFail($id);
+        $tenant->restore();
+        $tenant->update(['subscription_status' => 'active']);
+
+        AuditLog::create([
+            'tenant_id' => $tenant->id,
+            'user_name' => auth()->user()->name ?? 'Super Admin',
+            'action' => 'tenant_restored',
+            'description' => "Restored tenant business account '{$tenant->name}' from Recycle Bin.",
+        ]);
+
+        return redirect()->back()->with('success', "Tenant account '{$tenant->name}' restored successfully.");
+    }
+
+    public function restoreStore($id)
+    {
+        $store = Store::withTrashed()->findOrFail($id);
+        $store->restore();
+        $store->update(['is_active' => true]);
+
+        AuditLog::create([
+            'tenant_id' => $store->tenant_id,
+            'user_name' => auth()->user()->name ?? 'Super Admin',
+            'action' => 'store_restored',
+            'description' => "Restored outlet store '{$store->name}' from Recycle Bin.",
+        ]);
+
+        return redirect()->back()->with('success', "Store outlet '{$store->name}' restored successfully.");
     }
 
     public function systemHealthIndex()
