@@ -31358,5 +31358,700 @@ Total 11 (delta 6), reused 0 (delta 0), pack-reused 0
 remote: To https://github.com/XhihabX/saba_pos.git
    6141c1b..c8440c9  main -> main
 
+				The command exited with code 0.
+				Output:
+				Updated chat.md with latest transcript entries!
+
+				The command exited with code 0.
+				Output:
+				[main c0415f9] docs: Sync chat.md with 404 routing fix turn
+ Committer: Macbook Air M1 <macbookairm1@MacBookAir.netis.cc>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly. Run the
+following command and follow the instructions in your editor to edit
+your configuration file:
+
+    git config --global --edit
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 1 file changed, 6321 insertions(+), 2623 deletions(-)
+Enumerating objects: 5, done.
+Counting objects:  20% (1/5)Counting objects:  40% (2/5)Counting objects:  60% (3/5)Counting objects:  80% (4/5)Counting objects: 100% (5/5)Counting objects: 100% (5/5), done.
+Delta compression using up to 8 threads
+Compressing objects:  33% (1/3)Compressing objects:  66% (2/3)Compressing objects: 100% (3/3)Compressing objects: 100% (3/3), done.
+Writing objects:  33% (1/3)Writing objects:  66% (2/3)Writing objects: 100% (3/3)Writing objects: 100% (3/3), 40.59 KiB | 2.90 MiB/s, done.
+Total 3 (delta 2), reused 0 (delta 0), pack-reused 0
+remote: To https://github.com/XhihabX/saba_pos.git
+   c8440c9..c0415f9  main -> main
+
+### 🔍 Root Cause Analysis & 404 Error Fix Report
+
+#### 1. **Root Cause of the `HTTP 404 ERROR - The route super-admin/stores could not be found`**
+When navigating through the Super Admin or Merchant panels on cPanel subdomains (e.g. `pos.sababilling.net`), the Vue/Inertia routing helper (`safeRoute`) was returning relative path strings (e.g., `super-admin/stores` without a leading slash `/`).
+
+In browser navigation on subdomains:
+- Current URL: `https://pos.sababilling.net/super-admin/dashboard`
+- Clicking a link without a leading `/` (`super-admin/stores`) caused the browser to resolve the request as `https://pos.sababilling.net/super-admin/super-admin/stores`.
+- Laravel's router then tried to match `super-admin/super-admin/stores`, which did not match any defined route and threw `NotFoundHttpException: The route super-admin/stores could not be found.`
+
+Additionally:
+- `POST /super-admin/stores` (store creation action in `SuperAdmin/Stores.vue`) was missing its matching route and controller method in `SuperAdminController.php`.
+
+---
+
+### 🛠️ Fixes Applied
+
+1. **Enforced Absolute Route Resolution in `resources/js/app.js`**:
+   - Updated `safeRoute` helper to automatically check and guarantee that every generated route string begins with an absolute leading slash `/` or `http(s)`.
+   - Prevented any browser relative URL nesting (`super-admin/super-admin/...`).
+
+2. **Added Missing Super Admin Route & Controller Action**:
+   - Added `storeStore(Request $request)` to `App\Http\Controllers\SuperAdminController.php`.
+   - Added `Route::post('/stores', [SuperAdminController::class, 'storeStore'])->name('superadmin.stores.store');` to `routes/web.php`.
+
+3. **Recompiled & Repackaged cPanel Release ZIPs**:
+   - Built Vite frontend assets (`public/build/assets/app-*.js` and `app-*.css`).
+   - Regenerated updated `cpanel_dist/subdomain_public.zip` and `cpanel_dist/sabapos_backend.zip`.
+
+4. **Git Repository & `chat.md` Updated**:
+   - Pushed all fixes to GitHub repository [`XhihabX/saba_pos`](https://github.com/XhihabX/saba_pos.git) branch `main`.
+   - Updated [`chat.md`](file:///Users/macbookairm1/Downloads/Saba%20POS/chat.md) with the complete transcript history.
+
+---
+
+### 👤 User (Turn 51)
+
+APP_NAME=Laravel
+APP_ENV=Production
+APP_KEY=base64:FKGli4BSWnwArFDuG4J5YqHBbcQmy4iGrfPqd85Kd7g=
+APP_DEBUG=true
+APP_URL=http://pos.sababilling.net
+
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=en_US
+
+APP_MAINTENANCE_DRIVER=file
+# APP_MAINTENANCE_STORE=database
+
+# PHP_CLI_SERVER_WORKERS=4
+
+BCRYPT_ROUNDS=12
+
+LOG_CHANNEL=stack
+LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=debug
+
+DB_CONNECTION=sqlite
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sababill_pos
+DB_USERNAME=sababill_pos
+DB_PASSWORD=sababill_pos
+
+SESSION_DRIVER=database
+SESSION_LIFETIME=120
+SESSION_ENCRYPT=false
+SESSION_PATH=/
+SESSION_DOMAIN=null
+
+BROADCAST_CONNECTION=log
+FILESYSTEM_DISK=local
+QUEUE_CONNECTION=database
+
+CACHE_STORE=database
+# CACHE_PREFIX=
+
+MEMCACHED_HOST=127.0.0.1
+
+REDIS_CLIENT=phpredis
+REDIS_HOST=127.0.0.1
+REDIS_PASSWORD=null
+REDIS_PORT=6379
+
+MAIL_MAILER=log
+MAIL_SCHEME=null
+MAIL_HOST=127.0.0.1
+MAIL_PORT=2525
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_FROM_ADDRESS="hello@example.com"
+MAIL_FROM_NAME="${APP_NAME}"
+
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=
+AWS_USE_PATH_STYLE_ENDPOINT=false
+
+VITE_APP_NAME="${APP_NAME}" is this the proper env for the website?
+
+### 🤖 Antigravity Assistant (Turn 51)
+
+### ⚠️ Operational Analysis of your `.env` File
+
+No, this `.env` file has **4 CRITICAL MISCONFIGURATIONS** that will cause routing errors, HTTPS mixed-content blocks, database connection failures, and unbranded application titles on `https://pos.sababilling.net`.
+
+---
+
+### 🔴 Critical Issues Found & Fixes
+
+#### 1. 🚨 **Database Driver Mismatch (`DB_CONNECTION=sqlite` vs MySQL credentials)**
+- **Issue**: `DB_CONNECTION=sqlite` is enabled, but you have provided MySQL/MariaDB credentials below it (`DB_DATABASE=sababill_pos`, `DB_USERNAME=sababill_pos`, `DB_PASSWORD=sababill_pos`).
+- **Impact**: Laravel will ignore your MySQL database and attempt to find a non-existent SQLite file, causing database query exceptions.
+- **Fix**: Change `DB_CONNECTION=sqlite` to `DB_CONNECTION=mysql` if using cPanel MySQL, OR set `DB_DATABASE=/home/sababill/sabapos_backend/database/database.sqlite` if using SQLite.
+
+#### 2. 🚨 **Protocol Mismatch (`APP_URL=http://...` vs SSL HTTPS)**
+- **Issue**: `APP_URL=http://pos.sababilling.net` uses `http://` instead of `https://`.
+- **Impact**: Your domain uses SSL HTTPS (`https://pos.sababilling.net`). Having `http://` in `APP_URL` causes browser **Mixed Content Security Warnings**, broken asset loading, and redirect loops.
+- **Fix**: Change to `APP_URL=https://pos.sababilling.net`.
+
+#### 3. ⚠️ **Default App Branding (`APP_NAME=Laravel`)**
+- **Issue**: `APP_NAME=Laravel`.
+- **Impact**: Email footers, notifications, page titles, and browser tabs will display "Laravel" instead of your system brand.
+- **Fix**: Change to `APP_NAME="Saba POS"`.
+
+#### 4. ⚠️ **Unprocessed Queue & Database Cache Driver Warning**
+- **Issue**: `SESSION_DRIVER=database`, `CACHE_STORE=database`, and `QUEUE_CONNECTION=database`.
+- **Impact**: On cPanel, if background queue workers (`php artisan queue:work`) are not configured in cPanel Cron Jobs, queued jobs will sit unprocessed. If using SQLite, `file` drivers for sessions/cache are lighter and faster.
+
+---
+
+### 🟢 Recommended Production-Ready `.env` Files
+
+Choose the option below depending on whether you are using **cPanel MySQL** or **SQLite**:
+
+#### Option A: Recommended for **cPanel MySQL / MariaDB** (Production)
+
+```env
+APP_NAME="Saba POS"
+APP_ENV=production
+APP_KEY=base64:FKGli4BSWnwArFDuG4J5YqHBbcQmy4iGrfPqd85Kd7g=
+APP_DEBUG=false
+APP_URL=https://pos.sababilling.net
+
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=en_US
+
+BCRYPT_ROUNDS=12
+
+LOG_CHANNEL=stack
+LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=error
+
+# MySQL Database Configuration
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=sababill_pos
+DB_USERNAME=sababill_pos
+DB_PASSWORD=sababill_pos
+
+# Session & Cache Drivers
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
+SESSION_ENCRYPT=false
+SESSION_PATH=/
+SESSION_DOMAIN=null
+
+BROADCAST_CONNECTION=log
+FILESYSTEM_DISK=local
+QUEUE_CONNECTION=sync
+
+CACHE_STORE=file
+
+MAIL_MAILER=log
+MAIL_FROM_ADDRESS="support@sababilling.net"
+MAIL_FROM_NAME="${APP_NAME}"
+
+VITE_APP_NAME="${APP_NAME}"
+```
+
+---
+
+#### Option B: If using **SQLite Database** (Single File DB)
+
+```env
+APP_NAME="Saba POS"
+APP_ENV=production
+APP_KEY=base64:FKGli4BSWnwArFDuG4J5YqHBbcQmy4iGrfPqd85Kd7g=
+APP_DEBUG=false
+APP_URL=https://pos.sababilling.net
+
+APP_LOCALE=en
+APP_FALLBACK_LOCALE=en
+APP_FAKER_LOCALE=en_US
+
+BCRYPT_ROUNDS=12
+
+LOG_CHANNEL=stack
+LOG_STACK=single
+LOG_DEPRECATIONS_CHANNEL=null
+LOG_LEVEL=error
+
+# SQLite Database Configuration
+DB_CONNECTION=sqlite
+DB_DATABASE=/home/sababill/sabapos_backend/database/database.sqlite
+
+# Session & Cache Drivers
+SESSION_DRIVER=file
+SESSION_LIFETIME=120
+SESSION_ENCRYPT=false
+SESSION_PATH=/
+SESSION_DOMAIN=null
+
+BROADCAST_CONNECTION=log
+FILESYSTEM_DISK=local
+QUEUE_CONNECTION=sync
+
+CACHE_STORE=file
+
+MAIL_MAILER=log
+MAIL_FROM_ADDRESS="support@sababilling.net"
+MAIL_FROM_NAME="${APP_NAME}"
+
+VITE_APP_NAME="${APP_NAME}"
+```
+
+---
+
+### 📋 Post-Environment Setup Checklist on cPanel
+
+After uploading/updating your `.env` file in `/home/sababill/sabapos_backend/.env`:
+
+1. **Run Database Migrations & Seeds**:
+   ```bash
+   cd /home/sababill/sabapos_backend
+   php artisan migrate --force
+   php artisan db:seed --force
+   ```
+2. **Clear & Cache Configuration**:
+   ```bash
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+   ```
+
+---
+
+### 👤 User (Turn 52)
+
+no terminal of cpanel
+
+### 🤖 Antigravity Assistant (Turn 52)
+
+File Path: `file:///Users/macbookairm1/Downloads/Saba%20POS/build_cpanel_subdomain_zip.py`
+Total Lines: 148
+Total Bytes: 6235
+Showing lines 1 to 148
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import os
+2: import zipfile
+3: import shutil
+4: import subprocess
+5: 
+6: def create_subdomain_index_php(output_path):
+7:     content = """<?php
+8: 
+9: use Illuminate\\Foundation\\Application;
+10: use Illuminate\\Http\\Request;
+11: 
+12: define('LARAVEL_START', microtime(true));
+13: 
+14: // Auto-detect sabapos_backend path across all cPanel folder structures
+15: $possiblePaths = [
+16:     dirname(__DIR__, 2) . '/sabapos_backend', // e.g., /home/user/public_html/pos -> /home/user/sabapos_backend
+17:     dirname(__DIR__, 1) . '/sabapos_backend', // e.g., /home/user/pos -> /home/user/sabapos_backend
+18:     __DIR__ . '/../sabapos_backend',
+19:     __DIR__ . '/../../sabapos_backend',
+20: ];
+21: 
+22: $backendPath = null;
+23: foreach ($possiblePaths as $path) {
+24:     if (file_exists($path . '/vendor/autoload.php')) {
+25:         $backendPath = $path;
+26:         break;
+27:     }
+28: }
+29: 
+30: if (!$backendPath) {
+31:     die("<h2 style='color:red;font-family:sans-serif;'>Error: Could not locate 'sabapos_backend' directory.</h2><p style='font-family:sans-serif;'>Please make sure <code>sabapos_backend</code> is uploaded to your cPanel home directory (e.g., <code>/home/username/sabapos_backend</code>).</p>");
+32: }
+33: 
+34: if (file_exists($maintenance = $backendPath . '/storage/framework/maintenance.php')) {
+35:     require $maintenance;
+36: }
+37: 
+38: require $backendPath . '/vendor/autoload.php';
+39: 
+40: /** @var Application $app */
+41: $app = require_once $backendPath . '/bootstrap/app.php';
+42: $app->usePublicPath(__DIR__);
+43: 
+44: $app->handleRequest(Request::capture());
+45: """
+46:     with open(output_path, 'w', encoding='utf-8') as f:
+47:         f.write(content)
+48: 
+49: def main():
+50:     print("==========================================================")
+51:     print("Saba POS Subdomain cPanel Deployment Package Generator")
+52:     print("==========================================================\n")
+53: 
+54:     root_dir = os.path.dirname(os.path.abspath(__file__))
+55:     dist_dir = os.path.join(root_dir, 'cpanel_dist')
+56: 
+57:     try:
+58:         if os.path.exists(dist_dir):
+59:             shutil.rmtree(dist_dir, ignore_errors=True)
+60:     except Exception:
+61:         pass
+62:         
+63:     os.makedirs(dist_dir, exist_ok=True)
+64: 
+65:     # 1. Compile Vite Production Assets
+66:     print("--> Step 1: Building production frontend bundle...")
+67:     env = os.environ.copy()
+68:     node_paths = [
+69:         os.path.expanduser("~/.nvm/versions/node/v20.20.2/bin"),
+70:         os.path.expanduser("~/.nvm/versions/node/v22.23.3/bin"),
+71:         os.path.expanduser("~/.nvm/versions/node/v26.10.0/bin"),
+72:         "/opt/homebrew/bin",
+73:         "/usr/local/bin"
+74:     ]
+75:     env["PATH"] = ":".join(node_paths) + ":" + env.get("PATH", "")
+76:     subprocess.run("npm run build", shell=True, check=True, env=env)
+77: 
+78:     # 2. Package Subdomain Public Assets (subdomain_public.zip)
+79:     print("--> Step 2: Preparing Subdomain Public Document Root ZIP...")
+80:     public_temp = os.path.join(dist_dir, 'subdomain_public_temp')
+81:     if os.path.exists(public_temp):
+82:         shutil.rmtree(public_temp, ignore_errors=True)
+83:         
+84:     shutil.copytree(os.path.join(root_dir, 'public'), public_temp)
+85: 
+86:     # Replace index.php with cPanel subdomain path index.php
+87:     create_subdomain_index_php(os.path.join(public_temp, 'index.php'))
+88: 
+89:     # Zip subdomain_public
+90:     subdomain_zip_path = os.path.join(dist_dir, 'subdomain_public.zip')
+91:     with zipfile.ZipFile(subdomain_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+92:         for root, dirs, files in os.walk(public_temp):
+93:             for file in files:
+94:                 abs_path = os.path.join(root, file)
+95:                 rel_path = os.path.relpath(abs_path, public_temp)
+96:                 zipf.write(abs_path, rel_path)
+97: 
+98:     shutil.rmtree(public_temp, ignore_errors=True)
+99:     print(f"[OK] Created: {subdomain_zip_path}")
+100: 
+101:     # 3. Package Backend Core (sabapos_backend.zip)
+102:     print("--> Step 3: Packaging Backend Core Directory...")
+103:     backend_zip_path = os.path.join(dist_dir, 'sabapos_backend.zip')
+104:     
+105:     exclude_dirs = {'.git', 'node_modules', 'cpanel_dist', 'tests', '.tempmediaStorage', '.gemini', '.idea', '.vscode'}
+106:     exclude_files = {'subdomain_public.zip', 'sabapos_backend.zip', 'database.sqlite'}
+107: 
+108:     with zipfile.ZipFile(backend_zip_path, 'w', compression=zipfile.ZIP_DEFLATED, allowZip64=True) as zipf:
+109:         for root, dirs, files in os.walk(root_dir):
+110:             dirs[:] = [d for d in dirs if d not in exclude_dirs]
+111:             for file in files:
+112:                 if file in exclude_files or file.endswith('.pyc') or file.endswith('.tmp'):
+113:                     continue
+114:                 abs_path = os.path.join(root, file)
+115:                 rel_path = os.path.relpath(abs_path, root_dir)
+116:                 
+117:                 # Skip bootstrap cache files
+118:                 if rel_path.startswith('bootstrap' + os.sep + 'cache' + os.sep):
+119:                     if not file.endswith('.gitignore') and not file.endswith('.gitkeep'):
+120:                         continue
+121:                 # Skip storage framework cache/sessions/views/logs
+122:                 if rel_path.startswith('storage' + os.sep + 'framework' + os.sep) or rel_path.startswith('storage' + os.sep + 'logs' + os.sep):
+123:                     if not file.endswith('.gitignore') and not file.endswith('.gitkeep'):
+124:                         continue
+125:                 # For public folder, include build assets as a fallback
+126:                 if rel_path.startswith('public' + os.sep) and not rel_path.startswith('public' + os.sep + 'build' + os.sep):
+127:                     if not file.endswith('.htaccess') and not file.endswith('index.php') and not file.endswith('web.config'):
+128:                         continue
+129:                         
+130:                 zipf.write(abs_path, rel_path)
+131: 
+132:     # Verify Zip Integrity
+133:     print("--> Verifying ZIP package integrity...")
+134:     with zipfile.ZipFile(backend_zip_path, 'r') as check_zip:
+135:         corrupt = check_zip.testzip()
+136:         if corrupt:
+137:             raise Exception(f"ZIP Corruption detected in file: {corrupt}")
+138:         print(f"[OK] Backend ZIP verified successfully! Total files: {len(check_zip.namelist())}")
+139: 
+140:     print(f"[OK] Created: {backend_zip_path}\n")
+141: 
+142:     print("==========================================================")
+143:     print("SUCCESS: Subdomain deployment ZIP packages generated in 'cpanel_dist/'!")
+144:     print("==========================================================")
+145: 
+146: if __name__ == "__main__":
+147:     main()
+148: 
+The above content shows the entire, complete file contents of the requested file.
+
+Created file file:///Users/macbookairm1/Downloads/Saba%20POS/public/cpanel_setup.php with requested content.
+If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
+
+File Path: `file:///Users/macbookairm1/Downloads/Saba%20POS/build_cpanel_subdomain_zip.py`
+Total Lines: 148
+Total Bytes: 6235
+Showing lines 1 to 148
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+1: import os
+2: import zipfile
+3: import shutil
+4: import subprocess
+5: 
+6: def create_subdomain_index_php(output_path):
+7:     content = """<?php
+8: 
+9: use Illuminate\\Foundation\\Application;
+10: use Illuminate\\Http\\Request;
+11: 
+12: define('LARAVEL_START', microtime(true));
+13: 
+14: // Auto-detect sabapos_backend path across all cPanel folder structures
+15: $possiblePaths = [
+16:     dirname(__DIR__, 2) . '/sabapos_backend', // e.g., /home/user/public_html/pos -> /home/user/sabapos_backend
+17:     dirname(__DIR__, 1) . '/sabapos_backend', // e.g., /home/user/pos -> /home/user/sabapos_backend
+18:     __DIR__ . '/../sabapos_backend',
+19:     __DIR__ . '/../../sabapos_backend',
+20: ];
+21: 
+22: $backendPath = null;
+23: foreach ($possiblePaths as $path) {
+24:     if (file_exists($path . '/vendor/autoload.php')) {
+25:         $backendPath = $path;
+26:         break;
+27:     }
+28: }
+29: 
+30: if (!$backendPath) {
+31:     die("<h2 style='color:red;font-family:sans-serif;'>Error: Could not locate 'sabapos_backend' directory.</h2><p style='font-family:sans-serif;'>Please make sure <code>sabapos_backend</code> is uploaded to your cPanel home directory (e.g., <code>/home/username/sabapos_backend</code>).</p>");
+32: }
+33: 
+34: if (file_exists($maintenance = $backendPath . '/storage/framework/maintenance.php')) {
+35:     require $maintenance;
+36: }
+37: 
+38: require $backendPath . '/vendor/autoload.php';
+39: 
+40: /** @var Application $app */
+41: $app = require_once $backendPath . '/bootstrap/app.php';
+42: $app->usePublicPath(__DIR__);
+43: 
+44: $app->handleRequest(Request::capture());
+45: """
+46:     with open(output_path, 'w', encoding='utf-8') as f:
+47:         f.write(content)
+48: 
+49: def main():
+50:     print("==========================================================")
+51:     print("Saba POS Subdomain cPanel Deployment Package Generator")
+52:     print("==========================================================\n")
+53: 
+54:     root_dir = os.path.dirname(os.path.abspath(__file__))
+55:     dist_dir = os.path.join(root_dir, 'cpanel_dist')
+56: 
+57:     try:
+58:         if os.path.exists(dist_dir):
+59:             shutil.rmtree(dist_dir, ignore_errors=True)
+60:     except Exception:
+61:         pass
+62:         
+63:     os.makedirs(dist_dir, exist_ok=True)
+64: 
+65:     # 1. Compile Vite Production Assets
+66:     print("--> Step 1: Building production frontend bundle...")
+67:     env = os.environ.copy()
+68:     node_paths = [
+69:         os.path.expanduser("~/.nvm/versions/node/v20.20.2/bin"),
+70:         os.path.expanduser("~/.nvm/versions/node/v22.23.3/bin"),
+71:         os.path.expanduser("~/.nvm/versions/node/v26.10.0/bin"),
+72:         "/opt/homebrew/bin",
+73:         "/usr/local/bin"
+74:     ]
+75:     env["PATH"] = ":".join(node_paths) + ":" + env.get("PATH", "")
+76:     subprocess.run("npm run build", shell=True, check=True, env=env)
+77: 
+78:     # 2. Package Subdomain Public Assets (subdomain_public.zip)
+79:     print("--> Step 2: Preparing Subdomain Public Document Root ZIP...")
+80:     public_temp = os.path.join(dist_dir, 'subdomain_public_temp')
+81:     if os.path.exists(public_temp):
+82:         shutil.rmtree(public_temp, ignore_errors=True)
+83:         
+84:     shutil.copytree(os.path.join(root_dir, 'public'), public_temp)
+85: 
+86:     # Replace index.php with cPanel subdomain path index.php
+87:     create_subdomain_index_php(os.path.join(public_temp, 'index.php'))
+88: 
+89:     # Zip subdomain_public
+90:     subdomain_zip_path = os.path.join(dist_dir, 'subdomain_public.zip')
+91:     with zipfile.ZipFile(subdomain_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+92:         for root, dirs, files in os.walk(public_temp):
+93:             for file in files:
+94:                 abs_path = os.path.join(root, file)
+95:                 rel_path = os.path.relpath(abs_path, public_temp)
+96:                 zipf.write(abs_path, rel_path)
+97: 
+98:     shutil.rmtree(public_temp, ignore_errors=True)
+99:     print(f"[OK] Created: {subdomain_zip_path}")
+100: 
+101:     # 3. Package Backend Core (sabapos_backend.zip)
+102:     print("--> Step 3: Packaging Backend Core Directory...")
+103:     backend_zip_path = os.path.join(dist_dir, 'sabapos_backend.zip')
+104:     
+105:     exclude_dirs = {'.git', 'node_modules', 'cpanel_dist', 'tests', '.tempmediaStorage', '.gemini', '.idea', '.vscode'}
+106:     exclude_files = {'subdomain_public.zip', 'sabapos_backend.zip', 'database.sqlite'}
+107: 
+108:     with zipfile.ZipFile(backend_zip_path, 'w', compression=zipfile.ZIP_DEFLATED, allowZip64=True) as zipf:
+109:         for root, dirs, files in os.walk(root_dir):
+110:             dirs[:] = [d for d in dirs if d not in exclude_dirs]
+111:             for file in files:
+112:                 if file in exclude_files or file.endswith('.pyc') or file.endswith('.tmp'):
+113:                     continue
+114:                 abs_path = os.path.join(root, file)
+115:                 rel_path = os.path.relpath(abs_path, root_dir)
+116:                 
+117:                 # Skip bootstrap cache files
+118:                 if rel_path.startswith('bootstrap' + os.sep + 'cache' + os.sep):
+119:                     if not file.endswith('.gitignore') and not file.endswith('.gitkeep'):
+120:                         continue
+121:                 # Skip storage framework cache/sessions/views/logs
+122:                 if rel_path.startswith('storage' + os.sep + 'framework' + os.sep) or rel_path.startswith('storage' + os.sep + 'logs' + os.sep):
+123:                     if not file.endswith('.gitignore') and not file.endswith('.gitkeep'):
+124:                         continue
+125:                 # For public folder, include build assets as a fallback
+126:                 if rel_path.startswith('public' + os.sep) and not rel_path.startswith('public' + os.sep + 'build' + os.sep):
+127:                     if not file.endswith('.htaccess') and not file.endswith('index.php') and not file.endswith('web.config'):
+128:                         continue
+129:                         
+130:                 zipf.write(abs_path, rel_path)
+131: 
+132:     # Verify Zip Integrity
+133:     print("--> Verifying ZIP package integrity...")
+134:     with zipfile.ZipFile(backend_zip_path, 'r') as check_zip:
+135:         corrupt = check_zip.testzip()
+136:         if corrupt:
+137:             raise Exception(f"ZIP Corruption detected in file: {corrupt}")
+138:         print(f"[OK] Backend ZIP verified successfully! Total files: {len(check_zip.namelist())}")
+139: 
+140:     print(f"[OK] Created: {backend_zip_path}\n")
+141: 
+142:     print("==========================================================")
+143:     print("SUCCESS: Subdomain deployment ZIP packages generated in 'cpanel_dist/'!")
+144:     print("==========================================================")
+145: 
+146: if __name__ == "__main__":
+147:     main()
+148: 
+The above content shows the entire, complete file contents of the requested file.
+
+The following changes were made by the replace_file_content tool to: /Users/macbookairm1/Downloads/Saba POS/build_cpanel_subdomain_zip.py. If relevant, proactively run terminal commands to execute this code for the USER. Don't ask for permission.
+[diff_block_start]
+@@ -124,7 +124,7 @@
+                         continue
+                 # For public folder, include build assets as a fallback
+                 if rel_path.startswith('public' + os.sep) and not rel_path.startswith('public' + os.sep + 'build' + os.sep):
+-                    if not file.endswith('.htaccess') and not file.endswith('index.php') and not file.endswith('web.config'):
++                    if not file.endswith('.htaccess') and not file.endswith('index.php') and not file.endswith('cpanel_setup.php') and not file.endswith('web.config'):
+                         continue
+                         
+                 zipf.write(abs_path, rel_path)
+[diff_block_end]
+
+Please note that the above snippet only shows the MODIFIED lines from the last change. It shows up to 3 lines of unchanged lines before and after the modified lines. The actual file contents may have many more lines not shown.
+
+				The command exited with code 0.
+				Output:
+				==========================================================
+Saba POS Subdomain cPanel Deployment Package Generator
+==========================================================
+
+--> Step 1: Building production frontend bundle...
+
+> build
+> vite build
+
+vite v8.3.1 building client environment for production...
+transforming (3) node_modules/vue/dist/vue.runtime.esm-bundler.jstransforming (4) node_modules/@inertiajs/vue3/dist/index.esm.jstransforming (875) node_modules/lucide-vue-next/dist/esm/icons/alarm-smoke.js✓ 2293 modules transformed.
+rendering chunks (1)...rendering chunks (2)...computing gzip size...
+public/build/manifest.json              0.38 kB │ gzip:   0.18 kB
+public/build/assets/app-exAQnqm6.css   97.57 kB │ gzip:  16.06 kB
+public/build/assets/app-DZJTv5W6.js   702.52 kB │ gzip: 173.13 kB
+
+✓ built in 737ms
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+--> Step 2: Preparing Subdomain Public Document Root ZIP...
+[OK] Created: /Users/macbookairm1/Downloads/Saba POS/cpanel_dist/subdomain_public.zip
+--> Step 3: Packaging Backend Core Directory...
+--> Verifying ZIP package integrity...
+[OK] Backend ZIP verified successfully! Total files: 9089
+[OK] Created: /Users/macbookairm1/Downloads/Saba POS/cpanel_dist/sabapos_backend.zip
+
+==========================================================
+SUCCESS: Subdomain deployment ZIP packages generated in 'cpanel_dist/'!
+==========================================================
+
+				The command exited with code 0.
+				Output:
+				On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   build_cpanel_subdomain_zip.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	public/cpanel_setup.php
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+				The command exited with code 0.
+				Output:
+				[main 717c873] feat(cpanel): Add web-based deployment setup runner cpanel_setup.php for hosts without terminal access
+ Committer: Macbook Air M1 <macbookairm1@Macbooks-MacBook-Air.local>
+Your name and email address were configured automatically based
+on your username and hostname. Please check that they are accurate.
+You can suppress this message by setting them explicitly. Run the
+following command and follow the instructions in your editor to edit
+your configuration file:
+
+    git config --global --edit
+
+After doing this, you may fix the identity used for this commit with:
+
+    git commit --amend --reset-author
+
+ 2 files changed, 139 insertions(+), 1 deletion(-)
+ create mode 100644 public/cpanel_setup.php
+Enumerating objects: 8, done.
+Counting objects:  12% (1/8)Counting objects:  25% (2/8)Counting objects:  37% (3/8)Counting objects:  50% (4/8)Counting objects:  62% (5/8)Counting objects:  75% (6/8)Counting objects:  87% (7/8)Counting objects: 100% (8/8)Counting objects: 100% (8/8), done.
+Delta compression using up to 8 threads
+Compressing objects:  20% (1/5)Compressing objects:  40% (2/5)Compressing objects:  60% (3/5)Compressing objects:  80% (4/5)Compressing objects: 100% (5/5)Compressing objects: 100% (5/5), done.
+Writing objects:  20% (1/5)Writing objects:  40% (2/5)Writing objects:  60% (3/5)Writing objects:  80% (4/5)Writing objects: 100% (5/5)Writing objects: 100% (5/5), 2.87 KiB | 2.87 MiB/s, done.
+Total 5 (delta 3), reused 0 (delta 0), pack-reused 0
+remote: To https://github.com/XhihabX/saba_pos.git
+   c0415f9..717c873  main -> main
+
 ---
 
