@@ -124,7 +124,7 @@ def main():
                         continue
                 # For public folder, include build assets as a fallback
                 if rel_path.startswith('public' + os.sep) and not rel_path.startswith('public' + os.sep + 'build' + os.sep):
-                    if not file.endswith('.htaccess') and not file.endswith('index.php') and not file.endswith('web.config'):
+                    if not file.endswith('.htaccess') and not file.endswith('index.php') and not file.endswith('cpanel_setup.php') and not file.endswith('web.config'):
                         continue
                         
                 zipf.write(abs_path, rel_path)
