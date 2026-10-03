@@ -59,6 +59,17 @@ foreach ($storageDirs as $dir) {
     @chmod($dir, 0777);
 }
 
+// Force purge stale route & config cache files on cPanel to ensure all newly added Super Admin routes register cleanly
+@unlink($backendPath . '/bootstrap/cache/routes-v7.php');
+@unlink($backendPath . '/bootstrap/cache/config.php');
+try {
+    Illuminate\Support\Facades\Artisan::call('route:clear');
+    Illuminate\Support\Facades\Artisan::call('config:clear');
+    Illuminate\Support\Facades\Artisan::call('cache:clear');
+} catch (\Throwable $e) {
+    // Ignore initial bootstrap cache clear exception
+}
+
 $action = $_GET['action'] ?? null;
 $outputLog = [];
 
