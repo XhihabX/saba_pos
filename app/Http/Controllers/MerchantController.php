@@ -191,8 +191,15 @@ class MerchantController extends Controller
             ->latest()
             ->get();
 
+        $stats = [
+            'total_customers' => Customer::where('tenant_id', $tenantId)->count(),
+            'total_due' => (float) Customer::where('tenant_id', $tenantId)->sum('due_balance'),
+            'total_points' => (int) Customer::where('tenant_id', $tenantId)->sum('points'),
+        ];
+
         return Inertia::render('Merchant/Customers', [
             'customers' => $customers,
+            'stats' => $stats,
         ]);
     }
 
@@ -257,9 +264,17 @@ class MerchantController extends Controller
             ->get();
         $stores = Store::where('tenant_id', $tenantId)->get();
 
+        $stats = [
+            'total_revenue' => (float) Order::where('tenant_id', $tenantId)->sum('grand_total'),
+            'total_orders' => Order::where('tenant_id', $tenantId)->count(),
+            'paid_orders' => Order::where('tenant_id', $tenantId)->where('payment_status', 'paid')->count(),
+            'due_orders' => Order::where('tenant_id', $tenantId)->whereIn('payment_status', ['due', 'partial'])->count(),
+        ];
+
         return Inertia::render('Merchant/Orders', [
             'orders' => $orders,
             'stores' => $stores,
+            'stats' => $stats,
         ]);
     }
 }

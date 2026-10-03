@@ -101,7 +101,7 @@
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
               <tr v-for="order in filteredOrders" :key="order.id" class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
-                <td class="py-3.5 px-3 font-mono font-black text-indigo-600 dark:text-indigo-400">{{ order.invoice_number || ('INV-' + order.id) }}</td>
+                <td class="py-3.5 px-3 font-mono font-black text-indigo-600 dark:text-indigo-400">{{ order.invoice_no || order.invoice_number || ('INV-' + order.id) }}</td>
                 <td class="py-3.5 px-3 font-semibold text-slate-900 dark:text-slate-100">{{ order.store?.name || 'Main Branch' }}</td>
                 <td class="py-3.5 px-3 text-slate-700 dark:text-slate-300 font-medium">{{ order.customer?.name || 'Walk-in Customer' }}</td>
                 <td class="py-3.5 px-3">
@@ -112,15 +112,15 @@
                 <td class="py-3.5 px-3">
                   <span class="px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider inline-flex items-center gap-1"
                     :class="{
-                      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30': (order.payment_status || 'PAID') === 'PAID',
+                      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30': (order.payment_status || 'PAID').toUpperCase() === 'PAID',
                       'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30': (order.payment_status || '').toUpperCase() === 'DUE',
                       'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30': (order.payment_status || '').toUpperCase() === 'PARTIAL'
                     }">
                     ● {{ (order.payment_status || 'PAID').toUpperCase() }}
                   </span>
                 </td>
-                <td class="py-3.5 px-3 font-black font-mono text-slate-900 dark:text-slate-100">৳{{ (order.total_amount || 0).toLocaleString() }}</td>
-                <td class="py-3.5 px-3 text-slate-600 dark:text-slate-400">{{ order.cashier?.name || 'Store Cashier' }}</td>
+                <td class="py-3.5 px-3 font-black font-mono text-slate-900 dark:text-slate-100">৳{{ ((order.grand_total ?? order.total_amount) || 0).toLocaleString() }}</td>
+                <td class="py-3.5 px-3 text-slate-600 dark:text-slate-400">{{ order.user?.name || order.cashier?.name || 'Store Cashier' }}</td>
                 <td class="py-3.5 px-3 text-right">
                   <button @click="openReceiptModal(order)" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 text-slate-700 dark:text-slate-300 font-semibold transition-colors inline-flex items-center gap-1.5">
                     <Printer class="w-3.5 h-3.5 text-indigo-500" />
@@ -144,7 +144,7 @@
           <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <h3 class="text-sm font-black text-slate-900 dark:text-white font-mono flex items-center gap-2">
               <Printer class="w-4 h-4 text-indigo-500" />
-              <span>Thermal Receipt {{ selectedOrder.invoice_number || ('INV-' + selectedOrder.id) }}</span>
+              <span>Thermal Receipt {{ selectedOrder.invoice_no || selectedOrder.invoice_number || ('INV-' + selectedOrder.id) }}</span>
             </h3>
             <button @click="selectedOrder = null" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl font-bold">&times;</button>
           </div>
@@ -168,12 +168,12 @@
 
             <!-- Items -->
             <div class="py-2 border-y border-dashed border-slate-300 space-y-1.5">
-              <div v-for="(item, idx) in (selectedOrder.items || [{ name: 'Retail Store Item', qty: 1, price: selectedOrder.total_amount || 0 }])" :key="idx" class="flex justify-between items-center">
+              <div v-for="(item, idx) in (selectedOrder.items || [{ product_name: 'Retail Store Item', quantity: 1, unit_price: selectedOrder.grand_total || 0 }])" :key="idx" class="flex justify-between items-center">
                 <div>
-                  <div class="font-bold text-slate-900">{{ item.name || 'POS Product Item' }}</div>
-                  <div class="text-[9px] text-slate-500">{{ item.qty || 1 }} x ৳{{ (item.price || 0).toLocaleString() }}</div>
+                  <div class="font-bold text-slate-900">{{ item.product_name || item.name || 'POS Product Item' }}</div>
+                  <div class="text-[9px] text-slate-500">{{ item.quantity || item.qty || 1 }} x ৳{{ (item.unit_price || item.price || 0).toLocaleString() }}</div>
                 </div>
-                <div class="font-bold">৳{{ ((item.qty || 1) * (item.price || 0)).toLocaleString() }}</div>
+                <div class="font-bold">৳{{ ((item.quantity || item.qty || 1) * (item.unit_price || item.price || 0)).toLocaleString() }}</div>
               </div>
             </div>
 
@@ -181,7 +181,7 @@
             <div class="space-y-1 text-right pt-1">
               <div class="flex justify-between">
                 <span>Subtotal:</span>
-                <span>৳{{ (selectedOrder.subtotal || selectedOrder.total_amount || 0).toLocaleString() }}</span>
+                <span>৳{{ (selectedOrder.subtotal || selectedOrder.grand_total || 0).toLocaleString() }}</span>
               </div>
               <div class="flex justify-between">
                 <span>Vat / Tax:</span>
@@ -189,7 +189,7 @@
               </div>
               <div class="flex justify-between text-xs font-black pt-1 border-t border-slate-300 text-slate-900">
                 <span>GRAND TOTAL:</span>
-                <span>৳{{ (selectedOrder.total_amount || 0).toLocaleString() }}</span>
+                <span>৳{{ (selectedOrder.grand_total || selectedOrder.total_amount || 0).toLocaleString() }}</span>
               </div>
             </div>
 
