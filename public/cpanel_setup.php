@@ -40,6 +40,25 @@ $app = require_once $backendPath . '/bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
+// Ensure storage framework session/cache directories exist with writable permissions
+$storageDirs = [
+    $backendPath . '/storage/app',
+    $backendPath . '/storage/app/public',
+    $backendPath . '/storage/framework',
+    $backendPath . '/storage/framework/cache',
+    $backendPath . '/storage/framework/sessions',
+    $backendPath . '/storage/framework/views',
+    $backendPath . '/storage/logs',
+    $backendPath . '/bootstrap/cache',
+];
+
+foreach ($storageDirs as $dir) {
+    if (!file_exists($dir)) {
+        @mkdir($dir, 0777, true);
+    }
+    @chmod($dir, 0777);
+}
+
 $action = $_GET['action'] ?? null;
 $outputLog = [];
 
