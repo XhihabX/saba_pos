@@ -74,6 +74,16 @@ try {
 $action = $_GET['action'] ?? null;
 $outputLog = [];
 
+// Automatic Database Connection Diagnostics Check
+try {
+    Illuminate\Support\Facades\DB::connection()->getPdo();
+    $dbName = Illuminate\Support\Facades\DB::connection()->getDatabaseName();
+    $outputLog[] = "--> [SUCCESS] MySQL Database Connected Successfully! (Active DB: '$dbName')";
+} catch (\Throwable $dbEx) {
+    $outputLog[] = "--> [ERROR] Database Connection Failed: " . $dbEx->getMessage();
+    $outputLog[] = "--> [TIP] Check your cPanel MySQL Database credentials in 'sabapos_backend/.env'!";
+}
+
 if ($action) {
     try {
         if ($action === 'fresh_seed') {
