@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
 use App\Models\Order;
 use App\Models\Store;
 use App\Models\Tenant;
@@ -149,6 +150,116 @@ class MerchantController extends Controller
 
         return Inertia::render('Merchant/Subscription', [
             'tenant' => $tenant,
+        ]);
+    }
+
+    public function settings()
+    {
+        $tenantId = $this->getTenantId();
+        $tenant = Tenant::findOrFail($tenantId);
+
+        return Inertia::render('Merchant/Settings', [
+            'tenant' => $tenant,
+        ]);
+    }
+
+    public function updateSettings(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+        $tenant = Tenant::findOrFail($tenantId);
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:50',
+            'currency_symbol' => 'required|string|max:10',
+            'default_tax_rate' => 'required|numeric|min:0|max:100',
+            'receipt_header' => 'nullable|string',
+            'receipt_footer' => 'nullable|string',
+            'invoice_prefix' => 'required|string|max:20',
+        ]);
+
+        $tenant->update($validated);
+
+        return redirect()->back()->with('success', 'Merchant store settings saved successfully!');
+    }
+
+    public function customersIndex()
+    {
+        $tenantId = $this->getTenantId();
+        $customers = Customer::where('tenant_id', $tenantId)
+            ->withCount('orders')
+            ->latest()
+            ->get();
+
+        return Inertia::render('Merchant/Customers', [
+            'customers' => $customers,
+        ]);
+    }
+
+    public function storeCustomer(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:50',
+            'email' => 'nullable|email',
+            'address' => 'nullable|string',
+            'due_balance' => 'nullable|numeric|min:0',
+        ]);
+
+        Customer::create([
+            'tenant_id' => $tenantId,
+            'name' => $validated['name'],
+            'phone' => $validated['phone'],
+            'email' => $validated['email'] ?? null,
+            'address' => $validated['address'] ?? null,
+            'due_balance' => $validated['due_balance'] ?? 0.00,
+        ]);
+
+        return redirect()->back()->with('success', "Customer '{$validated['name']}' registered.");
+    }
+
+    public function updateCustomer(Request $request, $id)
+    {
+        $tenantId = $this->getTenantId();
+        $customer = Customer::where('id', $id)->where('tenant_id', $tenantId)->firstOrFail();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => 'required|string|max:50',
+            'email' => 'nullable|email',
+            'address' => 'nullable|string',
+            'due_balance' => 'nullable|numeric|min:0',
+        ]);
+
+        $customer->update($validated);
+
+        return redirect()->back()->with('success', "Customer '{$customer->name}' profile updated.");
+    }
+
+    public function deleteCustomer($id)
+    {
+        $tenantId = $this->getTenantId();
+        $customer = Customer::where('id', $id)->where('tenant_id', $tenantId)->firstOrFail();
+        $name = $customer->name;
+        $customer->delete();
+
+        return redirect()->back()->with('success', "Customer '{$name}' archived.");
+    }
+
+    public function ordersIndex()
+    {
+        $tenantId = $this->getTenantId();
+        $orders = Order::where('tenant_id', $tenantId)
+            ->with(['store', 'customer', 'items.product', 'user'])
+            ->latest()
+            ->get();
+        $stores = Store::where('tenant_id', $tenantId)->get();
+
+        return Inertia::render('Merchant/Orders', [
+            'orders' => $orders,
+            'stores' => $stores,
         ]);
     }
 }

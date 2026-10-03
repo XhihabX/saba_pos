@@ -1,8 +1,8 @@
 <template>
   <AuthenticatedLayout>
-    <div class="p-4 sm:p-6 w-full space-y-6 bg-slate-900 min-h-screen text-slate-100 selection:bg-indigo-500 selection:text-white">
-      <!-- Dark Hero Banner -->
-      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/20 p-6 sm:p-8 shadow-2xl">
+    <div class="p-4 sm:p-6 w-full space-y-6 bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-slate-100 selection:bg-indigo-500 selection:text-white transition-colors">
+      <!-- Dark Hero Banner (Fixed Anchor Element) -->
+      <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-500/20 p-6 sm:p-8 shadow-2xl text-white">
         <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div>
@@ -27,67 +27,67 @@
 
       <!-- KPI Stat Cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 backdrop-blur-md flex items-center justify-between shadow-lg">
+        <div class="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 backdrop-blur-md flex items-center justify-between shadow-xs dark:shadow-xl dark:shadow-black/20">
           <div>
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total Suppliers</span>
-            <span class="text-2xl font-black font-heading text-white mt-1 block">{{ suppliers.length }} Vendors</span>
+            <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Total Suppliers</span>
+            <span class="text-2xl font-black font-heading text-slate-900 dark:text-white mt-1 block">{{ suppliers.length }} Vendors</span>
           </div>
-          <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold">
+          <div class="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
             <Truck class="w-6 h-6" />
           </div>
         </div>
 
-        <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 backdrop-blur-md flex items-center justify-between shadow-lg">
+        <div class="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 backdrop-blur-md flex items-center justify-between shadow-xs dark:shadow-xl dark:shadow-black/20">
           <div>
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Total PO Orders</span>
-            <span class="text-2xl font-black font-heading text-cyan-400 mt-1 block">{{ totalPurchaseOrders }} POs</span>
+            <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Total PO Orders</span>
+            <span class="text-2xl font-black font-heading text-cyan-600 dark:text-cyan-400 mt-1 block">{{ totalPurchaseOrders }} POs</span>
           </div>
-          <div class="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 flex items-center justify-center font-bold">
+          <div class="w-12 h-12 rounded-2xl bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold">
             <ShoppingBag class="w-6 h-6" />
           </div>
         </div>
 
-        <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 backdrop-blur-md flex items-center justify-between shadow-lg">
+        <div class="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 backdrop-blur-md flex items-center justify-between shadow-xs dark:shadow-xl dark:shadow-black/20">
           <div>
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Accounts Payable Due</span>
-            <span class="text-2xl font-black font-heading text-rose-400 mt-1 block">৳{{ totalDueBalance.toLocaleString() }}</span>
+            <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Accounts Payable Due</span>
+            <span class="text-2xl font-black font-heading text-rose-600 dark:text-rose-400 mt-1 block">৳{{ totalDueBalance.toLocaleString() }}</span>
           </div>
-          <div class="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center font-bold">
+          <div class="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold">
             <DollarSign class="w-6 h-6" />
           </div>
         </div>
 
-        <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-5 backdrop-blur-md flex items-center justify-between shadow-lg">
+        <div class="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-5 backdrop-blur-md flex items-center justify-between shadow-xs dark:shadow-xl dark:shadow-black/20">
           <div>
-            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Clear Balance Vendors</span>
-            <span class="text-2xl font-black font-heading text-emerald-400 mt-1 block">{{ clearSuppliersCount }} Clean</span>
+            <span class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">Clear Balance Vendors</span>
+            <span class="text-2xl font-black font-heading text-emerald-600 dark:text-emerald-400 mt-1 block">{{ clearSuppliersCount }} Clean</span>
           </div>
-          <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center font-bold">
+          <div class="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
             <CheckCircle2 class="w-6 h-6" />
           </div>
         </div>
       </div>
 
       <!-- Suppliers Table Card -->
-      <div class="bg-slate-800/90 border border-slate-700/80 rounded-3xl p-6 shadow-2xl space-y-4 backdrop-blur-md">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-700/60">
+      <div class="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 rounded-3xl p-6 shadow-xs dark:shadow-2xl space-y-4 backdrop-blur-md">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100 dark:border-slate-800/60">
           <div class="relative w-full sm:w-80">
             <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input 
               v-model="searchQuery" 
               type="text" 
               placeholder="Search vendor company, contact, or email..." 
-              class="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+              class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500"
             />
           </div>
 
-          <span class="text-xs text-slate-400 font-mono">Showing {{ filteredSuppliers.length }} suppliers</span>
+          <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">Showing {{ filteredSuppliers.length }} suppliers</span>
         </div>
 
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs border-collapse">
             <thead>
-              <tr class="text-slate-400 border-b border-slate-700/60 uppercase text-[10px] bg-slate-900/60 font-semibold tracking-wider">
+              <tr class="text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase text-[10px] bg-slate-50 dark:bg-slate-800/60 font-semibold tracking-wider">
                 <th class="py-3.5 px-4">Supplier Company</th>
                 <th class="py-3.5 px-4">Contact Representative</th>
                 <th class="py-3.5 px-4">Phone / Email</th>
@@ -96,39 +96,39 @@
                 <th class="py-3.5 px-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-700/60">
-              <tr v-for="supplier in filteredSuppliers" :key="supplier.id" class="hover:bg-slate-700/30 transition-colors">
-                <td class="py-4 px-4 font-bold text-white text-sm font-heading flex items-center gap-3">
-                  <div class="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 flex items-center justify-center font-bold">
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800/60">
+              <tr v-for="supplier in filteredSuppliers" :key="supplier.id" class="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                <td class="py-4 px-4 font-bold text-slate-900 dark:text-white text-sm font-heading flex items-center gap-3">
+                  <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-400 flex items-center justify-center font-bold">
                     {{ supplier.company_name.charAt(0) }}
                   </div>
                   <span>{{ supplier.company_name }}</span>
                 </td>
-                <td class="py-4 px-4 text-slate-300 font-medium">{{ supplier.contact_person || 'N/A' }}</td>
-                <td class="py-4 px-4 text-slate-300">
-                  <div class="font-mono text-xs text-white">{{ supplier.phone || 'N/A' }}</div>
-                  <div class="text-[10px] text-slate-400 font-mono">{{ supplier.email }}</div>
+                <td class="py-4 px-4 text-slate-700 dark:text-slate-300 font-medium">{{ supplier.contact_person || 'N/A' }}</td>
+                <td class="py-4 px-4 text-slate-700 dark:text-slate-300">
+                  <div class="font-mono text-xs text-slate-900 dark:text-white">{{ supplier.phone || 'N/A' }}</div>
+                  <div class="text-[10px] text-slate-400 dark:text-slate-400 font-mono">{{ supplier.email }}</div>
                 </td>
                 <td class="py-4 px-4 text-center">
-                  <span class="px-2.5 py-1 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 font-bold text-xs font-mono">
+                  <span class="px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 font-bold text-xs font-mono">
                     {{ supplier.purchases_count || 0 }} POs
                   </span>
                 </td>
-                <td class="py-4 px-4 text-right font-bold font-mono text-sm" :class="supplier.due_balance > 0 ? 'text-rose-400' : 'text-emerald-400'">
+                <td class="py-4 px-4 text-right font-bold font-mono text-sm" :class="supplier.due_balance > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'">
                   ৳{{ parseFloat(supplier.due_balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 }) }}
                 </td>
                 <td class="py-4 px-4 text-center">
                   <div class="flex items-center justify-center gap-2">
                     <button 
                       @click="openEditModal(supplier)" 
-                      class="p-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 transition-colors" 
+                      class="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-500/30 transition-colors" 
                       title="Edit Supplier"
                     >
                       <Edit3 class="w-4 h-4" />
                     </button>
                     <button 
                       @click="deleteSupplier(supplier)" 
-                      class="p-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-colors" 
+                      class="p-2 rounded-xl bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 transition-colors" 
                       title="Delete Supplier"
                     >
                       <Trash2 class="w-4 h-4" />
@@ -145,40 +145,40 @@
       </div>
 
       <!-- Add/Edit Supplier Modal -->
-      <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4">
-        <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-4">
-          <div class="flex items-center justify-between pb-3 border-b border-slate-800">
-            <h3 class="text-lg font-black text-white font-heading flex items-center gap-2">
-              <Truck class="w-5 h-5 text-indigo-400" />
+      <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 w-full max-w-lg shadow-2xl space-y-4 text-slate-900 dark:text-slate-100">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h3 class="text-lg font-black text-slate-900 dark:text-white font-heading flex items-center gap-2">
+              <Truck class="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
               <span>{{ isEditing ? 'Edit Supplier Account' : 'Add New Supplier Account' }}</span>
             </h3>
-            <button @click="showModal = false" class="text-slate-400 hover:text-white text-xl font-bold">&times;</button>
+            <button @click="showModal = false" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl font-bold">&times;</button>
           </div>
 
           <form @submit.prevent="submitForm" class="space-y-4 text-xs">
             <div>
-              <label class="block text-slate-300 font-semibold mb-1">Company / Vendor Name</label>
-              <input v-model="form.company_name" required type="text" placeholder="e.g. Apex Distribution Ltd" class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-indigo-500" />
+              <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Company / Vendor Name</label>
+              <input v-model="form.company_name" required type="text" placeholder="e.g. Apex Distribution Ltd" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500" />
             </div>
 
             <div>
-              <label class="block text-slate-300 font-semibold mb-1">Contact Person</label>
-              <input v-model="form.contact_person" type="text" placeholder="e.g. Tanvir Ahmed" class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-indigo-500" />
+              <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Contact Person</label>
+              <input v-model="form.contact_person" type="text" placeholder="e.g. Tanvir Ahmed" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500" />
             </div>
 
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-slate-300 font-semibold mb-1">Phone Number</label>
-                <input v-model="form.phone" type="text" placeholder="+880 1800-000000" class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-indigo-500" />
+                <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Phone Number</label>
+                <input v-model="form.phone" type="text" placeholder="+880 1800-000000" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500" />
               </div>
               <div>
-                <label class="block text-slate-300 font-semibold mb-1">Email Address</label>
-                <input v-model="form.email" type="email" placeholder="vendor@apex.com" class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:border-indigo-500" />
+                <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Email Address</label>
+                <input v-model="form.email" type="email" placeholder="vendor@apex.com" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500" />
               </div>
             </div>
 
-            <div class="pt-4 border-t border-slate-800 flex justify-end gap-3">
-              <button type="button" @click="showModal = false" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-semibold">Cancel</button>
+            <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+              <button type="button" @click="showModal = false" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold">Cancel</button>
               <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20">{{ isEditing ? 'Update Supplier' : 'Save Supplier' }}</button>
             </div>
           </form>

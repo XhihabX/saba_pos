@@ -1,27 +1,27 @@
 <template>
-  <!-- Full Screen Container (Shopify & Posify Clean Light Theme) -->
-  <div class="min-h-screen bg-slate-100 text-slate-900 flex font-sans antialiased selection:bg-emerald-500 selection:text-white">
+  <!-- Full Screen Container (Dual Light & Dark Theme) -->
+  <div class="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-200">
     
-    <!-- Left Light Theme Sidebar -->
+    <!-- Left Theme-Adaptive Sidebar -->
     <aside 
       v-if="isSidebarLayout"
       :class="[
-        'bg-white text-slate-800 flex flex-col transition-all duration-300 z-40 fixed lg:static inset-y-0 left-0 border-r border-slate-200 shadow-sm',
+        'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 flex flex-col transition-all duration-300 z-40 fixed lg:static inset-y-0 left-0 border-r border-slate-200 dark:border-slate-800/80 shadow-xs',
         sidebarCollapsed ? 'w-20' : 'w-72',
         mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       ]"
     >
       <!-- Sidebar Header / Branding -->
-      <div class="h-16 px-4 flex items-center justify-between border-b border-slate-200 shrink-0 bg-white">
+      <div class="h-16 px-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
         <Link :href="route('landing')" class="flex items-center gap-3 overflow-hidden">
           <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center font-black text-xl text-white shadow-md shadow-emerald-600/20 shrink-0">
             S
           </div>
           <div v-if="!sidebarCollapsed" class="truncate">
-            <div class="font-extrabold text-base leading-none font-heading text-slate-900 tracking-wide">
+            <div class="font-extrabold text-base leading-none font-heading text-slate-900 dark:text-slate-100 tracking-wide">
               Saba POS
             </div>
-            <div class="text-[10px] text-emerald-700 uppercase tracking-widest font-black mt-1">
+            <div class="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase tracking-widest font-black mt-1">
               Shopify SaaS ERP
             </div>
           </div>
@@ -29,7 +29,7 @@
 
         <button 
           @click="sidebarCollapsed = !sidebarCollapsed"
-          class="hidden lg:flex p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition-colors border border-slate-200"
+          class="hidden lg:flex p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors border border-slate-200 dark:border-slate-700"
           :title="sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'"
         >
           <ChevronLeft v-if="!sidebarCollapsed" class="w-4 h-4" />
@@ -38,20 +38,20 @@
 
         <button 
           @click="mobileSidebarOpen = false"
-          class="lg:hidden p-1.5 rounded-lg bg-slate-100 text-slate-600 hover:text-slate-900"
+          class="lg:hidden p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
         >
           <X class="w-5 h-5" />
         </button>
       </div>
 
       <!-- Current Role & Security Banner in Sidebar -->
-      <div v-if="!sidebarCollapsed" class="px-4 py-3 bg-slate-50 border-b border-slate-200">
+      <div v-if="!sidebarCollapsed" class="px-4 py-3 bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200 dark:border-slate-800">
         <div class="flex items-center gap-2">
-          <ShieldCheck class="w-4 h-4 text-emerald-600 shrink-0" />
-          <span class="text-xs font-extrabold text-slate-800 truncate">{{ roleLabel }}</span>
+          <ShieldCheck class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 truncate">{{ roleLabel }}</span>
         </div>
-        <div class="flex items-center gap-1.5 mt-1 text-[10px] text-slate-600 font-mono font-bold">
-          <Lock class="w-3 h-3 text-emerald-600 shrink-0" />
+        <div class="flex items-center gap-1.5 mt-1 text-[10px] text-slate-600 dark:text-slate-400 font-mono font-bold">
+          <Lock class="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>256-BIT SSL ENCRYPTED</span>
         </div>
       </div>
@@ -181,7 +181,7 @@
 
         <!-- 🏢 MERCHANT HQ PORTAL MENU -->
         <div v-if="userRole === 'merchant'">
-          <div v-if="!sidebarCollapsed" class="px-3 mb-2 text-[10px] font-extrabold uppercase tracking-widest text-indigo-600">
+          <div v-if="!sidebarCollapsed" class="px-3 mb-2 text-[10px] font-extrabold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
             Merchant HQ & Chain
           </div>
           <div class="space-y-1">
@@ -189,120 +189,150 @@
               href="/merchant/dashboard"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'Merchant/Dashboard' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'Merchant/Dashboard' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <Building2 class="w-4 h-4 text-indigo-600 shrink-0" />
+              <Building2 class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Executive BI Overview</span>
             </Link>
             <Link 
               href="/merchant/stores"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'Merchant/Stores' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'Merchant/Stores' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <Store class="w-4 h-4 text-indigo-600 shrink-0" />
+              <Store class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Store Outlets Manager</span>
             </Link>
             <Link 
               href="/merchant/users"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'Merchant/Users' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'Merchant/Users' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <UserCheck class="w-4 h-4 text-indigo-600 shrink-0" />
+              <UserCheck class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Staff & Role Access</span>
+            </Link>
+            <Link 
+              href="/merchant/customers"
+              :class="[
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
+                $page.component === 'Merchant/Customers' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
+              ]"
+            >
+              <Users class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span v-if="!sidebarCollapsed">Customer CRM & Loyalty</span>
+            </Link>
+            <Link 
+              href="/merchant/orders"
+              :class="[
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
+                $page.component === 'Merchant/Orders' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
+              ]"
+            >
+              <Receipt class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span v-if="!sidebarCollapsed">Chain Sales Orders</span>
             </Link>
             <Link 
               href="/products"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'Products/Index' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'Products/Index' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <Package class="w-4 h-4 text-indigo-600 shrink-0" />
+              <Package class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Products Catalog</span>
             </Link>
             <Link 
               href="/products/barcodes"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'Products/Barcodes' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'Products/Barcodes' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <Barcode class="w-4 h-4 text-indigo-600 shrink-0" />
+              <Barcode class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Barcode Label Generator</span>
             </Link>
             <Link 
               href="/merchant/suppliers"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'Merchant/Suppliers' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'Merchant/Suppliers' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <Truck class="w-4 h-4 text-indigo-600 shrink-0" />
+              <Truck class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Supplier Directory</span>
             </Link>
             <Link 
               href="/merchant/purchases"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'Merchant/Purchases' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'Merchant/Purchases' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <ShoppingBag class="w-4 h-4 text-indigo-600 shrink-0" />
+              <ShoppingBag class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Inventory Purchases</span>
             </Link>
             <Link 
               href="/sales/quotations"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'Sales/Quotations' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'Sales/Quotations' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <FileText class="w-4 h-4 text-indigo-600 shrink-0" />
+              <FileText class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Sales Quotations</span>
             </Link>
             <Link 
               href="/expenses"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'Expenses/Index' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'Expenses/Index' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <DollarSign class="w-4 h-4 text-indigo-600 shrink-0" />
+              <DollarSign class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Store Expenses</span>
             </Link>
             <Link 
               href="/hrm/attendance"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'HRM/Attendance' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'HRM/Attendance' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <Clock class="w-4 h-4 text-indigo-600 shrink-0" />
+              <Clock class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Staff Attendance & Clock</span>
             </Link>
             <Link 
               href="/reports/profit-loss"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'Reports/ProfitLoss' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'Reports/ProfitLoss' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <TrendingUp class="w-4 h-4 text-indigo-600 shrink-0" />
+              <TrendingUp class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Profit & Loss Accounting</span>
+            </Link>
+            <Link 
+              href="/merchant/settings"
+              :class="[
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
+                $page.component === 'Merchant/Settings' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
+              ]"
+            >
+              <Settings class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span v-if="!sidebarCollapsed">Merchant HQ Settings</span>
             </Link>
             <Link 
               href="/merchant/subscription"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'Merchant/Subscription' ? 'bg-indigo-50 text-indigo-800 border-indigo-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'Merchant/Subscription' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
-              <CreditCard class="w-4 h-4 text-indigo-600 shrink-0" />
+              <CreditCard class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Billing & SaaS Plan</span>
             </Link>
           </div>
@@ -441,14 +471,14 @@
     <div class="flex-1 flex flex-col min-w-0 min-h-screen">
       
       <!-- Top Navigation Bar -->
-      <header class="h-16 bg-white border-b border-slate-200 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+      <header class="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs transition-colors">
         
         <!-- Left: Mobile Menu Toggle & Page Context -->
         <div class="flex items-center gap-3">
           <button 
             v-if="isSidebarLayout"
             @click="mobileSidebarOpen = !mobileSidebarOpen"
-            class="lg:hidden p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+            class="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
           >
             <Menu class="w-5 h-5" />
           </button>
@@ -459,10 +489,10 @@
               S
             </div>
             <div>
-              <div class="font-bold text-base leading-none font-heading text-slate-900">
+              <div class="font-bold text-base leading-none font-heading text-slate-900 dark:text-slate-100">
                 Saba POS
               </div>
-              <div class="text-[9px] text-emerald-700 uppercase tracking-wider font-extrabold">
+              <div class="text-[9px] text-emerald-600 dark:text-emerald-400 uppercase tracking-wider font-extrabold">
                 Counter Workstation
               </div>
             </div>
@@ -470,18 +500,29 @@
 
           <!-- Page Title Breadcrumb -->
           <div v-else class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">Portal /</span>
-            <span class="text-sm font-extrabold text-slate-900">{{ currentTabTitle }}</span>
+            <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hidden sm:inline">Portal /</span>
+            <span class="text-sm font-extrabold text-slate-900 dark:text-slate-100">{{ currentTabTitle }}</span>
           </div>
         </div>
 
         <!-- Right Header Utility Tools -->
         <div class="flex items-center gap-2 sm:gap-3">
+          
+          <!-- ☀️ / 🌙 Theme Switcher Toggle Button -->
+          <button 
+            @click="toggleTheme" 
+            class="flex items-center justify-center p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all active:scale-95 shadow-2xs"
+            :title="isDarkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'"
+          >
+            <Sun v-if="isDarkMode" class="w-4 h-4 text-amber-400 fill-amber-400/20" />
+            <Moon v-else class="w-4 h-4 text-indigo-600" />
+          </button>
+
           <!-- Posify Language Selector -->
           <div class="relative">
             <select 
               v-model="selectedLanguage"
-              class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 focus:outline-none cursor-pointer pr-6 appearance-none"
+              class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 focus:outline-none cursor-pointer pr-6 appearance-none"
             >
               <option value="en">🇺🇸 EN</option>
               <option value="bn">🇧🇩 BN</option>
@@ -489,16 +530,16 @@
               <option value="ar">🇦🇪 AR</option>
               <option value="fr">🇫🇷 FR</option>
             </select>
-            <Globe class="w-3 h-3 text-slate-500 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Globe class="w-3 h-3 text-slate-500 dark:text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
           <!-- Posify Quick Calculator Modal Button -->
           <button 
             @click="showCalcModal = !showCalcModal" 
-            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700"
             title="Quick POS Calculator"
           >
-            <Calculator class="w-3.5 h-3.5 text-amber-600" />
+            <Calculator class="w-3.5 h-3.5 text-amber-500" />
             <span class="hidden xl:inline">Calc</span>
           </button>
 
@@ -506,29 +547,29 @@
           <div class="relative">
             <button 
               @click="showRoleDropdown = !showRoleDropdown"
-              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-extrabold text-xs border border-emerald-300 transition-colors shadow-2xs"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-extrabold text-xs border border-emerald-300 dark:border-emerald-800 transition-colors shadow-2xs"
               title="Switch Persona Role"
             >
-              <UserCheck class="w-3.5 h-3.5 text-emerald-600" />
+              <UserCheck class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               <span>{{ roleLabel }}</span>
-              <span class="text-[10px] text-emerald-600">▼</span>
+              <span class="text-[10px] text-emerald-600 dark:text-emerald-400">▼</span>
             </button>
 
             <!-- User Profile Dropdown Popover -->
-            <div v-if="showRoleDropdown" class="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-xl p-3 z-50 space-y-2">
+            <div v-if="showRoleDropdown" class="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-3 z-50 space-y-2 text-slate-900 dark:text-slate-100">
               <div class="px-1 py-1">
-                <div class="font-extrabold text-xs text-slate-900 truncate">{{ userName }}</div>
-                <div class="text-[10px] text-slate-500 truncate">{{ userEmail }}</div>
+                <div class="font-extrabold text-xs text-slate-900 dark:text-slate-100 truncate">{{ userName }}</div>
+                <div class="text-[10px] text-slate-500 dark:text-slate-400 truncate">{{ userEmail }}</div>
               </div>
-              <div class="border-t border-slate-100 my-1"></div>
+              <div class="border-t border-slate-100 dark:border-slate-800 my-1"></div>
               <Link 
                 :href="route('logout')" 
                 method="post" 
                 as="button"
                 @click="showRoleDropdown = false"
-                class="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition-colors text-left"
+                class="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors text-left"
               >
-                <X class="w-3.5 h-3.5 text-rose-600" />
+                <X class="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                 <span>Sign Out</span>
               </Link>
             </div>
@@ -547,45 +588,45 @@
       </header>
 
       <!-- Quick Calculator Modal Pop-over (Posify Feature) -->
-      <div v-if="showCalcModal" class="fixed bottom-6 right-6 z-50 bg-white border border-slate-300 rounded-3xl p-5 shadow-2xl w-72 space-y-3 font-mono">
-        <div class="flex items-center justify-between border-b border-slate-200 pb-2">
-          <span class="font-bold text-xs text-slate-900 font-sans flex items-center gap-1.5">
-            <Calculator class="w-4 h-4 text-amber-600" /> Quick POS Calc
+      <div v-if="showCalcModal" class="fixed bottom-6 right-6 z-50 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-3xl p-5 shadow-2xl w-72 space-y-3 font-mono text-slate-900 dark:text-slate-100">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+          <span class="font-bold text-xs text-slate-900 dark:text-slate-100 font-sans flex items-center gap-1.5">
+            <Calculator class="w-4 h-4 text-amber-500" /> Quick POS Calc
           </span>
-          <button @click="showCalcModal = false" class="text-slate-400 hover:text-slate-700 font-sans">
+          <button @click="showCalcModal = false" class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 font-sans">
             ✕
           </button>
         </div>
-        <div class="bg-slate-50 border border-slate-300 p-3 rounded-xl text-right text-lg font-black text-slate-900 overflow-x-auto">
+        <div class="bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 p-3 rounded-xl text-right text-lg font-black text-slate-900 dark:text-slate-100 overflow-x-auto">
           {{ calcDisplay || '0' }}
         </div>
-        <div class="grid grid-cols-4 gap-1.5 text-xs font-bold text-slate-800">
-          <button @click="calcInput('C')" class="p-2.5 rounded-lg bg-rose-100 text-rose-800 hover:bg-rose-200">C</button>
-          <button @click="calcInput('/')" class="p-2.5 rounded-lg bg-slate-100 hover:bg-slate-200">÷</button>
-          <button @click="calcInput('*')" class="p-2.5 rounded-lg bg-slate-100 hover:bg-slate-200">×</button>
-          <button @click="calcInput('-')" class="p-2.5 rounded-lg bg-slate-100 hover:bg-slate-200">-</button>
+        <div class="grid grid-cols-4 gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+          <button @click="calcInput('C')" class="p-2.5 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-900">C</button>
+          <button @click="calcInput('/')" class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700">÷</button>
+          <button @click="calcInput('*')" class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700">×</button>
+          <button @click="calcInput('-')" class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700">-</button>
 
-          <button @click="calcInput('7')" class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100">7</button>
-          <button @click="calcInput('8')" class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100">8</button>
-          <button @click="calcInput('9')" class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100">9</button>
-          <button @click="calcInput('+')" class="p-2.5 rounded-lg bg-slate-100 hover:bg-slate-200">+</button>
+          <button @click="calcInput('7')" class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">7</button>
+          <button @click="calcInput('8')" class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">8</button>
+          <button @click="calcInput('9')" class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">9</button>
+          <button @click="calcInput('+')" class="p-2.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700">+</button>
 
-          <button @click="calcInput('4')" class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100">4</button>
-          <button @click="calcInput('5')" class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100">5</button>
-          <button @click="calcInput('6')" class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100">6</button>
+          <button @click="calcInput('4')" class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">4</button>
+          <button @click="calcInput('5')" class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">5</button>
+          <button @click="calcInput('6')" class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">6</button>
           <button @click="calcInput('=')" class="row-span-2 p-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 flex items-center justify-center font-black">=</button>
 
-          <button @click="calcInput('1')" class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100">1</button>
-          <button @click="calcInput('2')" class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100">2</button>
-          <button @click="calcInput('3')" class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100">3</button>
+          <button @click="calcInput('1')" class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">1</button>
+          <button @click="calcInput('2')" class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">2</button>
+          <button @click="calcInput('3')" class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">3</button>
 
-          <button @click="calcInput('0')" class="col-span-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100">0</button>
-          <button @click="calcInput('.')" class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 hover:bg-slate-100">.</button>
+          <button @click="calcInput('0')" class="col-span-2 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">0</button>
+          <button @click="calcInput('.')" class="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700">.</button>
         </div>
       </div>
 
       <!-- Main Page Content Body -->
-      <main class="flex-1 flex flex-col min-w-0 bg-slate-100">
+      <main class="flex-1 flex flex-col min-w-0 bg-slate-100 dark:bg-slate-950 transition-colors">
         <slot />
       </main>
     </div>
@@ -593,7 +634,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { 
   ShieldCheck, 
@@ -622,7 +663,11 @@ import {
   Trash2,
   Settings,
   Activity,
-  Megaphone
+  Megaphone,
+  Sun,
+  Moon,
+  Users,
+  Receipt
 } from 'lucide-vue-next';
 
 
@@ -633,6 +678,34 @@ const selectedLanguage = ref('en');
 const showCalcModal = ref(false);
 const showRoleDropdown = ref(false);
 const calcDisplay = ref('');
+const isDarkMode = ref(false);
+
+const initTheme = () => {
+  if (typeof window === 'undefined') return;
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    isDarkMode.value = true;
+    document.documentElement.classList.add('dark');
+  } else {
+    isDarkMode.value = false;
+    document.documentElement.classList.remove('dark');
+  }
+};
+
+const toggleTheme = () => {
+  isDarkMode.value = !isDarkMode.value;
+  if (isDarkMode.value) {
+    document.documentElement.classList.add('dark');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
+  }
+};
+
+onMounted(() => {
+  initTheme();
+});
 
 // Sidebar layout is enabled for all management portal pages except POS/Terminal workstation
 const isSidebarLayout = computed(() => page.component !== 'POS/Terminal');
@@ -653,6 +726,8 @@ const calcInput = (val) => {
 };
 
 const authUser = computed(() => page.props.auth?.user || {});
+const userName = computed(() => authUser.value?.name || 'Authorized User');
+const userEmail = computed(() => authUser.value?.email || 'user@sabapos.com');
 const userRole = computed(() => authUser.value?.role || '');
 
 const roleLabel = computed(() => {
@@ -669,8 +744,12 @@ const currentTabTitle = computed(() => {
   if (comp === 'SuperAdmin/Dashboard') return 'Super Admin Command Center';
   if (comp === 'SuperAdmin/Plans') return 'SaaS Pricing Plans';
   if (comp === 'Merchant/Dashboard') return 'Merchant HQ Analytics';
-  if (comp === 'Merchant/Stores') return 'Store Branches';
-  if (comp === 'Merchant/Subscription') return 'Billing & Subscription';
+  if (comp === 'Merchant/Stores') return 'Store Outlets Directory';
+  if (comp === 'Merchant/Users') return 'Staff & RBAC Accounts';
+  if (comp === 'Merchant/Customers') return 'Customer CRM & Loyalty';
+  if (comp === 'Merchant/Orders') return 'Chain Sales Orders';
+  if (comp === 'Merchant/Settings') return 'Merchant HQ Settings';
+  if (comp === 'Merchant/Subscription') return 'Billing & SaaS Subscription';
   if (comp === 'Manager/Dashboard') return 'Branch Operations';
   if (comp === 'Manager/Shifts') return 'Register Shift Audits';
   if (comp === 'Manager/Transfers') return 'Stock Transfers';
