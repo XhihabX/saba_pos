@@ -11,7 +11,7 @@ createInertiaApp({
     if (!page) {
       console.error(`Inertia page component not found: ${name}`);
     }
-    return page;
+    return page?.default || page;
   },
   setup({ el, App, props, plugin }) {
     const app = createApp({ render: () => h(App, props) });
