@@ -171,6 +171,7 @@ class MerchantController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:50',
+            'logo_url' => 'nullable|string|max:1000',
             'currency_symbol' => 'required|string|max:10',
             'default_tax_rate' => 'required|numeric|min:0|max:100',
             'receipt_header' => 'nullable|string',
@@ -181,6 +182,46 @@ class MerchantController extends Controller
         $tenant->update($validated);
 
         return redirect()->back()->with('success', 'Merchant store settings saved successfully!');
+    }
+
+    public function forceDeleteStaff($id)
+    {
+        $tenantId = $this->getTenantId();
+        $user = User::withTrashed()->where('id', $id)->where('tenant_id', $tenantId)->firstOrFail();
+        $name = $user->name;
+        $user->forceDelete();
+
+        return redirect()->back()->with('success', "Staff user '{$name}' permanently deleted.");
+    }
+
+    public function restoreStaff($id)
+    {
+        $tenantId = $this->getTenantId();
+        $user = User::withTrashed()->where('id', $id)->where('tenant_id', $tenantId)->firstOrFail();
+        $user->restore();
+
+        return redirect()->back()->with('success', "Staff user '{$user->name}' restored.");
+    }
+
+    public function payCustomerDue(Request $request, $id)
+    {
+        $tenantId = $this->getTenantId();
+        $customer = Customer::where('id', $id)->where('tenant_id', $tenantId)->firstOrFail();
+
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'payment_method' => 'required|string',
+            'notes' => 'nullable|string',
+        ]);
+
+        $payAmount = (float) $validated['amount'];
+        $customer->decrement('due_balance', $payAmount);
+
+        if ($customer->due_balance < 0) {
+            $customer->update(['due_balance' => 0]);
+        }
+
+        return redirect()->back()->with('success', "Collected payment of ৳{$payAmount} for customer '{$customer->name}'. Updated due balance: ৳{$customer->due_balance}.");
     }
 
     public function customersIndex()

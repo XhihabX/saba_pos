@@ -2,12 +2,9 @@
   <div class="min-h-screen bg-slate-100 text-slate-900 flex items-center justify-center p-6 selection:bg-emerald-500 selection:text-white">
     <div class="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-8 shadow-xl space-y-6">
       <!-- Header -->
-      <div class="text-center space-y-2">
-        <div class="w-14 h-14 rounded-2xl bg-emerald-600 mx-auto flex items-center justify-center font-black text-3xl text-white shadow-md">
-          S
-        </div>
-        <h1 class="text-2xl font-black font-heading text-slate-900">Saba POS SaaS Portal</h1>
-        <p class="text-xs text-slate-500 font-medium">Log in to access your ERP dashboard and POS terminal</p>
+      <div class="text-center space-y-2 flex flex-col items-center">
+        <ApplicationLogo size="lg" :show-text="true" subtitle="SaaS Enterprise POS & ERP" />
+        <p class="text-xs text-slate-500 font-medium mt-2">Log in to access your ERP dashboard and POS terminal</p>
       </div>
 
       <!-- Flash / Validation Errors -->
@@ -88,6 +85,7 @@
 <script setup>
 import { ref } from 'vue';
 import { router, Link } from '@inertiajs/vue3';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 
 const props = defineProps({
   errors: Object,

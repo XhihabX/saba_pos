@@ -95,6 +95,9 @@
                   {{ cust.points || 0 }} pts
                 </td>
                 <td class="py-3.5 px-3 text-right space-x-2">
+                  <button v-if="(cust.due_balance || cust.due) > 0" @click="openPayDueModal(cust)" class="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold transition-colors">
+                    Collect Due
+                  </button>
                   <button @click="openEditModal(cust)" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 text-slate-600 dark:text-slate-300 transition-colors">
                     <Edit3 class="w-4 h-4" />
                   </button>
@@ -110,6 +113,50 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Collect Due Payment Modal -->
+      <div v-if="showPayDueModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h3 class="text-lg font-black text-slate-900 dark:text-white font-heading flex items-center gap-2">
+              <DollarSign class="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <span>Collect Customer Due Payment</span>
+            </h3>
+            <button @click="showPayDueModal = false" class="text-slate-400 hover:text-slate-700 dark:hover:text-white text-xl font-bold">&times;</button>
+          </div>
+
+          <form @submit.prevent="submitPayDue" class="space-y-4 text-xs">
+            <div class="p-3 bg-slate-50 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700">
+              <div class="font-bold text-slate-900 dark:text-white">{{ activeCustomer?.name }}</div>
+              <div class="text-slate-500 text-[11px]">Current Outstanding Due: <span class="font-black text-rose-600 dark:text-rose-400">৳{{ activeCustomer?.due_balance || activeCustomer?.due || 0 }}</span></div>
+            </div>
+
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Payment Amount Received (৳)</label>
+              <input v-model.number="payDueForm.amount" required type="number" step="0.01" min="0.01" :max="activeCustomer?.due_balance || activeCustomer?.due" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 font-black font-mono focus:outline-none focus:border-emerald-500" />
+            </div>
+
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Payment Method</label>
+              <select v-model="payDueForm.payment_method" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500">
+                <option value="cash">Cash Received</option>
+                <option value="bkash">bKash Mobile Banking</option>
+                <option value="card">Credit / Debit Card</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Payment Notes / Reference</label>
+              <input v-model="payDueForm.notes" type="text" placeholder="e.g. Received cash at main outlet counter" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500" />
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3">
+              <button type="button" @click="showPayDueModal = false" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-semibold">Cancel</button>
+              <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/20">Record Due Settlement</button>
+            </div>
+          </form>
         </div>
       </div>
 
@@ -182,6 +229,35 @@ const props = defineProps({
 const searchQuery = ref('');
 const showModal = ref(false);
 const isEditing = ref(false);
+
+const showPayDueModal = ref(false);
+const activeCustomer = ref(null);
+const payDueForm = ref({
+  amount: 0,
+  payment_method: 'cash',
+  notes: '',
+});
+
+const openPayDueModal = (cust) => {
+  activeCustomer.value = cust;
+  payDueForm.value = {
+    amount: (cust.due_balance || cust.due || 0),
+    payment_method: 'cash',
+    notes: `Settlement payment for ${cust.name}`,
+  };
+  showPayDueModal.value = true;
+};
+
+const submitPayDue = () => {
+  if (!activeCustomer.value) return;
+  const url = window.safeRoute ? window.safeRoute('merchant.customers.pay-due', activeCustomer.value.id) : `/merchant/customers/${activeCustomer.value.id}/pay-due`;
+  router.post(url, payDueForm.value, {
+    onSuccess: () => {
+      showPayDueModal.value = false;
+      activeCustomer.value = null;
+    }
+  });
+};
 
 const form = ref({
   id: null,

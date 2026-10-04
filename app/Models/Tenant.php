@@ -15,6 +15,7 @@ class Tenant extends Model
         'code',
         'email',
         'phone',
+        'logo_url',
         'plan_name',
         'subscription_status',
         'mrr_amount',
@@ -22,6 +23,11 @@ class Tenant extends Model
         'payment_method',
         'sender_number',
         'transaction_id',
+        'currency_symbol',
+        'default_tax_rate',
+        'receipt_header',
+        'receipt_footer',
+        'invoice_prefix',
     ];
 
     public function users()

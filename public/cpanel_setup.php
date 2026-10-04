@@ -7,13 +7,18 @@
 define('LARAVEL_START', microtime(true));
 @ini_set('memory_limit', '512M');
 
-// Auto-detect sabapos_backend path across all cPanel directory structures
+// Auto-detect sabapos / sabapos_backend path across all cPanel directory structures
 $possiblePaths = [
-    dirname(__DIR__, 2) . '/sabapos_backend', // e.g. /home/user/public_html/pos -> /home/user/sabapos_backend
-    dirname(__DIR__, 1) . '/sabapos_backend', // e.g. /home/user/pos -> /home/user/sabapos_backend
+    dirname(__DIR__, 2) . '/sabapos',
+    dirname(__DIR__, 1) . '/sabapos',
+    __DIR__ . '/../sabapos',
+    __DIR__ . '/../../sabapos',
+    dirname(__DIR__, 2) . '/sabapos_backend',
+    dirname(__DIR__, 1) . '/sabapos_backend',
     __DIR__ . '/../sabapos_backend',
     __DIR__ . '/../../sabapos_backend',
     __DIR__ . '/..',
+    __DIR__,
 ];
 
 $backendPath = null;
@@ -33,6 +38,29 @@ if (!$backendPath) {
         <p style='color: #cbd5e1; font-size: 13px;'>Ensure <code>sabapos_backend.zip</code> is extracted to your cPanel home directory (e.g. <code>/home/username/sabapos_backend</code>).</p>
       </div>
     </body>");
+}
+
+// Auto-repair .env file and ensure APP_KEY is valid
+$envPath = $backendPath . '/.env';
+if (!file_exists($envPath)) {
+    if (file_exists($backendPath . '/.env.production.example')) {
+        @copy($backendPath . '/.env.production.example', $envPath);
+    } elseif (file_exists($backendPath . '/.env.example')) {
+        @copy($backendPath . '/.env.example', $envPath);
+    }
+}
+
+if (file_exists($envPath)) {
+    $envContent = file_get_contents($envPath);
+    if (!preg_match('/^APP_KEY=base64:.+/m', $envContent)) {
+        $key = 'base64:' . base64_encode(random_bytes(32));
+        if (preg_match('/^APP_KEY=/m', $envContent)) {
+            $envContent = preg_replace('/^APP_KEY=.*/m', "APP_KEY={$key}", $envContent);
+        } else {
+            $envContent .= "\nAPP_KEY={$key}\n";
+        }
+        @file_put_contents($envPath, $envContent);
+    }
 }
 
 require $backendPath . '/vendor/autoload.php';
@@ -55,9 +83,9 @@ $storageDirs = [
 
 foreach ($storageDirs as $dir) {
     if (!file_exists($dir)) {
-        @mkdir($dir, 0777, true);
+        @mkdir($dir, 0755, true);
     }
-    @chmod($dir, 0777);
+    @chmod($dir, 0755);
 }
 
 // Force purge stale route & config cache files on cPanel to ensure all newly added Super Admin routes register cleanly

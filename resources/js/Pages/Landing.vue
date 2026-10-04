@@ -4,17 +4,7 @@
     <!-- SaaS Public Header Navbar -->
     <header class="h-20 border-b border-slate-200 bg-white/90 backdrop-blur-xl px-6 lg:px-12 flex items-center justify-between sticky top-0 z-50 shadow-xs">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center font-black text-xl text-white shadow-md shadow-emerald-600/20">
-          S
-        </div>
-        <div>
-          <span class="font-extrabold text-xl font-heading text-slate-900 tracking-tight">
-            Saba POS
-          </span>
-          <span class="block text-[9px] text-emerald-700 font-black uppercase tracking-widest">
-            Enterprise SaaS Infrastructure
-          </span>
-        </div>
+        <ApplicationLogo size="md" :show-text="true" subtitle="Enterprise SaaS Infrastructure" />
       </div>
 
       <nav class="hidden md:flex items-center gap-8 text-xs font-extrabold text-slate-600 uppercase tracking-wider">
@@ -344,6 +334,7 @@
 
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { 
   Sparkles, 
   Zap, 

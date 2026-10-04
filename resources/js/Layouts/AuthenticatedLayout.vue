@@ -14,17 +14,7 @@
       <!-- Sidebar Header / Branding -->
       <div class="h-16 px-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
         <Link :href="route('landing')" class="flex items-center gap-3 overflow-hidden">
-          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center font-black text-xl text-white shadow-md shadow-emerald-600/20 shrink-0">
-            S
-          </div>
-          <div v-if="!sidebarCollapsed" class="truncate">
-            <div class="font-extrabold text-base leading-none font-heading text-slate-900 dark:text-slate-100 tracking-wide">
-              Saba POS
-            </div>
-            <div class="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase tracking-widest font-black mt-1">
-              Shopify SaaS ERP
-            </div>
-          </div>
+          <ApplicationLogo :show-text="!sidebarCollapsed" :src="$page.props.auth?.user?.tenant?.logo_url" />
         </Link>
 
         <button 
@@ -636,6 +626,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { Link, usePage } from '@inertiajs/vue3';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { 
   ShieldCheck, 
   Crown, 
