@@ -49,7 +49,7 @@ return new class extends Migration
 
         Schema::table('order_items', function (Blueprint $table) {
             if (!Schema::hasColumn('order_items', 'is_backorder')) {
-                $table->boolean('is_backorder')->default(false)->after('total_amount');
+                $table->boolean('is_backorder')->default(false);
             }
         });
     }
