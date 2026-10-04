@@ -171,6 +171,15 @@ function repairDatabaseSchema() {
             });
         }
 
+        // 8. Repair order_items table
+        if (Illuminate\Support\Facades\Schema::hasTable('order_items')) {
+            Illuminate\Support\Facades\Schema::table('order_items', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (!Illuminate\Support\Facades\Schema::hasColumn('order_items', 'is_backorder')) {
+                    $table->boolean('is_backorder')->default(false);
+                }
+            });
+        }
+
         // Check if default seeded accounts exist
         if (!App\Models\User::where('email', 'merchant@sabapos.com')->exists()) {
             Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
