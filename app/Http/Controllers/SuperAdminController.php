@@ -577,6 +577,105 @@ class SuperAdminController extends Controller
         return redirect()->back()->with('success', "Store outlet '{$store->name}' restored successfully.");
     }
 
+    public function restoreUser($id)
+    {
+        $user = User::withTrashed()->findOrFail($id);
+        $user->restore();
+
+        AuditLog::create([
+            'tenant_id' => $user->tenant_id,
+            'user_name' => auth()->user()->name ?? 'Super Admin',
+            'action' => 'user_restored',
+            'description' => "Restored user account '{$user->name}' from Recycle Bin.",
+        ]);
+
+        return redirect()->back()->with('success', "User account '{$user->name}' restored successfully.");
+    }
+
+    public function restoreProduct($id)
+    {
+        $product = Product::withTrashed()->findOrFail($id);
+        $product->restore();
+
+        AuditLog::create([
+            'tenant_id' => $product->tenant_id,
+            'user_name' => auth()->user()->name ?? 'Super Admin',
+            'action' => 'product_restored',
+            'description' => "Restored product '{$product->name}' from Recycle Bin.",
+        ]);
+
+        return redirect()->back()->with('success', "Product '{$product->name}' restored successfully.");
+    }
+
+    public function forceDeleteTenant($id)
+    {
+        $tenant = Tenant::withTrashed()->findOrFail($id);
+        $name = $tenant->name;
+        $tenant->forceDelete();
+
+        AuditLog::create([
+            'user_name' => auth()->user()->name ?? 'Super Admin',
+            'action' => 'tenant_permanently_deleted',
+            'description' => "Permanently purged tenant business account '{$name}' from database.",
+        ]);
+
+        return redirect()->back()->with('success', "Tenant business '{$name}' permanently deleted.");
+    }
+
+    public function forceDeleteStore($id)
+    {
+        $store = Store::withTrashed()->findOrFail($id);
+        $name = $store->name;
+        $store->forceDelete();
+
+        AuditLog::create([
+            'tenant_id' => $store->tenant_id,
+            'user_name' => auth()->user()->name ?? 'Super Admin',
+            'action' => 'store_permanently_deleted',
+            'description' => "Permanently purged outlet store '{$name}' from database.",
+        ]);
+
+        return redirect()->back()->with('success', "Store outlet '{$name}' permanently deleted.");
+    }
+
+    public function forceDeleteUser($id)
+    {
+        $user = User::withTrashed()->findOrFail($id);
+        $name = $user->name;
+        $user->forceDelete();
+
+        AuditLog::create([
+            'tenant_id' => $user->tenant_id,
+            'user_name' => auth()->user()->name ?? 'Super Admin',
+            'action' => 'user_permanently_deleted',
+            'description' => "Permanently purged user account '{$name}' from database.",
+        ]);
+
+        return redirect()->back()->with('success', "User account '{$name}' permanently deleted.");
+    }
+
+    public function forceDeleteProduct($id)
+    {
+        $product = Product::withTrashed()->findOrFail($id);
+        $name = $product->name;
+        $product->forceDelete();
+
+        AuditLog::create([
+            'tenant_id' => $product->tenant_id,
+            'user_name' => auth()->user()->name ?? 'Super Admin',
+            'action' => 'product_permanently_deleted',
+            'description' => "Permanently purged product '{$name}' from database.",
+        ]);
+
+        return redirect()->back()->with('success', "Product '{$name}' permanently deleted.");
+    }
+
+    public function exitImpersonation(Request $request)
+    {
+        $request->session()->forget('impersonated_tenant_id');
+        return redirect()->route('superadmin.dashboard')->with('success', 'Exited impersonation mode. Returned to Super Admin Command Center.');
+    }
+
     public function systemHealthIndex()
     {
         return Inertia::render('SuperAdmin/SystemHealth');

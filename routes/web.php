@@ -38,7 +38,7 @@ Route::get('/demo/pos', [PosController::class, 'sandboxDemo'])->name('pos.demo')
 
 // 3. Super Admin Portal Layer (SaaS Platform Owner & CEO)
 Route::prefix('super-admin')->middleware(['auth', EnsureSuperAdmin::class])->group(function () {
-    Route::get('/', fn() => redirect()->route('superadmin.dashboard'));
+    Route::redirect('/', '/super-admin/dashboard');
     Route::get('/dashboard', [SuperAdminController::class, 'dashboard'])->name('superadmin.dashboard');
     Route::post('/tenants', [SuperAdminController::class, 'storeTenant'])->name('superadmin.tenants.store');
     Route::post('/tenants/{id}/update', [SuperAdminController::class, 'updateTenant'])->name('superadmin.tenants.update');
@@ -46,7 +46,9 @@ Route::prefix('super-admin')->middleware(['auth', EnsureSuperAdmin::class])->gro
     Route::post('/tenants/{id}/reject', [SuperAdminController::class, 'rejectTenant'])->name('superadmin.tenants.reject');
     Route::post('/tenants/{id}/restore', [SuperAdminController::class, 'restoreTenant'])->name('superadmin.tenants.restore');
     Route::delete('/tenants/{id}', [SuperAdminController::class, 'deleteTenant'])->name('superadmin.tenants.delete');
+    Route::delete('/tenants/{id}/force', [SuperAdminController::class, 'forceDeleteTenant'])->name('superadmin.tenants.force-delete');
     Route::post('/tenants/{id}/impersonate', [SuperAdminController::class, 'impersonateTenant'])->name('superadmin.tenants.impersonate');
+    Route::post('/exit-impersonate', [SuperAdminController::class, 'exitImpersonation'])->name('superadmin.exit-impersonate');
     Route::post('/tenants/{id}/extend', [SuperAdminController::class, 'extendSubscription'])->name('superadmin.tenants.extend');
     Route::get('/plans', [SuperAdminController::class, 'plansIndex'])->name('superadmin.plans');
     Route::post('/plans', [SuperAdminController::class, 'storePlan'])->name('superadmin.plans.store');
@@ -56,11 +58,16 @@ Route::prefix('super-admin')->middleware(['auth', EnsureSuperAdmin::class])->gro
     Route::post('/stores', [SuperAdminController::class, 'storeStore'])->name('superadmin.stores.store');
     Route::post('/stores/{id}/toggle', [SuperAdminController::class, 'toggleStoreStatus'])->name('superadmin.stores.toggle');
     Route::post('/stores/{id}/restore', [SuperAdminController::class, 'restoreStore'])->name('superadmin.stores.restore');
+    Route::delete('/stores/{id}/force', [SuperAdminController::class, 'forceDeleteStore'])->name('superadmin.stores.force-delete');
     Route::get('/users', [SuperAdminController::class, 'usersIndex'])->name('superadmin.users');
     Route::post('/users', [SuperAdminController::class, 'storeUser'])->name('superadmin.users.store');
     Route::post('/users/{id}/update', [SuperAdminController::class, 'updateUser'])->name('superadmin.users.update');
     Route::delete('/users/{id}', [SuperAdminController::class, 'deleteUser'])->name('superadmin.users.delete');
+    Route::delete('/users/{id}/force', [SuperAdminController::class, 'forceDeleteUser'])->name('superadmin.users.force-delete');
+    Route::post('/users/{id}/restore', [SuperAdminController::class, 'restoreUser'])->name('superadmin.users.restore');
     Route::post('/users/{id}/reset-password', [SuperAdminController::class, 'resetUserPassword'])->name('superadmin.users.reset-password');
+    Route::delete('/products/{id}/force', [SuperAdminController::class, 'forceDeleteProduct'])->name('superadmin.products.force-delete');
+    Route::post('/products/{id}/restore', [SuperAdminController::class, 'restoreProduct'])->name('superadmin.products.restore');
     Route::get('/transactions', [SuperAdminController::class, 'transactionsIndex'])->name('superadmin.transactions');
     Route::get('/analytics', [SuperAdminController::class, 'analyticsIndex'])->name('superadmin.analytics');
     Route::get('/audit-logs', [SuperAdminController::class, 'auditLogsIndex'])->name('superadmin.auditlogs');
@@ -74,7 +81,7 @@ Route::prefix('super-admin')->middleware(['auth', EnsureSuperAdmin::class])->gro
 
 // 4. Merchant HQ Portal Layer (Business CEO & Chain Owner)
 Route::prefix('merchant')->middleware(['auth', EnsureMerchant::class, EnsureActiveSubscription::class])->group(function () {
-    Route::get('/', fn() => redirect()->route('merchant.dashboard'));
+    Route::redirect('/', '/merchant/dashboard');
     Route::get('/dashboard', [MerchantController::class, 'dashboard'])->name('merchant.dashboard');
     Route::get('/stores', [MerchantStoreController::class, 'index'])->name('merchant.stores');
     Route::post('/stores', [MerchantStoreController::class, 'store'])->name('merchant.stores.store');
@@ -84,6 +91,8 @@ Route::prefix('merchant')->middleware(['auth', EnsureMerchant::class, EnsureActi
     Route::post('/users', [MerchantController::class, 'storeStaff'])->name('merchant.users.store');
     Route::post('/users/{id}/update', [MerchantController::class, 'updateStaff'])->name('merchant.users.update');
     Route::delete('/users/{id}', [MerchantController::class, 'deleteStaff'])->name('merchant.users.delete');
+    Route::delete('/users/{id}/force', [MerchantController::class, 'forceDeleteStaff'])->name('merchant.users.force-delete');
+    Route::post('/users/{id}/restore', [MerchantController::class, 'restoreStaff'])->name('merchant.users.restore');
     Route::get('/suppliers', [SupplierController::class, 'suppliersIndex'])->name('merchant.suppliers');
     Route::post('/suppliers', [SupplierController::class, 'suppliersStore'])->name('merchant.suppliers.store');
     Route::post('/suppliers/{id}/update', [SupplierController::class, 'updateSupplier'])->name('merchant.suppliers.update');
@@ -98,12 +107,13 @@ Route::prefix('merchant')->middleware(['auth', EnsureMerchant::class, EnsureActi
     Route::post('/customers', [MerchantController::class, 'storeCustomer'])->name('merchant.customers.store');
     Route::post('/customers/{id}/update', [MerchantController::class, 'updateCustomer'])->name('merchant.customers.update');
     Route::delete('/customers/{id}', [MerchantController::class, 'deleteCustomer'])->name('merchant.customers.delete');
+    Route::post('/customers/{id}/pay-due', [MerchantController::class, 'payCustomerDue'])->name('merchant.customers.pay-due');
     Route::get('/orders', [MerchantController::class, 'ordersIndex'])->name('merchant.orders');
 });
 
 // 5. Store Manager Portal Layer (Branch Operations & Shift Audit)
 Route::prefix('manager')->middleware(['auth', EnsureStoreManager::class, EnsureActiveSubscription::class])->group(function () {
-    Route::get('/', fn() => redirect()->route('manager.dashboard'));
+    Route::redirect('/', '/manager/dashboard');
     Route::get('/dashboard', [StoreManagerController::class, 'dashboard'])->name('manager.dashboard');
     Route::get('/shifts', [StoreManagerController::class, 'shiftReconciliation'])->name('manager.shifts');
     Route::get('/transfers', [StockTransferController::class, 'index'])->name('manager.transfers');

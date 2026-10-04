@@ -32416,3 +32416,17 @@ remote: To https://github.com/XhihabX/saba_pos.git
 
 ---
 
+### 👤 User (Session 2026-10-04 Deployment & Feature Completion)
+Deploy to `https://xhihab.com` (Frontend document root `public_html`, Backend folder `sabapos`). Resolve HTTP 500 errors, `APP_URL` `http://:` malformed URLs, `public_html/index.php` PHP parse errors, `TenantScope` Auth recursion stack overflow, implement custom brand logo suite, permanent force delete, and customer credit due settlement.
+
+### 🤖 Antigravity Assistant
+- **URL Engine & Scheme Hardening**: Added dynamic `APP_URL` auto-healing and enforced `URL::forceRootUrl('https://xhihab.com')` inside `AppServiceProvider::boot()`.
+- **Parser Fix**: Fixed Python string escaping in `build_cpanel_subdomain_zip.py` that generated unescaped double quotes in `public_html/index.php`.
+- **Recursion Guard**: Fixed `TenantScope.php` stack overflow loop (`Maximum call stack size reached`) by bypassing `User` model queries and adding static `$isResolvingAuth` state guard.
+- **Session Optimization & Database Sync**: Configured `SESSION_DRIVER=file` in `.env` for zero database dependency and synchronized database migrations and seeders on `xhihabco_pos`.
+- **Custom Brand Logo Suite**: Generated vector brand logo (`/images/logo.png`), created `resources/js/Components/ApplicationLogo.vue`, and integrated across `Landing.vue`, `Login.vue`, `Register.vue`, `AuthenticatedLayout.vue`, and `Pos.vue`.
+- **Merchant Custom Branding**: Added migration `2026_10_04_000009_add_logo_url_to_tenants_table.php` and logo URL setting in `MerchantController.php` and `Merchant/Settings.vue`.
+- **Force Delete & Customer Due Settlement**: Implemented `forceDeleteTenant`, `forceDeleteStore`, `forceDeleteUser`, `forceDeleteProduct`, `restoreUser`, `restoreProduct`, `exitImpersonation`, and customer due settlement (`payCustomerDue` / `Customers.vue` modal).
+- **Deployment & Documentation**: Re-built `public_html.zip` and `sabapos.zip` in `cpanel_dist/`. Updated `docs/ARCHITECTURE.md` and `docs/CHANGELOG.md`.
+
+---

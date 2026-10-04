@@ -94,12 +94,18 @@
                     {{ tenant.subscription_status }}
                   </span>
                 </td>
-                <td class="py-4 px-4 text-right">
+                <td class="py-4 px-4 text-right space-x-2">
                   <button 
                     @click="restoreTenant(tenant)"
-                    class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer"
+                    class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer"
                   >
-                    Restore & Activate Account
+                    Restore
+                  </button>
+                  <button 
+                    @click="forceDeleteTenant(tenant)"
+                    class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer"
+                  >
+                    Permanently Delete
                   </button>
                 </td>
               </tr>
@@ -140,12 +146,18 @@
                 </td>
                 <td class="py-4 px-4 text-indigo-700 font-bold">{{ store.tenant?.name || 'N/A' }}</td>
                 <td class="py-4 px-4 text-slate-600 font-medium">{{ store.address || 'Dhaka, Bangladesh' }}</td>
-                <td class="py-4 px-4 text-right">
+                <td class="py-4 px-4 text-right space-x-2">
                   <button 
                     @click="restoreStore(store)"
-                    class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer"
+                    class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer"
                   >
-                    Reactivate Outlet
+                    Reactivate
+                  </button>
+                  <button 
+                    @click="forceDeleteStore(store)"
+                    class="px-3.5 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs shadow-md transition-all cursor-pointer"
+                  >
+                    Permanently Delete
                   </button>
                 </td>
               </tr>
@@ -156,6 +168,47 @@
           No deactivated store outlets found.
         </div>
       </div>
+
+      <!-- 👤 Trashed Staff & User Accounts Panel -->
+      <div class="p-6 sm:p-8 rounded-3xl bg-white border border-slate-200/80 shadow-sm space-y-6">
+        <div class="flex items-center justify-between">
+          <h3 class="font-black text-xl font-heading text-slate-900 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <Users class="w-5 h-5" />
+            </div>
+            <span>Trashed Staff & User Accounts</span>
+          </h3>
+        </div>
+
+        <div v-if="trashedUsers && trashedUsers.length > 0" class="overflow-x-auto rounded-2xl border border-slate-200/80">
+          <table class="w-full text-left text-xs">
+            <thead>
+              <tr class="text-slate-500 border-b border-slate-200 uppercase text-[10px] bg-slate-50/80 font-bold tracking-wider">
+                <th class="py-4 px-4">User Name</th>
+                <th class="py-4 px-4">Email</th>
+                <th class="py-4 px-4">Role</th>
+                <th class="py-4 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 font-sans">
+              <tr v-for="u in trashedUsers" :key="u.id" class="hover:bg-slate-50/80 transition-colors">
+                <td class="py-4 px-4 font-extrabold text-slate-900">{{ u.name }}</td>
+                <td class="py-4 px-4 text-slate-600 font-mono">{{ u.email }}</td>
+                <td class="py-4 px-4">
+                  <span class="px-2 py-1 rounded bg-slate-100 text-slate-800 font-bold uppercase text-[10px]">{{ u.role }}</span>
+                </td>
+                <td class="py-4 px-4 text-right space-x-2">
+                  <button @click="restoreUser(u)" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 text-white font-extrabold text-xs">Restore</button>
+                  <button @click="forceDeleteUser(u)" class="px-3.5 py-1.5 rounded-xl bg-rose-600 text-white font-extrabold text-xs">Permanently Delete</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else class="text-center py-12 text-slate-400 font-bold text-xs">
+          No trashed user accounts.
+        </div>
+      </div>
     </div>
   </AuthenticatedLayout>
 </template>
@@ -163,29 +216,48 @@
 <script setup>
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Trash2, ShieldAlert, Store, RefreshCw } from 'lucide-vue-next';
+import { Trash2, ShieldAlert, Store, RefreshCw, Users } from 'lucide-vue-next';
 
 defineProps({
   suspendedTenants: Array,
   inactiveStores: Array,
+  trashedUsers: Array,
+  trashedProducts: Array,
 });
 
 const restoreTenant = (tenant) => {
   if (confirm(`Restore and activate merchant subscription for '${tenant.name}'?`)) {
-    router.post(`/super-admin/tenants/${tenant.id}/update`, {
-      name: tenant.name,
-      email: tenant.email,
-      phone: tenant.phone,
-      plan_name: tenant.plan_name,
-      mrr_amount: tenant.mrr_amount,
-      subscription_status: 'active',
-    });
+    router.post(`/super-admin/tenants/${tenant.id}/restore`);
+  }
+};
+
+const forceDeleteTenant = (tenant) => {
+  if (confirm(`⚠️ PERMANENT DELETE: Are you sure you want to permanently delete tenant '${tenant.name}'? This cannot be undone.`)) {
+    router.delete(`/super-admin/tenants/${tenant.id}/force`);
   }
 };
 
 const restoreStore = (store) => {
   if (confirm(`Reactivate store outlet '${store.name}'?`)) {
-    router.post(`/super-admin/stores/${store.id}/toggle`);
+    router.post(`/super-admin/stores/${store.id}/restore`);
+  }
+};
+
+const forceDeleteStore = (store) => {
+  if (confirm(`⚠️ PERMANENT DELETE: Are you sure you want to permanently delete store '${store.name}'?`)) {
+    router.delete(`/super-admin/stores/${store.id}/force`);
+  }
+};
+
+const restoreUser = (u) => {
+  if (confirm(`Restore user account '${u.name}'?`)) {
+    router.post(`/super-admin/users/${u.id}/restore`);
+  }
+};
+
+const forceDeleteUser = (u) => {
+  if (confirm(`⚠️ PERMANENT DELETE: Are you sure you want to permanently purge user '${u.name}'?`)) {
+    router.delete(`/super-admin/users/${u.id}/force`);
   }
 };
 </script>

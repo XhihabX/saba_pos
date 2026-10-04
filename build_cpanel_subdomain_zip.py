@@ -11,25 +11,28 @@ use Illuminate\\Http\\Request;
 
 define('LARAVEL_START', microtime(true));
 
-// Auto-detect sabapos_backend path across all cPanel folder structures
 $possiblePaths = [
-    dirname(__DIR__, 2) . '/sabapos_backend', // e.g., /home/user/public_html/pos -> /home/user/sabapos_backend
-    dirname(__DIR__, 1) . '/sabapos_backend', // e.g., /home/user/pos -> /home/user/sabapos_backend
+    dirname(__DIR__) . '/sabapos',
+    dirname(__DIR__) . '/sabapos_backend',
+    __DIR__ . '/../sabapos',
     __DIR__ . '/../sabapos_backend',
-    __DIR__ . '/../../sabapos_backend',
 ];
 
 $backendPath = null;
 foreach ($possiblePaths as $path) {
     if (file_exists($path . '/vendor/autoload.php')) {
-        $backendPath = $path;
+        $backendPath = realpath($path);
         break;
     }
 }
 
 if (!$backendPath) {
-    die("<h2 style='color:red;font-family:sans-serif;'>Error: Could not locate 'sabapos_backend' directory.</h2><p style='font-family:sans-serif;'>Please make sure <code>sabapos_backend</code> is uploaded to your cPanel home directory (e.g., <code>/home/username/sabapos_backend</code>).</p>");
+    die("Error: Could not locate sabapos backend directory.");
 }
+
+// Purge stale cache manifests
+@unlink($backendPath . '/bootstrap/cache/routes-v7.php');
+@unlink($backendPath . '/bootstrap/cache/config.php');
 
 if (file_exists($maintenance = $backendPath . '/storage/framework/maintenance.php')) {
     require $maintenance;
@@ -122,7 +125,7 @@ def main():
                 if rel_path.startswith('storage' + os.sep + 'framework' + os.sep) or rel_path.startswith('storage' + os.sep + 'logs' + os.sep):
                     if not file.endswith('.gitignore') and not file.endswith('.gitkeep'):
                         continue
-                # For public folder, include build assets as a fallback
+                # For public folder, preserve public/build assets as a fail-safe fallback
                 if rel_path.startswith('public' + os.sep) and not rel_path.startswith('public' + os.sep + 'build' + os.sep):
                     if not file.endswith('.htaccess') and not file.endswith('index.php') and not file.endswith('cpanel_setup.php') and not file.endswith('web.config'):
                         continue
@@ -135,12 +138,18 @@ def main():
         corrupt = check_zip.testzip()
         if corrupt:
             raise Exception(f"ZIP Corruption detected in file: {corrupt}")
-        print(f"[OK] Backend ZIP verified successfully! Total files: {len(check_zip.namelist())}")
+    # Create convenience copies named public_html.zip and sabapos.zip for xhihab.com
+    public_html_zip_path = os.path.join(dist_dir, 'public_html.zip')
+    sabapos_zip_path = os.path.join(dist_dir, 'sabapos.zip')
+    shutil.copyfile(subdomain_zip_path, public_html_zip_path)
+    shutil.copyfile(backend_zip_path, sabapos_zip_path)
 
-    print(f"[OK] Created: {backend_zip_path}\n")
+    print(f"[OK] Created xhihab.com packages: {public_html_zip_path} & {sabapos_zip_path}\n")
 
     print("==========================================================")
-    print("SUCCESS: Subdomain deployment ZIP packages generated in 'cpanel_dist/'!")
+    print("SUCCESS: Production deployment ZIP packages generated in 'cpanel_dist/'!")
+    print("  - public_html.zip (Extract inside /home/username/public_html)")
+    print("  - sabapos.zip (Extract inside /home/username/sabapos)")
     print("==========================================================")
 
 if __name__ == "__main__":

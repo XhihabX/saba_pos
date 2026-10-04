@@ -6,107 +6,169 @@
 Saba POS is an international-grade, multi-tenant SaaS Point of Sale (POS) and Enterprise Resource Planning (ERP) platform designed for multi-store chain retail, food & beverage outlets, and wholesale merchants. It provides centralized tenant administration, chain inventory governance, branch shift audits, and offline-resilient touchscreen cashier POS terminals.
 
 ## Tech Stack
-- **Frontend**: Vue 3 (Composition API), Inertia.js 1.x, TailwindCSS 3.x, Lucide Vue Icons
-- **Backend Framework**: Laravel 11/12 (PHP 8.2+)
+- **Frontend**: Vue 3 (Composition API), Inertia.js 1.x, TailwindCSS 4 (Dual Light/Dark mode via CSS variables & `@variant dark`), Lucide Vue Icons, Brand Logo Component (`ApplicationLogo.vue` & `/images/logo.png`)
+- **Backend Framework**: Laravel 11/12 (PHP 8.2+) with Eloquent ORM, Global Query Scopes, Soft Deletes, Permanent Force Delete Purging, and Customer Due Settlement
 - **Database**: MySQL 8.0+ (Shared database, shared schema with `tenant_id` discriminator column)
-- **Asset Bundler & Routing**: Vite 5.x, Ziggy Route Engine (with root-relative path normalization)
-- **Deployment & Hosting**: Linux cPanel Shared/VPS hosting (`pos.sababilling.net`) with custom web installer (`cpanel_setup.php`) and ZIP builder (`build_cpanel_subdomain_zip.py`)
+- **Asset Bundler & Routing**: Vite 5.x, Ziggy Route Engine (with dynamic `APP_URL` auto-healing and `URL::forceRootUrl` guardrails)
+- **Deployment & Hosting**: Linux cPanel Shared/VPS hosting (`xhihab.com`) with web setup tool (`public/cpanel_setup.php`) and ZIP packager (`build_cpanel_subdomain_zip.py`)
 
 ## Folder Structure
-- `app/Http/Controllers/`: Backend controllers handling business logic, transaction blocks, and Inertia response rendering for all 4 portal tiers.
+- `app/Http/Controllers/`: Backend controllers handling business logic, transaction blocks, and Inertia response rendering for all 4 portal tiers (`SuperAdmin`, `Merchant`, `StoreManager`, `Cashier POS`).
 - `app/Http/Middleware/`: Middleware layers enforcing role-based authorization (`EnsureSuperAdmin`, `EnsureMerchant`, `EnsureStoreManager`, `EnsureActiveSubscription`) and Inertia shared props (`HandleInertiaRequests`).
-- `app/Models/`: Eloquent ORM models and relationships.
-- `app/Models/Scopes/`: Global query scopes (`TenantScope` enforcing tenant-level data isolation).
+- `app/Models/`: Eloquent ORM models and relationships (`Tenant`, `Store`, `User`, `Product`, `Stock`, `Order`, `RegisterShift`, `Purchase`, `Supplier`, `Customer`, etc.).
+- `app/Models/Scopes/`: Global query scopes (`TenantScope` enforcing tenant-level data isolation across multi-tenant models).
 - `app/Traits/`: Reusable model traits (`Tenantable` linking Eloquent models to `TenantScope`).
 - `bootstrap/`: Application bootstrap, routing configuration (`bootstrap/app.php`), and cached manifests.
-- `cpanel_dist/`: Compiled production deployment ZIP packages (`subdomain_public.zip`, `sabapos_backend.zip`).
-- `database/migrations/`: Database schema definitions for multi-tenancy, stores, products, orders, shifts, and audit logs.
+- `database/migrations/`: Database schema definitions for multi-tenancy, stores, products, orders, shifts, soft deletes, and audit logs.
 - `database/seeders/`: Seeder scripts (`SabaPosSeeder.php`) for default SaaS tenants, store outlets, products, and role accounts.
-- `docs/`: Project documentation including `ARCHITECTURE.MD`, `CHANGELOG.md`, and `ultimate_system_blueprint.md`.
-- `public/`: Web document root containing compiled Vite assets, `.htaccess`, and the web setup helper (`cpanel_setup.php`).
+- `docs/`: Project documentation including `ARCHITECTURE.md`, `CHANGELOG.md`, and operational guidelines.
+- `public/`: Web document root containing compiled Vite assets, `.htaccess`, and web setup helper (`cpanel_setup.php`).
 - `resources/js/`: Vue 3 frontend application, components, layouts (`AuthenticatedLayout.vue`), and pages (`resources/js/Pages/*`).
-- `routes/`: Web route definitions (`routes/web.php`) organized by portal roles.
+- `routes/`: Web route definitions (`routes/web.php`) organized into 7 functional role and operation layers.
 
 ## Feature Modules
 
 ### 1. Super Admin Command Center Portal
-- **What it does:** Provides full platform oversight for SaaS platform owners including merchant tenant management, tenant impersonation, subscription approvals, plan pricing configuration, payment verifications (bKash/Nagad/Bank), global store metrics, security audit trail, system telemetry, global announcements, and a recycle bin for suspended accounts.
+- **What it does:** Provides complete platform oversight for SaaS owners: merchant tenant management, tenant approvals/rejections, account impersonation, subscription extensions, plan pricing configuration, store governance, global user password resets, platform transaction ledger, global BI analytics, security audit trail, SaaS Recycle Bin with soft-delete restoration, system health telemetry, global announcements broadcast, and platform payment settings.
 - **Where it lives:** `app/Http/Controllers/SuperAdminController.php`, `resources/js/Pages/SuperAdmin/*`, `routes/web.php` (`/super-admin/*`)
-- **Key design decisions:** Accessible strictly by users with `role === 'super_admin'`. Uses `Inertia::render` to pass paginated platform data without exposure to lower-tier roles.
+- **Key design decisions:** Accessible strictly by users with `role === 'super_admin'`. Uses `Inertia::render` with server-side pagination to securely render platform stats.
 - **Depends on:** `Tenant`, `Store`, `User`, `SaaSPlan`, `AuditLog`, `Order`, `EnsureSuperAdmin` middleware.
-- **Last updated:** 2026-10-03
+- **Last updated:** 2026-10-04
 
 ### 2. Merchant HQ Portal & Chain Governance
-- **What it does:** Enables business owners (CEOs) to manage multi-store chains, create branch outlets, manage staff roles, access executive BI analytics (revenue, COGS, net profit), manage subscriptions, manage suppliers, process purchase orders, handle price quotations, track daily expenses, monitor staff attendance, and review Profit & Loss accounting.
-- **Where it lives:** `app/Http/Controllers/MerchantController.php`, `MerchantStoreController.php`, `SupplierController.php`, `ReportController.php`, `resources/js/Pages/Merchant/*`, `routes/web.php` (`/merchant/*`)
-- **Key design decisions:** Protected by `EnsureMerchant` and `EnsureActiveSubscription` middleware. All queries are scoped to the user's `tenant_id`.
-- **Depends on:** `Tenant`, `Store`, `User`, `Supplier`, `Purchase`, `ReportController`, `EnsureMerchant` middleware.
-- **Last updated:** 2026-10-03
+- **What it does:** Enables business owners (CEOs) to oversee multi-store chains: executive BI analytics (revenue, COGS, net profit), tenant staff user management, customer CRM with loyalty points & due ledgers, sales order history with thermal receipt previews, SaaS subscription status and renewal payment instructions, and tenant store settings.
+- **Where it lives:** `app/Http/Controllers/MerchantController.php`, `resources/js/Pages/Merchant/*`, `routes/web.php` (`/merchant/*`)
+- **Key design decisions:** Protected by `EnsureMerchant` and `EnsureActiveSubscription` middleware. All database queries automatically scoped to tenant ID.
+- **Depends on:** `Tenant`, `Store`, `User`, `Customer`, `Order`, `EnsureMerchant` middleware.
+- **Last updated:** 2026-10-04
 
-### 3. Store Manager Portal
-- **What it does:** Allows branch managers to monitor daily branch operations, conduct register shift float audits (cash over/short variance), request and accept inter-store stock transfers, process product returns/refunds, issue price quotes, and review branch performance.
-- **Where it lives:** `app/Http/Controllers/StoreManagerController.php`, `ShiftController.php`, `StockTransferController.php`, `ReturnController.php`, `resources/js/Pages/Manager/*`, `routes/web.php` (`/manager/*`)
-- **Key design decisions:** Restricted to `store_manager` and `merchant` roles via `EnsureStoreManager` middleware. Scoped to the specific assigned `store_id`.
+### 3. Multi-Store Outlet Governance
+- **What it does:** Allows merchants to create, configure, update, and manage branch retail stores, store-specific tax rates, active states, and currency symbols.
+- **Where it lives:** `app/Http/Controllers/MerchantStoreController.php`, `resources/js/Pages/Merchant/Stores.vue`, `routes/web.php` (`/merchant/stores/*`)
+- **Key design decisions:** Scoped per tenant; soft-deleting a store marks `deleted_at` while preserving historical transaction data.
+- **Depends on:** `Store`, `Tenant`, `EnsureMerchant` middleware.
+- **Last updated:** 2026-10-04
+
+### 4. Store Manager Branch Portal
+- **What it does:** Enables branch managers to oversee daily branch operations, register shift audits (cash over/short variance), inter-store stock transfer requests, product return/refund processing, branch operational expenses, and sales quotations.
+- **Where it lives:** `app/Http/Controllers/StoreManagerController.php`, `resources/js/Pages/Manager/*`, `routes/web.php` (`/manager/*`)
+- **Key design decisions:** Restricted to `store_manager` and `merchant` roles via `EnsureStoreManager` middleware. Scoped to the manager's assigned `store_id`.
 - **Depends on:** `Store`, `RegisterShift`, `StockTransfer`, `ProductReturn`, `EnsureStoreManager` middleware.
-- **Last updated:** 2026-10-03
+- **Last updated:** 2026-10-04
 
-### 4. Cashier POS Counter Workstation
-- **What it does:** Touchscreen-optimized cashier counter workstation featuring SKU search, barcode scanning, category filtering, cart modifiers, discounts, customer selection, split/multi-payment checkout (Cash, bKash, Card), parked cart draft/hold functionality, shift register opening/closing float tracking, thermal receipt printing (58mm/80mm), and offline cart resilience.
-- **Where it lives:** `app/Http/Controllers/PosController.php`, `ShiftController.php`, `resources/js/Pages/POS/Terminal.vue`, `routes/web.php` (`/pos/*`)
-- **Key design decisions:** Employs DB row-level locking (`lockForUpdate()`) during checkout stock deduction to prevent stock over-selling. Uses local storage for offline cart queuing.
+### 5. Cashier POS Counter Workstation
+- **What it does:** Touchscreen-optimized cashier workstation featuring SKU search, barcode scanning, category filtering, cart discounts, customer selection, split/multi-payment checkout (Cash, bKash, Card, Customer Credit), parked order hold/resume functionality, register shift float tracking, supervisor PIN override verification, thermal receipt printing, and sandbox demo mode.
+- **Where it lives:** `app/Http/Controllers/PosController.php`, `resources/js/Pages/POS/Terminal.vue`, `routes/web.php` (`/pos/*`, `/demo/pos`)
+- **Key design decisions:** Employs DB row locking (`lockForUpdate()`) during checkout stock deduction to prevent inventory race conditions. Supports store-level `allow_negative_stock` policy checks.
 - **Depends on:** `Product`, `Stock`, `Order`, `OrderItem`, `RegisterShift`, `ParkedOrder`, `Customer`.
-- **Last updated:** 2026-10-03
+- **Last updated:** 2026-10-04
 
-### 5. Multi-Tenant Data Isolation & Scoping Engine
-- **What it does:** Enforces strict data segregation across multi-tenant merchant accounts so no tenant can access another tenant's stores, products, orders, customers, or users.
-- **Where it lives:** `app/Models/Scopes/TenantScope.php`, `app/Traits/Tenantable.php`, `app/Models/User.php`, `Store.php`, `Product.php`, `Order.php`, `Stock.php`
-- **Key design decisions:** Implemented via Eloquent Global Query Scope (`TenantScope`). Automatically appends `WHERE tenant_id = X` to queries when `Auth::check()` is true and user is not a `super_admin`.
+### 6. Register Shift Float Audit & Reconciliation
+- **What it does:** Manages cashier cash drawer float lifecycle: opening shift balance, closing physical cash count, and automatic cash over/short discrepancy calculation.
+- **Where it lives:** `app/Http/Controllers/ShiftController.php`, `app/Models/RegisterShift.php`, `resources/js/Pages/Manager/Shifts.vue`
+- **Key design decisions:** Enforces that cashiers have an active open shift before allowing sales checkout in the POS terminal.
+- **Depends on:** `RegisterShift`, `User`, `Store`.
+- **Last updated:** 2026-10-04
+
+### 7. Multi-Tenant Data Isolation & Query Scoping Engine
+- **What it does:** Enforces strict multi-tenant data isolation across all merchant data (stores, products, orders, customers, users, inventory).
+- **Where it lives:** `app/Models/Scopes/TenantScope.php`, `app/Traits/Tenantable.php`, `app/Models/*`
+- **Key design decisions:** Implemented as an Eloquent Global Query Scope (`TenantScope`). Automatically appends `WHERE tenant_id = X` to queries when `Auth::check()` is true and user is not a `super_admin`.
 - **Depends on:** `Illuminate\Database\Eloquent\Scope`, `Illuminate\Support\Facades\Auth`.
-- **Last updated:** 2026-10-03
+- **Last updated:** 2026-10-04
 
-### 6. Product Catalog & Barcode Label Generator
-- **What it does:** Handles product listings, pricing, SKU assignment, product categories, measurement units, and generates multi-format printable barcode labels (EAN-13 / Code-128) for thermal printers.
-- **Where it lives:** `app/Http/Controllers/ProductController.php`, `BarcodeController.php`, `resources/js/Pages/Products/*`
-- **Key design decisions:** Products are linked to categories, units, and store-specific stock levels (`Stock` model).
+### 8. Product Catalog & Inventory Management
+- **What it does:** Handles product creation, SKU generation, barcode values, cost vs selling prices, product categories, measurement units, and store-specific inventory stock quantities.
+- **Where it lives:** `app/Http/Controllers/ProductController.php`, `resources/js/Pages/Products/Index.vue`
+- **Key design decisions:** Products link to `Category` and `Unit`, with store stock quantities maintained in the `Stock` table (`store_id`, `product_id`, `quantity`).
 - **Depends on:** `Product`, `Category`, `Unit`, `Stock`, `Store`.
-- **Last updated:** 2026-10-03
+- **Last updated:** 2026-10-04
 
-### 7. Inventory Purchases & Supplier Directory
-- **What it does:** Manages vendor profiles, payables ledgers, purchase order entry, and automatic inventory stock augmentation upon purchase order receipt.
+### 9. Barcode Label Generator
+- **What it does:** Generates multi-format printable barcode labels (Code-128 / EAN-13) formatted for standard thermal label printers.
+- **Where it lives:** `app/Http/Controllers/BarcodeController.php`, `resources/js/Pages/Products/Barcodes.vue`
+- **Key design decisions:** Renders print-ready CSS grid components with store name, product title, price, and SVG/Canvas barcodes.
+- **Depends on:** `Product`, `Store`.
+- **Last updated:** 2026-10-04
+
+### 10. Supplier Directory & Inventory Purchases
+- **What it does:** Manages vendor profiles, payables ledgers, purchase order entry, and automatic inventory stock augmentation upon purchase order completion.
 - **Where it lives:** `app/Http/Controllers/SupplierController.php`, `resources/js/Pages/Merchant/Suppliers.vue`, `Purchases.vue`
-- **Key design decisions:** Purchasing an item updates supplier balance and increments store stock inside a `DB::transaction()`.
+- **Key design decisions:** Purchasing items updates supplier due balances and increments store stock inside a `DB::transaction()`.
 - **Depends on:** `Supplier`, `Purchase`, `PurchaseItem`, `Stock`.
-- **Last updated:** 2026-10-03
+- **Last updated:** 2026-10-04
 
-### 8. Web-based cPanel Deployment Engine
-- **What it does:** Enables complete database migration, seeding, table wipe recovery, cache clearing, and route optimization directly from a browser without SSH terminal access.
+### 11. Inter-Store Inventory Transfers
+- **What it does:** Manages stock transfers between store branches within a merchant tenant account, atomically deducting stock from the origin store and adding to the destination store.
+- **Where it lives:** `app/Http/Controllers/StockTransferController.php`, `resources/js/Pages/Manager/Transfers.vue`
+- **Key design decisions:** Executes stock adjustments inside `DB::transaction()` to ensure atomicity and prevent stock loss.
+- **Depends on:** `StockTransfer`, `StockTransferItem`, `Stock`, `Store`.
+- **Last updated:** 2026-10-04
+
+### 12. Product Returns & Refund Management
+- **What it does:** Processes customer product returns, evaluates return condition (resellable vs damaged), restocks valid items, and records refund payment methods.
+- **Where it lives:** `app/Http/Controllers/ReturnController.php`, `resources/js/Pages/Manager/Returns.vue`
+- **Key design decisions:** Restocks inventory only when return item condition is set to `resellable`.
+- **Depends on:** `ProductReturn`, `Order`, `Product`, `Stock`.
+- **Last updated:** 2026-10-04
+
+### 13. Operational Store Expense Tracking
+- **What it does:** Tracks branch operational expenses (rent, utilities, maintenance, staff wage advances) per store outlet.
+- **Where it lives:** `app/Http/Controllers/ExpenseController.php`, `resources/js/Pages/Expenses/Index.vue`
+- **Key design decisions:** Expenses are factored directly into the Net Profit calculation in financial BI reports.
+- **Depends on:** `Expense`, `Store`.
+- **Last updated:** 2026-10-04
+
+### 14. Sales Quotations & Proforma Invoices
+- **What it does:** Allows merchants and store managers to create proforma sales quotes and convert approved quotations into active POS orders with 1 click.
+- **Where it lives:** `app/Http/Controllers/QuotationController.php`, `resources/js/Pages/Sales/Quotations.vue`
+- **Key design decisions:** Quotation conversion automatically creates an `Order` and deducts inventory stock.
+- **Depends on:** `Quotation`, `Order`, `Product`, `Stock`.
+- **Last updated:** 2026-10-04
+
+### 15. HRM Staff Attendance & Shift Clocking
+- **What it does:** Provides staff clock-in / clock-out tracking, calculating total daily shift hours per employee.
+- **Where it lives:** `app/Http/Controllers/AttendanceController.php`, `resources/js/Pages/HRM/Attendance.vue`
+- **Key design decisions:** Uses single action toggle (`toggleClock`) per user per day.
+- **Depends on:** `Attendance`, `User`.
+- **Last updated:** 2026-10-04
+
+### 16. Profit & Loss Financial BI Analytics
+- **What it does:** Generates financial statements calculating gross revenue, cost of goods sold (COGS), operating expenses, and net profit margins across stores and date ranges.
+- **Where it lives:** `app/Http/Controllers/ReportController.php`, `resources/js/Pages/Reports/ProfitLoss.vue`
+- **Key design decisions:** Aggregates `Order` totals, `Purchase` costs, and `Expense` records per tenant.
+- **Depends on:** `Order`, `Purchase`, `Expense`, `Store`.
+- **Last updated:** 2026-10-04
+
+### 17. Public SaaS Marketing Landing Page
+- **What it does:** Public landing page introducing Saba POS features, pricing tiers, interactive currency selector, FAQ accordion, and link to POS live demo.
+- **Where it lives:** `app/Http/Controllers/LandingController.php`, `resources/js/Pages/Landing.vue`
+- **Key design decisions:** Completely accessible without authentication; includes sandbox POS counter demo link (`/demo/pos`).
+- **Depends on:** `LandingController`, `SaaSPlan`.
+- **Last updated:** 2026-10-04
+
+### 18. Web-Based cPanel Deployment Engine
+- **What it does:** Browser-accessible database migration, seeding, cache clearing, and route optimization script designed for cPanel shared hosting environments without SSH access.
 - **Where it lives:** `public/cpanel_setup.php`, `build_cpanel_subdomain_zip.py`
-- **Key design decisions:** Disables foreign key checks (`SET FOREIGN_KEY_CHECKS = 0`) during fresh migrations to cleanly drop pre-existing tables on cPanel shared MySQL databases. Automatically purges `bootstrap/cache/routes-v7.php` to prevent stale route locks.
-- **Depends on:** `Illuminate\Support\Facades\Artisan`, `DB`, `Schema`.
-- **Last updated:** 2026-10-03
+- **Key design decisions:** Disables foreign key checks (`SET FOREIGN_KEY_CHECKS = 0`) during fresh migrations to cleanly clear pre-existing tables. Purges cached route manifests (`bootstrap/cache/routes-v7.php`).
+- **Depends on:** `Artisan`, `DB`, `Schema`.
+- **Last updated:** 2026-10-04
 
 ## Data Model
 
 ```
 Tenant (1) <---> (N) Store (1) <---> (N) Stock (N) <---> (1) Product
 Tenant (1) <---> (N) User (1) <---> (N) Order (1) <---> (N) OrderItem
-Tenant (1) <---> (N) Supplier (1) <---> (N) Purchase
-Store  (1) <---> (N) RegisterShift
+Tenant (1) <---> (N) Supplier (1) <---> (N) Purchase (1) <---> (N) PurchaseItem
+Tenant (1) <---> (N) Customer
 Tenant (1) <---> (N) AuditLog
+Store  (1) <---> (N) RegisterShift
+Store  (1) <---> (N) Expense
+Store  (1) <---> (N) StockTransfer (Source / Destination)
 ```
 
-- **`tenants`**: SaaS business accounts (name, code, subscription_status, mrr_amount, plan_name, expires_at).
-- **`stores`**: Branch outlets linked to a tenant (name, code, tax_rate, currency_symbol, is_active).
-- **`users`**: User accounts (name, email, password, role, tenant_id, store_id).
-- **`products`**: Item catalog (name, sku, barcode, cost_price, selling_price, tenant_id, category_id).
-- **`stocks`**: Store-specific inventory quantities (store_id, product_id, quantity).
-- **`orders` / `order_items`**: Completed sales transactions and line items.
-- **`register_shifts`**: Cashier register drawer float tracking (opening_balance, closing_balance, cash_difference).
-- **`saas_plans`**: Pricing tier configurations (Starter, Growth, Enterprise).
-- **`audit_logs`**: System security activity logs.
+## Known Issues / Flagged Inferences
 
-## Known Issues / Tech Debt
-
-- **Lack of Soft Deletes on Core Entities**: Deleting a tenant, store, or product executes a hard SQL `DELETE`. Adding `$table->softDeletes()` will enable restoration of deleted items from the SaaS Recycle Bin. *[Flagged for future enhancement]*
-- **Offline Sync Concurrency Over-Selling Risk**: If two offline cashiers sell the last unit of a product locally at the same time, both offline sales succeed locally. When both sync online sequentially, stock decreases below zero (negative inventory). Adding an `allow_negative_stock` configuration check in `PosController::checkout` will flag backorders. *[Flagged for future enhancement]*
-- **Login Throttling on Shared Terminal IPs**: `throttle:6,1` limits login attempts to 6 per minute per IP. Fast cashier switching on a shared IP could hit throttling. Increasing to `throttle:15,1` or using IP + Username composite keys is recommended. *[Flagged for future enhancement]*
+- **HRM Module Extensibility**: Attendance tracking is currently limited to basic clock-in/out timestamps; full payroll calculations are flagged for future enhancement.
+- **Single Base Currency per Tenant**: Stores can set distinct currency display symbols (`$`, `৳`, `AED`), but overall tenant financial reporting assumes a 1:1 base currency exchange without real-time FX conversions.
+- **Tenant Impersonation Session Handling**: Super Admin impersonation uses session key swapping (`impersonated_by`).
