@@ -66,11 +66,126 @@ foreach ($storageDirs as $dir) {
 @unlink($backendPath . '/bootstrap/cache/packages.php');
 @unlink($backendPath . '/bootstrap/cache/services.php');
 
+function repairDatabaseSchema() {
+    try {
+        if (!Illuminate\Support\Facades\Schema::hasTable('users')) {
+            Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+            Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+            return;
+        }
+
+        // 1. Repair users table
+        Illuminate\Support\Facades\Schema::table('users', function (\Illuminate\Database\Schema\Blueprint $table) {
+            if (!Illuminate\Support\Facades\Schema::hasColumn('users', 'tenant_id')) {
+                $table->unsignedBigInteger('tenant_id')->nullable()->after('id');
+            }
+            if (!Illuminate\Support\Facades\Schema::hasColumn('users', 'store_id')) {
+                $table->unsignedBigInteger('store_id')->nullable()->after('tenant_id');
+            }
+            if (!Illuminate\Support\Facades\Schema::hasColumn('users', 'role')) {
+                $table->string('role')->default('merchant')->after('password');
+            }
+            if (!Illuminate\Support\Facades\Schema::hasColumn('users', 'permissions')) {
+                $table->json('permissions')->nullable()->after('role');
+            }
+            if (!Illuminate\Support\Facades\Schema::hasColumn('users', 'phone')) {
+                $table->string('phone')->nullable()->after('permissions');
+            }
+            if (!Illuminate\Support\Facades\Schema::hasColumn('users', 'is_active')) {
+                $table->boolean('is_active')->default(true)->after('phone');
+            }
+            if (!Illuminate\Support\Facades\Schema::hasColumn('users', 'deleted_at')) {
+                $table->softDeletes();
+            }
+        });
+
+        // 2. Repair tenants table
+        if (Illuminate\Support\Facades\Schema::hasTable('tenants')) {
+            Illuminate\Support\Facades\Schema::table('tenants', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (!Illuminate\Support\Facades\Schema::hasColumn('tenants', 'deleted_at')) {
+                    $table->softDeletes();
+                }
+                if (!Illuminate\Support\Facades\Schema::hasColumn('tenants', 'currency_symbol')) {
+                    $table->string('currency_symbol')->default('৳')->after('plan_name');
+                }
+                if (!Illuminate\Support\Facades\Schema::hasColumn('tenants', 'default_tax_rate')) {
+                    $table->decimal('default_tax_rate', 5, 2)->default(5.00)->after('currency_symbol');
+                }
+                if (!Illuminate\Support\Facades\Schema::hasColumn('tenants', 'receipt_header')) {
+                    $table->text('receipt_header')->nullable()->after('default_tax_rate');
+                }
+                if (!Illuminate\Support\Facades\Schema::hasColumn('tenants', 'receipt_footer')) {
+                    $table->text('receipt_footer')->nullable()->after('receipt_header');
+                }
+                if (!Illuminate\Support\Facades\Schema::hasColumn('tenants', 'invoice_prefix')) {
+                    $table->string('invoice_prefix')->default('INV-')->after('receipt_footer');
+                }
+            });
+        }
+
+        // 3. Repair stores table
+        if (Illuminate\Support\Facades\Schema::hasTable('stores')) {
+            Illuminate\Support\Facades\Schema::table('stores', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (!Illuminate\Support\Facades\Schema::hasColumn('stores', 'deleted_at')) {
+                    $table->softDeletes();
+                }
+                if (!Illuminate\Support\Facades\Schema::hasColumn('stores', 'allow_negative_stock')) {
+                    $table->boolean('allow_negative_stock')->default(true)->after('is_active');
+                }
+            });
+        }
+
+        // 4. Repair customers table
+        if (Illuminate\Support\Facades\Schema::hasTable('customers')) {
+            Illuminate\Support\Facades\Schema::table('customers', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (!Illuminate\Support\Facades\Schema::hasColumn('customers', 'deleted_at')) {
+                    $table->softDeletes();
+                }
+            });
+        }
+
+        // 5. Repair suppliers table
+        if (Illuminate\Support\Facades\Schema::hasTable('suppliers')) {
+            Illuminate\Support\Facades\Schema::table('suppliers', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (!Illuminate\Support\Facades\Schema::hasColumn('suppliers', 'deleted_at')) {
+                    $table->softDeletes();
+                }
+            });
+        }
+
+        // 6. Repair products table
+        if (Illuminate\Support\Facades\Schema::hasTable('products')) {
+            Illuminate\Support\Facades\Schema::table('products', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (!Illuminate\Support\Facades\Schema::hasColumn('products', 'deleted_at')) {
+                    $table->softDeletes();
+                }
+            });
+        }
+
+        // 7. Repair categories table
+        if (Illuminate\Support\Facades\Schema::hasTable('categories')) {
+            Illuminate\Support\Facades\Schema::table('categories', function (\Illuminate\Database\Schema\Blueprint $table) {
+                if (!Illuminate\Support\Facades\Schema::hasColumn('categories', 'deleted_at')) {
+                    $table->softDeletes();
+                }
+            });
+        }
+
+        // Check if default seeded accounts exist
+        if (!App\Models\User::where('email', 'merchant@sabapos.com')->exists()) {
+            Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+        }
+    } catch (\Throwable $ex) {
+        // Safe fallback
+    }
+}
+
 try {
     Illuminate\Support\Facades\Artisan::call('route:clear');
     Illuminate\Support\Facades\Artisan::call('config:clear');
     Illuminate\Support\Facades\Artisan::call('cache:clear');
     Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+    repairDatabaseSchema();
 } catch (\Throwable $e) {
     // Ignore initial bootstrap cache clear / migrate exception
 }
@@ -82,11 +197,13 @@ $outputLog = [];
 try {
     Illuminate\Support\Facades\DB::connection()->getPdo();
     $dbName = Illuminate\Support\Facades\DB::connection()->getDatabaseName();
-    $outputLog[] = "--> [SUCCESS] MySQL Database Connected Successfully! (Active DB: '$dbName')";
+    repairDatabaseSchema();
+    $outputLog[] = "--> [SUCCESS] MySQL Database Connected & Schema Repaired! (Active DB: '$dbName')";
 } catch (\Throwable $dbEx) {
     $outputLog[] = "--> [ERROR] Database Connection Failed: " . $dbEx->getMessage();
     $outputLog[] = "--> [TIP] Check your cPanel MySQL Database credentials in 'sabapos_backend/.env'!";
 }
+
 
 if ($action) {
     try {
