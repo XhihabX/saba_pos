@@ -31,7 +31,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div>
                 <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Company / Store Brand Name</label>
-                <input v-model="form.name" required type="text" placeholder="e.g. Saba Super Shop" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500" />
+                <input v-model="form.name" required type="text" placeholder="e.g. IOT Super Shop" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500" />
               </div>
 
               <div>
@@ -41,7 +41,7 @@
 
               <div class="md:col-span-2">
                 <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Support Email Address</label>
-                <input v-model="form.email" type="email" placeholder="contact@saba.com" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500" />
+                <input v-model="form.email" type="email" placeholder="contact@iotpos.com" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500" />
               </div>
 
               <div class="md:col-span-2">
@@ -99,7 +99,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
               <div>
                 <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Receipt Top Header Note</label>
-                <textarea v-model="form.receipt_header" rows="3" placeholder="Welcome to Saba Super Store! Thank you for shopping with us." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500"></textarea>
+                <textarea v-model="form.receipt_header" rows="3" placeholder="Welcome to IOT Super Store! Thank you for shopping with us." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500"></textarea>
               </div>
 
               <div>

@@ -729,7 +729,7 @@ const calcInput = (val) => {
 
 const authUser = computed(() => page.props.auth?.user || {});
 const userName = computed(() => authUser.value?.name || 'Authorized User');
-const userEmail = computed(() => authUser.value?.email || 'user@sabapos.com');
+const userEmail = computed(() => authUser.value?.email || 'user@iotpos.com');
 const userRole = computed(() => authUser.value?.role || '');
 
 const roleLabel = computed(() => {

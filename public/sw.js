@@ -1,6 +1,6 @@
-const CACHE_NAME = 'saba-pos-v2';
-const OFFLINE_SYNC_TAG = 'saba-pos-offline-sync';
-const DB_NAME = 'SabaPosDB';
+const CACHE_NAME = 'iot-pos-v2';
+const OFFLINE_SYNC_TAG = 'iot-pos-offline-sync';
+const DB_NAME = 'IotPosDB';
 const DB_VERSION = 2;
 
 // Static assets to pre-cache on install
@@ -60,7 +60,7 @@ function idbDelete(storeName, key) {
 // Install: Pre-cache static assets
 // =====================================================================
 self.addEventListener('install', event => {
-  console.log('[SW] Installing Saba POS Service Worker...');
+  console.log('[SW] Installing IOT POS Service Worker...');
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache =>
@@ -73,7 +73,7 @@ self.addEventListener('install', event => {
 // Activate: Clean stale caches, claim clients immediately
 // =====================================================================
 self.addEventListener('activate', event => {
-  console.log('[SW] Activating Saba POS Service Worker...');
+  console.log('[SW] Activating IOT POS Service Worker...');
   event.waitUntil(
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))))
@@ -121,7 +121,7 @@ self.addEventListener('fetch', event => {
           return caches.match(request).then(cached => {
             if (cached) return cached;
             return new Response(
-              '<html><body style="font-family:sans-serif;padding:2rem;background:#0f172a;color:#e2e8f0"><h1>🛒 Saba POS - Offline Mode</h1><p>The terminal is offline. Please open the POS while connected to Internet at least once to cache it for offline use.</p></body></html>',
+              '<html><body style="font-family:sans-serif;padding:2rem;background:#0f172a;color:#e2e8f0"><h1>🛒 IOT POS - International Office Technology (Offline Mode)</h1><p>The terminal is offline. Please open the POS while connected to Internet at least once to cache it for offline use.</p></body></html>',
               { headers: { 'Content-Type': 'text/html' } }
             );
           });

@@ -44,13 +44,13 @@ class AuthController extends Controller
     public function switchRole($role)
     {
         $roleMap = [
-            'super_admin' => 'admin@sabapos.com',
-            'merchant' => 'merchant@sabapos.com',
-            'store_manager' => 'manager@sabapos.com',
-            'cashier' => 'cashier@sabapos.com',
+            'super_admin' => 'admin@iot.com',
+            'merchant' => 'merchant@iotpos.com',
+            'store_manager' => 'manager@iotpos.com',
+            'cashier' => 'cashier@iotpos.com',
         ];
 
-        $email = $roleMap[$role] ?? 'merchant@sabapos.com';
+        $email = $roleMap[$role] ?? 'merchant@iotpos.com';
         $user = \App\Models\User::where('email', $email)->first();
 
         if ($user) {

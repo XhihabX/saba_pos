@@ -306,7 +306,7 @@ class SuperAdminController extends Controller
             'nagad_number' => '01811000222',
             'bank_details' => "Bank: Dutch Bangla Bank Ltd\nA/C: 101-120-99882\nBranch: Banani, Dhaka",
             'support_phone' => '+880 1700 000000',
-            'support_email' => 'support@sabapos.com',
+            'support_email' => 'support@iotpos.com',
             'currency_symbol' => '৳',
             'default_tax_rate' => 5.0,
             'maintenance_mode' => false,

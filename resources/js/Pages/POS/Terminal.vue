@@ -910,13 +910,13 @@ const processCheckout = async (paymentDetails) => {
     } catch (e) {
       // Fallback to localStorage if IndexedDB fails
       offlineQueue.value.push(offlineOrder);
-      localStorage.setItem('saba_offline_orders', JSON.stringify(offlineQueue.value));
+      localStorage.setItem('iot_offline_orders', JSON.stringify(offlineQueue.value));
     }
 
     // Register Background Sync so order syncs even if tab closes
     if (swRegistration.value && 'sync' in swRegistration.value) {
       try {
-        await swRegistration.value.sync.register('saba-pos-offline-sync');
+        await swRegistration.value.sync.register('iot-pos-offline-sync');
         console.log('[POS] Background Sync registered for offline order.');
       } catch (e) {
         console.warn('[POS] Background Sync registration failed:', e);
@@ -1267,7 +1267,7 @@ const loadOfflineQueue = async () => {
     }
   } catch (e) {
     // Fallback to localStorage
-    const saved = localStorage.getItem('saba_offline_orders');
+    const saved = localStorage.getItem('iot_offline_orders');
     if (saved) {
       try { offlineQueue.value = JSON.parse(saved); } catch {}
     }
@@ -1318,9 +1318,9 @@ const syncOfflineQueue = async () => {
   offlineQueue.value = remaining;
   // Keep localStorage as backup
   if (remaining.length === 0) {
-    localStorage.removeItem('saba_offline_orders');
+    localStorage.removeItem('iot_offline_orders');
   } else {
-    localStorage.setItem('saba_offline_orders', JSON.stringify(remaining));
+    localStorage.setItem('iot_offline_orders', JSON.stringify(remaining));
   }
 
   isSyncing.value = false;
@@ -1398,7 +1398,7 @@ onMounted(async () => {
     await syncOfflineQueue();
     // Also trigger SW Background Sync if registration is available
     if (swRegistration.value && 'sync' in swRegistration.value) {
-      try { await swRegistration.value.sync.register('saba-pos-offline-sync'); } catch (_) {}
+      try { await swRegistration.value.sync.register('iot-pos-offline-sync'); } catch (_) {}
     }
   });
   window.addEventListener('offline', () => {

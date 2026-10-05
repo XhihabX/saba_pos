@@ -53,7 +53,7 @@ class PosController extends Controller
         ];
 
         $demoCustomers = [
-            ['id' => 1, 'name' => 'Walk-in Retail Customer', 'phone' => '01700000000', 'email' => 'walkin@sabapos.com'],
+            ['id' => 1, 'name' => 'Walk-in Retail Customer', 'phone' => '01700000000', 'email' => 'walkin@iotpos.com'],
             ['id' => 2, 'name' => 'Tanvir Ahmed (VIP Member)', 'phone' => '01811112222', 'email' => 'tanvir@example.com'],
         ];
 

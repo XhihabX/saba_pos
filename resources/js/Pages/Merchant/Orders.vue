@@ -152,7 +152,7 @@
           <!-- Printable Thermal Paper Simulation -->
           <div class="bg-white text-slate-900 p-4 rounded-xl border border-slate-300 font-mono text-[11px] leading-tight space-y-3 shadow-inner">
             <div class="text-center space-y-1 pb-2 border-b border-dashed border-slate-300">
-              <div class="text-sm font-black uppercase">{{ selectedOrder.store?.name || 'SABA RETAIL STORE' }}</div>
+              <div class="text-sm font-black uppercase">{{ selectedOrder.store?.name || 'IOT RETAIL STORE' }}</div>
               <div class="text-[9px] text-slate-600">POS Sales Terminal Receipt</div>
               <div class="text-[9px] text-slate-500">Date: {{ new Date(selectedOrder.created_at || Date.now()).toLocaleString() }}</div>
             </div>

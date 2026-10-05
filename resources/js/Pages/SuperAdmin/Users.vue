@@ -196,7 +196,7 @@
 
           <div>
             <label class="block text-slate-700 font-bold mb-1">Email Address</label>
-            <input type="email" v-model="createForm.email" required placeholder="user@sabapos.com" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-rose-500" />
+            <input type="email" v-model="createForm.email" required placeholder="user@iotpos.com" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:border-rose-500" />
           </div>
 
           <div>

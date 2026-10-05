@@ -214,25 +214,25 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
             <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
               <div class="font-sans font-extrabold text-rose-400">👑 Super Admin SaaS</div>
-              <div class="text-slate-200">Email: admin@sabapos.com</div>
-              <div class="text-slate-400">Password: 123456</div>
+              <div class="text-slate-200">Email: admin@iot.com</div>
+              <div class="text-slate-400">Password: Admin-iot2026?</div>
             </div>
 
             <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
               <div class="font-sans font-extrabold text-indigo-400">🏢 Merchant HQ CEO</div>
-              <div class="text-slate-200">Email: merchant@sabapos.com</div>
+              <div class="text-slate-200">Email: merchant@iotpos.com</div>
               <div class="text-slate-400">Password: 123456</div>
             </div>
 
             <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
               <div class="font-sans font-extrabold text-cyan-400">⚙️ Store Manager</div>
-              <div class="text-slate-200">Email: manager@sabapos.com</div>
+              <div class="text-slate-200">Email: manager@iotpos.com</div>
               <div class="text-slate-400">Password: 123456</div>
             </div>
 
             <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
               <div class="font-sans font-extrabold text-emerald-400">⚡ Cashier Terminal</div>
-              <div class="text-slate-200">Email: cashier@sabapos.com</div>
+              <div class="text-slate-200">Email: cashier@iotpos.com</div>
               <div class="text-slate-400">Password: 123456</div>
             </div>
           </div>

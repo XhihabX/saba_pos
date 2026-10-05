@@ -61,18 +61,18 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Last updated:** 2026-10-04
 
 ### 5. Cashier POS Counter Workstation
-- **What it does:** Touchscreen-optimized cashier workstation featuring SKU search, barcode scanning, category filtering, cart discounts, customer selection, split/multi-payment checkout (Cash, bKash, Card, Customer Credit), parked order hold/resume functionality, register shift float tracking, supervisor PIN override verification, thermal receipt printing, and sandbox demo mode.
+- **What it does:** High-speed touchscreen and mouse-free keyboard counter workstation (`F1` Search Focus, `F2` Customer Quick-Add, `F4` Checkout, `F7`/`F8` Park/Resume Order, `ESC` Modal Dismiss) featuring SKU search, barcode scanning, category filtering, cart discounts, customer selection, split/multi-payment checkout (Cash, bKash, Card, Customer Credit), parked order hold/resume modal, register shift float tracking modal, supervisor PIN override verification, thermal receipt printing, and clean enterprise authentication with no prefilled credentials or demo login buttons.
 - **Where it lives:** `app/Http/Controllers/PosController.php`, `resources/js/Pages/POS/Terminal.vue`, `routes/web.php` (`/pos/*`, `/demo/pos`)
-- **Key design decisions:** Employs DB row locking (`lockForUpdate()`) during checkout stock deduction to prevent inventory race conditions. Supports store-level `allow_negative_stock` policy checks.
+- **Key design decisions:** Employs DB row locking (`lockForUpdate()`) during checkout stock deduction to prevent inventory race conditions. Supports store-level `allow_negative_stock` policy checks. Full keyboard hotkey map for 100% mouse-free supermarket cashier operations.
 - **Depends on:** `Product`, `Stock`, `Order`, `OrderItem`, `RegisterShift`, `ParkedOrder`, `Customer`.
-- **Last updated:** 2026-10-04
+- **Last updated:** 2026-10-05
 
 ### 6. Register Shift Float Audit & Reconciliation
-- **What it does:** Manages cashier cash drawer float lifecycle: opening shift balance, closing physical cash count, and automatic cash over/short discrepancy calculation.
-- **Where it lives:** `app/Http/Controllers/ShiftController.php`, `app/Models/RegisterShift.php`, `resources/js/Pages/Manager/Shifts.vue`
+- **What it does:** Manages cashier cash drawer float lifecycle: opening shift balance modal, closing physical cash count drawer reconciliation modal, and automatic cash over/short discrepancy calculation.
+- **Where it lives:** `app/Http/Controllers/ShiftController.php`, `app/Models/RegisterShift.php`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/Pages/Manager/Shifts.vue`
 - **Key design decisions:** Enforces that cashiers have an active open shift before allowing sales checkout in the POS terminal.
 - **Depends on:** `RegisterShift`, `User`, `Store`.
-- **Last updated:** 2026-10-04
+- **Last updated:** 2026-10-05
 
 ### 7. Multi-Tenant Data Isolation & Query Scoping Engine
 - **What it does:** Enforces strict multi-tenant data isolation across all merchant data (stores, products, orders, customers, users, inventory).
