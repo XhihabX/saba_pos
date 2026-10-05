@@ -7,11 +7,15 @@
       ]"
     >
       <img 
-        :src="logoSrc" 
+        v-if="props.src && !imgFailed" 
+        :src="props.src" 
         alt="IOT POS Logo"
         class="w-full h-full object-cover"
         @error="handleImgError"
       />
+      <div v-else class="w-full h-full bg-gradient-to-br from-emerald-500 via-teal-600 to-indigo-600 flex items-center justify-center font-black text-white font-heading text-xs tracking-tighter shadow-inner">
+        IOT
+      </div>
     </div>
 
     <div v-if="showText" class="truncate">
