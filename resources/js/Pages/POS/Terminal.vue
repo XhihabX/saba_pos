@@ -38,6 +38,20 @@
 
         <!-- Terminal Quick Action Tools -->
         <div class="flex items-center gap-2">
+          <!-- Store Outlet Selector (Multi-Store Support) -->
+          <div v-if="stores.length > 1" class="px-2.5 py-1.5 rounded-xl bg-slate-700/80 border border-slate-600 flex items-center gap-1.5 text-[11px] font-bold">
+            <StoreIcon class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+            <select 
+              v-model="selectedStoreId" 
+              @change="switchStoreOutlet"
+              class="bg-transparent text-slate-100 font-bold focus:outline-none cursor-pointer"
+            >
+              <option v-for="s in stores" :key="s.id" :value="s.id" class="bg-slate-800 text-white">
+                {{ s.name }}
+              </option>
+            </select>
+          </div>
+
           <!-- Register Shift Drawer Button -->
           <button 
             @click="openShiftModal"
@@ -195,6 +209,19 @@
                 />
               </div>
 
+              <!-- Line Discount Input -->
+              <div class="flex items-center justify-between gap-2 bg-slate-900/40 px-2.5 py-1 rounded-xl border border-slate-700/80 text-[10px]">
+                <span class="font-bold text-rose-400 font-mono">Item Discount (৳):</span>
+                <input 
+                  type="number" 
+                  v-model.number="item.discount" 
+                  min="0"
+                  step="1"
+                  placeholder="0.00" 
+                  class="w-24 px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-600 text-[11px] text-slate-100 text-right focus:outline-none focus:border-emerald-400 font-mono"
+                />
+              </div>
+
               <!-- Stepper & Line Total -->
               <div class="flex items-center justify-between pt-1 border-t border-slate-700/60">
                 <div class="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-700">
@@ -211,7 +238,7 @@
 
                 <div class="text-right">
                   <span class="text-xs font-black font-mono text-emerald-400">
-                    ৳{{ formatMoney(item.quantity * item.unit_price) }}
+                    ৳{{ formatMoney(Math.max(0, (item.quantity * item.unit_price) - (item.discount || 0))) }}
                   </span>
                 </div>
               </div>
@@ -398,6 +425,8 @@
       :discountAmount="orderDiscount" 
       :taxAmount="taxAmount" 
       :grandTotal="grandTotal" 
+      :presetTender="presetTender"
+      :isGuestCustomer="isGuestCustomer"
       :isSubmitting="isSubmitting" 
       @close="showCheckoutModal = false" 
       @confirm="processCheckout" 
@@ -689,7 +718,8 @@ import {
   PackageSearch, 
   WifiOff, 
   RefreshCw,
-  Lock
+  Lock,
+  Store as StoreIcon
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -708,10 +738,30 @@ const selectedStoreId = ref(props.currentStoreId);
 const selectedCustomerId = ref(props.customers[0]?.id || null);
 const selectedCategoryId = ref(null);
 const searchQuery = ref('');
+const presetTender = ref(0);
 
-const cart = ref([]);
-const orderDiscount = ref(0);
-const taxRate = ref(5.0);
+const isGuestCustomer = computed(() => {
+  return !selectedCustomerId.value || selectedCustomerId.value === 1 || selectedCustomerId.value === '1';
+});
+
+const switchStoreOutlet = () => {
+  if (cart.value.length > 0) {
+    if (!confirm('Switching store outlet will reset current cart. Continue?')) {
+      selectedStoreId.value = props.currentStoreId;
+      return;
+    }
+    cart.value = [];
+  }
+  router.get('/pos', { store_id: selectedStoreId.value }, { preserveState: false });
+};
+
+const currentStore = computed(() => {
+  return props.stores.find(s => s.id === selectedStoreId.value) || props.stores[0] || null;
+});
+
+const taxRate = computed(() => {
+  return currentStore.value?.default_tax_rate !== undefined ? Number(currentStore.value.default_tax_rate) : 5.0;
+});
 
 const searchInputRef = ref(null);
 const showCheckoutModal = ref(false);
@@ -822,11 +872,12 @@ const playScannerBeep = () => {
 };
 
 const addToCart = (product) => {
+  const allowNegative = currentStore.value?.allow_negative_stock ?? false;
   const stockAvailable = product.current_stock ?? product.stock ?? 999;
   const existing = cart.value.find(i => i.product_id === product.id);
   const currentCartQty = existing ? existing.quantity : 0;
 
-  if (currentCartQty + 1 > stockAvailable) {
+  if (!allowNegative && (currentCartQty + 1 > stockAvailable)) {
     syncNotification.value = {
       type: 'error',
       message: `⚠️ Stock limit reached for "${product.name}"! Available: ${stockAvailable}`
@@ -858,9 +909,10 @@ const updateQty = (index, delta) => {
   if (!item) return;
 
   if (delta > 0) {
+    const allowNegative = currentStore.value?.allow_negative_stock ?? false;
     const product = allProducts.value.find(p => p.id === item.product_id);
     const stockAvailable = product ? (product.current_stock ?? 999) : 999;
-    if (item.quantity + delta > stockAvailable) {
+    if (!allowNegative && (item.quantity + delta > stockAvailable)) {
       syncNotification.value = {
         type: 'error',
         message: `⚠️ Stock limit reached for "${item.name}"! Max available: ${stockAvailable}`
@@ -882,6 +934,7 @@ const removeFromCart = (index) => {
 
 const applyQuickTender = (amt) => {
   if (cart.value.length === 0) return;
+  presetTender.value = amt;
   openCheckoutModal();
 };
 
@@ -1000,9 +1053,11 @@ const processCheckout = async (paymentDetails) => {
 
 const parkActiveOrder = () => {
   if (cart.value.length === 0) return;
+  const cust = customersList.value.find(c => c.id === selectedCustomerId.value);
+  const custName = cust ? cust.name : 'Walk-in Customer';
   router.post('/pos/park', {
     store_id: selectedStoreId.value,
-    customer_name: 'Walk-in Customer',
+    customer_name: custName,
     cart_data: cart.value,
   }, {
     preserveScroll: true,
@@ -1453,12 +1508,18 @@ const syncOfflineQueue = async () => {
         body: JSON.stringify(payload),
       });
 
-      // Only response.ok (200-299) means true success - fetch follows 302 redirects automatically
-      if (response.ok) {
-        await idbDelete('offline_orders', offlineId);
-        syncedCount++;
+      const contentType = response.headers.get('content-type') || '';
+      if (response.ok && contentType.includes('application/json')) {
+        const resData = await response.json();
+        if (resData && resData.success) {
+          await idbDelete('offline_orders', offlineId);
+          syncedCount++;
+        } else {
+          console.warn(`[POS] Server rejected order ${offlineId}:`, resData);
+          remaining.push(item);
+        }
       } else {
-        console.warn(`[POS] Order ${offlineId} rejected: HTTP ${response.status}`);
+        console.warn(`[POS] Order ${offlineId} rejected: HTTP ${response.status} or non-JSON response`);
         remaining.push(item);
       }
     } catch (networkErr) {

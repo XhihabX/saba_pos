@@ -226,4 +226,41 @@ class MerchantToPosWorkflowTest extends TestCase
         $this->assertEquals('closed', $closedShift->status);
         $this->assertEquals(0.00, (float) $closedShift->cash_difference, 'Drawer cash reconciliation should have 0 variance');
     }
+
+    public function test_pos_checkout_requires_active_shift(): void
+    {
+        $this->withoutMiddleware();
+
+        $tenant = Tenant::create(['name' => 'Shift Test Merchant', 'email' => 'shifttest@iotpos.com', 'code' => 'SHIFTTEST']);
+        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Main Outlet', 'code' => 'STORE001']);
+        $user = User::create([
+            'tenant_id' => $tenant->id,
+            'store_id' => $store->id,
+            'name' => 'Cashier Shift Guard',
+            'email' => 'cashier.shift@iotpos.com',
+            'password' => Hash::make('password'),
+            'role' => 'cashier',
+        ]);
+        $product = Product::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Test Item',
+            'sku' => 'TST-001',
+            'cost_price' => 50,
+            'selling_price' => 100,
+        ]);
+        Stock::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'product_id' => $product->id, 'quantity' => 10]);
+
+        $this->actingAs($user);
+
+        // Checkout without open shift should fail validation
+        $response = $this->postJson('/pos/checkout', [
+            'store_id' => $store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 1, 'unit_price' => 100]],
+            'paid_amount' => 100,
+            'payment_method' => 'cash',
+        ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors(['shift']);
+    }
 }

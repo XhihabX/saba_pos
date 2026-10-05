@@ -18,8 +18,9 @@
           <div v-if="receipt.is_offline" class="mb-2 py-1 px-2 bg-amber-100 border border-amber-400 rounded text-[10px] font-bold text-amber-900 uppercase">
             ⚡ Offline Counter Sale (Queued for Cloud Sync)
           </div>
+          <img v-if="receipt.store?.logo_url" :src="receipt.store.logo_url" alt="Store Logo" class="h-10 mx-auto mb-2 object-contain" />
           <h2 class="text-base font-extrabold uppercase tracking-wide">{{ receipt.store?.name || receipt.store_name || 'IOT POS Store' }}</h2>
-          <p class="text-[11px] text-slate-600">{{ receipt.store?.address || 'Main Branch, Dhaka' }}</p>
+          <p class="text-[11px] text-slate-600">{{ receipt.store?.address || 'Main Branch' }}</p>
           <p class="text-[11px] text-slate-600">Tel: {{ receipt.store?.phone || '+880 1700 000000' }} | VAT: {{ receipt.store?.vat_number || 'REG-9910' }}</p>
           <p class="text-[10px] text-slate-500 mt-1 font-bold">{{ receipt.store?.receipt_header || 'Customer Receipt' }}</p>
         </div>
@@ -38,8 +39,8 @@
             <span class="font-semibold">{{ receipt.customer?.name || 'Walk-in Customer' }}</span>
           </div>
           <div class="flex justify-between">
-            <span>Cashier ID:</span>
-            <span>#{{ receipt.user_id || 1 }} (Admin)</span>
+            <span>Cashier:</span>
+            <span class="font-semibold">{{ receipt.user?.name || receipt.cashier_name || `Cashier #${receipt.user_id || 1}` }}</span>
           </div>
         </div>
 

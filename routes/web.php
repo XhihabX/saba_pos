@@ -143,6 +143,9 @@ Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () 
     // HRM Staff Attendance & Clock In/Out
     Route::get('/hrm/attendance', [AttendanceController::class, 'index'])->name('hrm.attendance');
     Route::post('/hrm/attendance/toggle', [AttendanceController::class, 'toggleClock'])->name('hrm.attendance.toggle');
+
+    // Inline Customer Registration for POS Cashier Workstation
+    Route::post('/customers', [MerchantController::class, 'storeCustomer'])->name('customers.store');
 });
 
 use App\Http\Controllers\StockAdjustmentController;

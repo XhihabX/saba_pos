@@ -105,11 +105,24 @@ class PosController extends Controller
         // Verify store belongs to merchant tenant
         $store = Store::where('id', $validated['store_id'])->where('tenant_id', $tenantId)->firstOrFail();
 
+        // Enforce active register shift requirement for cashiers
+        $activeShift = \App\Models\RegisterShift::where('tenant_id', $tenantId)
+            ->where('user_id', auth()->id())
+            ->where('store_id', $store->id)
+            ->where('status', 'open')
+            ->first();
+
+        if (!$activeShift) {
+            throw ValidationException::withMessages([
+                'shift' => ['An active register shift must be opened before processing sales checkout. Please open your shift first.']
+            ]);
+        }
+
         // Idempotency check for offline sync retry
         if (!empty($validated['client_uuid'])) {
             $existing = Order::where('tenant_id', $tenantId)->where('notes', 'LIKE', '%[UUID:' . $validated['client_uuid'] . ']%')->first();
             if ($existing) {
-                $existing->load(['items', 'customer', 'store', 'payments']);
+                $existing->load(['items', 'customer', 'store', 'payments', 'user']);
                 if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                     return response()->json([
                         'success' => true,
@@ -248,7 +261,7 @@ class PosController extends Controller
                 }
             }
 
-            $order->load(['items', 'customer', 'store', 'payments']);
+            $order->load(['items', 'customer', 'store', 'payments', 'user']);
 
             if (request()->wantsJson() || request()->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([

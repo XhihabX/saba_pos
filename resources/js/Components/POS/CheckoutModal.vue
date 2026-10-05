@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
+  <div v-if="show" @keydown.enter.prevent="submitCheckout" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh] text-slate-900 dark:text-slate-100">
       <!-- Modal Header -->
       <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-800/80">
@@ -86,11 +86,14 @@
               </button>
               <button 
                 type="button" 
-                @click="selectedMethod = 'credit'; paidAmount = 0"
-                :class="['p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold', selectedMethod === 'credit' ? 'bg-emerald-600 border-emerald-700 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700']"
+                :disabled="isGuestCustomer"
+                @click="!isGuestCustomer && (selectedMethod = 'credit', paidAmount = 0)"
+                :title="isGuestCustomer ? 'Select a registered customer (F2) to enable Customer Credit' : 'Customer Credit Ledger'"
+                :class="['p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold relative', isGuestCustomer ? 'opacity-40 cursor-not-allowed bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-300 dark:border-slate-700' : (selectedMethod === 'credit' ? 'bg-emerald-600 border-emerald-700 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700')]"
               >
                 <UserCheck class="w-5 h-5" />
                 <span>Customer Credit</span>
+                <span v-if="isGuestCustomer" class="text-[9px] text-amber-500 font-extrabold font-mono">Reg. Required (F2)</span>
               </button>
             </div>
           </div>
@@ -234,7 +237,9 @@ const props = defineProps({
   discountAmount: Number,
   taxAmount: Number,
   grandTotal: Number,
+  presetTender: { type: Number, default: 0 },
   isSubmitting: Boolean,
+  isGuestCustomer: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['close', 'confirm']);
@@ -248,10 +253,13 @@ const paymentLines = ref([
   { method: 'cash', amount: 0, reference_no: '' }
 ]);
 
-watch(() => props.grandTotal, (newVal) => {
-  paidAmount.value = newVal || 0;
-  if (paymentLines.value.length === 1) {
-    paymentLines.value[0].amount = newVal || 0;
+watch(() => [props.grandTotal, props.presetTender, props.show], () => {
+  if (props.show) {
+    const targetAmt = props.presetTender > 0 ? props.presetTender : (props.grandTotal || 0);
+    paidAmount.value = targetAmt;
+    if (paymentLines.value.length === 1) {
+      paymentLines.value[0].amount = targetAmt;
+    }
   }
 }, { immediate: true });
 
