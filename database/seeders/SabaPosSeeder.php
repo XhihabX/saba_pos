@@ -21,9 +21,9 @@ class SabaPosSeeder extends Seeder
     {
         // 1. Create Default SaaS Tenant
         $tenant = Tenant::create([
-            'name' => 'Saba Chain Retail Enterprise',
+            'name' => 'IOT Enterprise Retail Chain',
             'code' => 'TENANT-001',
-            'email' => 'ceo@sabacorp.com',
+            'email' => 'ceo@iotpos.com',
             'phone' => '+880 1711 000111',
             'plan_name' => 'Growth Multi-Store',
             'subscription_status' => 'active',
@@ -49,15 +49,15 @@ class SabaPosSeeder extends Seeder
         // 2. Create Default Stores
         $mainStore = Store::create([
             'tenant_id' => $tenant->id,
-            'name' => 'Saba POS Flagship Outlet',
+            'name' => 'IOT Flagship Outlet',
             'code' => 'STORE-001',
             'phone' => '+880 1700 000000',
-            'email' => 'outlet1@sabapos.com',
+            'email' => 'outlet1@iotpos.com',
             'address' => 'Level 4, Jamuna Future Park, Dhaka',
             'vat_number' => 'VAT-99201-BD',
             'currency_symbol' => '৳',
             'default_tax_rate' => 5.00,
-            'receipt_header' => 'Welcome to Saba POS Retail Flagship!',
+            'receipt_header' => 'Welcome to IOT POS Retail Flagship!',
             'receipt_footer' => 'Thank you for shopping with us.',
             'is_active' => true,
         ]);
