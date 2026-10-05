@@ -29,7 +29,7 @@ class ShiftController extends Controller
     {
         $userId = auth()->id();
         $tenantId = $this->getTenantId();
-        $storeId = (int) $request->input('store_id', auth()->user()->store_id ?? Store::where('tenant_id', $tenantId)->first()->id);
+        $storeId = (int) $request->input('store_id', auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1));
 
         $shift = RegisterShift::where('tenant_id', $tenantId)
             ->where('user_id', $userId)

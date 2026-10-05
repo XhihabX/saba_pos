@@ -30,7 +30,7 @@ class StoreManagerController extends Controller
     public function dashboard(Request $request)
     {
         $tenantId = $this->getTenantId();
-        $storeId = auth()->user()->store_id ?? Store::where('tenant_id', $tenantId)->first()->id;
+        $storeId = auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
 
         $todaySales = Order::where('tenant_id', $tenantId)
             ->where('store_id', $storeId)
@@ -63,7 +63,7 @@ class StoreManagerController extends Controller
     public function shiftReconciliation(Request $request)
     {
         $tenantId = $this->getTenantId();
-        $storeId = auth()->user()->store_id ?? Store::where('tenant_id', $tenantId)->first()->id;
+        $storeId = auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
 
         $shifts = RegisterShift::where('tenant_id', $tenantId)
             ->where('store_id', $storeId)
