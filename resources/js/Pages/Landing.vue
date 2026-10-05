@@ -327,7 +327,7 @@
 
     <!-- Footer -->
     <footer class="py-10 border-t border-slate-200 bg-white px-6 lg:px-12 text-center text-xs text-slate-500 font-semibold">
-      <p>© 2026 Saba POS Infrastructure Platform. Built with PHP 8.3 & Laravel 11, Vue 3 Inertia, Tailwind CSS, & cPanel deployment compatibility.</p>
+      <p>© 2026 International Office Technology (IOT POS). Enterprise SaaS POS & Cloud ERP Platform.</p>
     </footer>
   </div>
 </template>

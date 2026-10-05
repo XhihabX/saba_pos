@@ -97,7 +97,7 @@
         <!-- Receipt Footer Note -->
         <div class="text-center mt-4 space-y-1">
           <p class="text-[10px] font-semibold">{{ receipt.store?.receipt_footer || 'Thank you for your visit!' }}</p>
-          <div class="font-mono text-[9px] text-slate-400">Powered by Saba POS Enterprise</div>
+          <div class="font-mono text-[9px] text-slate-400">Powered by International Office Technology (IOT POS)</div>
         </div>
       </div>
 

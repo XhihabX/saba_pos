@@ -8,7 +8,7 @@
     >
       <img 
         :src="logoSrc" 
-        alt="Saba POS Logo"
+        alt="IOT POS Logo"
         class="w-full h-full object-cover"
         @error="handleImgError"
       />
@@ -16,9 +16,9 @@
 
     <div v-if="showText" class="truncate">
       <div :class="['font-extrabold font-heading text-slate-900 dark:text-slate-100 tracking-wide leading-none', sizeClasses.text]">
-        Saba <span class="text-emerald-500">POS</span>
+        IOT <span class="text-indigo-500">POS</span>
       </div>
-      <div v-if="subtitle" class="text-[10px] text-emerald-600 dark:text-emerald-400 uppercase tracking-widest font-black mt-1">
+      <div v-if="subtitle" class="text-[10px] text-indigo-600 dark:text-indigo-400 uppercase tracking-widest font-black mt-1">
         {{ subtitle }}
       </div>
     </div>
@@ -43,7 +43,7 @@ const props = defineProps({
   },
   subtitle: {
     type: String,
-    default: 'SaaS POS & ERP Infrastructure'
+    default: 'International Office Technology'
   }
 });
 

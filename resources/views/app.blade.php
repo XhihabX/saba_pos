@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <title>Saba POS - SaaS Point of Sale & ERP Infrastructure</title>
-    <meta name="description" content="Saba POS is an enterprise multi-outlet point of sale and cloud ERP system engineered for fast counter transactions, inventory management, and business analytics." />
-    <meta name="keywords" content="POS, Point of Sale, ERP, Inventory Management, Retail Software, SaaS POS, Multi-store POS" />
-    <meta property="og:title" content="Saba POS - Enterprise SaaS Point of Sale & ERP" />
-    <meta property="og:description" content="Sub-10ms counter workstation responsiveness, zero-downtime offline sales resilience, and multi-store chain inventory governance." />
+    <title>IOT POS - International Office Technology Point of Sale & ERP</title>
+    <meta name="description" content="International Office Technology (IOT) POS is an enterprise multi-outlet point of sale and cloud ERP system engineered for fast counter transactions, inventory management, and business analytics." />
+    <meta name="keywords" content="IOT, International Office Technology, POS, Point of Sale, ERP, Inventory Management, Retail Software, SaaS POS" />
+    <meta property="og:title" content="IOT POS - International Office Technology Enterprise Point of Sale & ERP" />
+    <meta property="og:description" content="Sub-10ms counter workstation responsiveness, zero-downtime offline sales resilience, and multi-store chain inventory governance by International Office Technology." />
     <meta property="og:type" content="website" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     

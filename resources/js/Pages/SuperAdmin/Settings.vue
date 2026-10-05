@@ -131,12 +131,12 @@ const props = defineProps({
 });
 
 const form = ref({
-  app_name: props.settings?.app_name || 'Saba POS',
+  app_name: props.settings?.app_name || 'IOT POS - International Office Technology',
   bkash_number: props.settings?.bkash_number || '01711000111',
   nagad_number: props.settings?.nagad_number || '01811000222',
   bank_details: props.settings?.bank_details || 'Bank: DBBL Banani\nA/C: 101-120-99882',
   support_phone: props.settings?.support_phone || '+880 1700 000000',
-  support_email: props.settings?.support_email || 'support@sabapos.com',
+  support_email: props.settings?.support_email || 'support@iotpos.com',
   currency_symbol: props.settings?.currency_symbol || '৳',
   default_tax_rate: props.settings?.default_tax_rate || 5.0,
   maintenance_mode: Boolean(props.settings?.maintenance_mode || false),

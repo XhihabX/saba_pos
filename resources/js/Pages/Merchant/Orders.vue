@@ -195,7 +195,7 @@
 
             <div class="text-center pt-2 text-[9px] text-slate-500 border-t border-dashed border-slate-300">
               Thank you for shopping with us!<br/>
-              Powered by Saba POS System
+              Powered by International Office Technology (IOT POS)
             </div>
           </div>
 

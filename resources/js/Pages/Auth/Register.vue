@@ -13,18 +13,18 @@
               S
             </div>
             <div>
-              <span class="font-black text-2xl font-heading tracking-tight text-white block">Saba POS</span>
-              <span class="text-[10px] text-emerald-400 font-bold uppercase tracking-widest">SaaS Cloud & ERP</span>
+              <span class="font-black text-2xl font-heading tracking-tight text-white block">IOT POS</span>
+              <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">International Office Technology</span>
             </div>
           </div>
 
           <h2 class="text-2xl lg:text-3xl font-black font-heading leading-tight mb-4 text-white">
             Sell. Track. Grow. <br />
-            <span class="text-emerald-400">Power Your Store.</span>
+            <span class="text-indigo-400">Power Your Store.</span>
           </h2>
 
           <p class="text-xs text-slate-300 leading-relaxed mb-8">
-            Join thousands of retail shops, restaurants, and chain stores using Saba POS for sub-10ms checkout and offline counter resilience.
+            Join thousands of retail shops, restaurants, and chain stores using IOT POS by International Office Technology for sub-10ms checkout and offline counter resilience.
           </p>
 
           <!-- Feature Checkmark Badges -->

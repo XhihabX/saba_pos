@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-05] — International Office Technology (IOT POS) Rebranding & Branch Preservation Split
+**What:** Rebranded application identity on `main` branch to **IOT (International Office Technology)** / **IOT POS** across configuration files (`.env.example`, `.env.production.example`, `config/app.php`), HTML meta tags (`resources/views/app.blade.php`), Vue app setup (`app.js`), brand components (`ApplicationLogo.vue`), layouts (`AuthenticatedLayout.vue`), landing page (`Landing.vue`), auth pages (`Login.vue`, `Register.vue`, `PendingApproval.vue`), thermal receipts (`ReceiptModal.vue`, `Orders.vue`), and settings modals. Created and pushed dedicated `saba-pos` git branch to preserve the original Saba POS distribution on GitHub.
+**Why:** Transition primary product branding to International Office Technology (IOT POS) as the main production distribution, while maintaining full source-code preservation of Saba POS under `origin/saba-pos`.
+**How:** Created branch `saba-pos` via `git checkout -b saba-pos && git push -u origin saba-pos`. Rebranded text strings, logos, titles, and headers on `main` branch, recompiled Vite asset bundle (`app-DK7DvzZk.js`, `app-LI6q156S.css`), updated documentation, and committed to `main`.
+**Where:** `.env.example`, `.env.production.example`, `config/app.php`, `resources/views/app.blade.php`, `resources/js/*`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** `main` branch now serves **IOT - International Office Technology**, while `saba-pos` branch retains legacy **Saba POS** identity.
+
+---
+
 ## [2026-10-05] — Hardened `AppServiceProvider` APP_URL Auto-Healing for Web Requests
 **What:** Updated `AppServiceProvider::boot()` to automatically detect incoming web request hosts (`HTTP_HOST`) and override `config('app.url')` when `app.url` contains `localhost`, `127.0.0.1`, or is executed under a cached configuration.
 **Why:** Running `php artisan config:cache` on servers where `.env` or local CLI defaults contained `https://localhost:8000` caused Ziggy (`@routes`) and Vite asset tags (`@vite`) to emit asset URLs pointing to `https://localhost:8000/build/assets/...`. Browsers visiting `https://xhihab.com` failed to fetch JavaScript/CSS assets from `localhost:8000`, causing a blank screen.

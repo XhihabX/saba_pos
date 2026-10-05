@@ -3,7 +3,11 @@
 *This file describes the current state of the system. Update it in place whenever something changes — this is not a log, see CHANGELOG.md for history.*
 
 ## Overview
-Saba POS is an international-grade, multi-tenant SaaS Point of Sale (POS) and Enterprise Resource Planning (ERP) platform designed for multi-store chain retail, food & beverage outlets, and wholesale merchants. It provides centralized tenant administration, chain inventory governance, branch shift audits, and offline-resilient touchscreen cashier POS terminals.
+IOT POS (International Office Technology Point of Sale & Cloud ERP) is an international-grade, multi-tenant SaaS Point of Sale (POS) and Enterprise Resource Planning (ERP) platform designed for multi-store chain retail, office tech solutions, food & beverage outlets, and wholesale merchants. It provides centralized tenant administration, chain inventory governance, branch shift audits, and offline-resilient touchscreen cashier POS terminals.
+
+> **Git Branching Strategy**:
+> - `main` (Primary Branch): Rebranded enterprise distribution — **IOT (International Office Technology)**.
+> - `saba-pos` (Preservation Branch): Pre-rebrand legacy distribution — **Saba POS**.
 
 ## Tech Stack
 - **Frontend**: Vue 3 (Composition API), Inertia.js 1.x, TailwindCSS 4 (Dual Light/Dark mode via CSS variables & `@variant dark`), Lucide Vue Icons, Brand Logo Component (`ApplicationLogo.vue` & `/images/logo.png`)

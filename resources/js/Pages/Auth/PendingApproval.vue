@@ -18,7 +18,7 @@
           Registration Received!
         </h2>
         <p class="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-md mx-auto">
-          Thank you for registering <span class="font-bold text-amber-400">{{ tenant?.name || 'your store' }}</span> on <span class="font-bold text-white">Saba POS</span>. Your manual payment is awaiting Super Admin verification.
+          Thank you for registering <span class="font-bold text-amber-400">{{ tenant?.name || 'your store' }}</span> on <span class="font-bold text-white">IOT POS</span>. Your manual payment is awaiting Super Admin verification.
         </p>
       </div>
 
@@ -72,7 +72,7 @@
       </div>
 
       <p class="text-[11px] text-slate-500 pt-2">
-        Need urgent activation? Call Saba POS Support at <span class="text-slate-400 font-bold">+880 1711 000111</span>
+        Need urgent activation? Call IOT POS Support at <span class="text-slate-400 font-bold">+880 1711 000111</span>
       </p>
 
     </div>

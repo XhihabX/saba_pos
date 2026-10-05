@@ -475,15 +475,15 @@
 
           <!-- Top Brand Header for non-sidebar mode (POS Terminal) -->
           <Link v-if="!isSidebarLayout" :href="route('landing')" class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center font-bold text-lg text-white shadow-md">
-              S
+            <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-blue-500 flex items-center justify-center font-bold text-lg text-white shadow-md">
+              I
             </div>
             <div>
               <div class="font-bold text-base leading-none font-heading text-slate-900 dark:text-slate-100">
-                Saba POS
+                IOT POS
               </div>
-              <div class="text-[9px] text-emerald-600 dark:text-emerald-400 uppercase tracking-wider font-extrabold">
-                Counter Workstation
+              <div class="text-[9px] text-indigo-600 dark:text-indigo-400 uppercase tracking-wider font-extrabold">
+                International Office Technology
               </div>
             </div>
           </Link>

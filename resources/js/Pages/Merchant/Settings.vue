@@ -139,7 +139,7 @@ const form = useForm({
   currency_symbol: props.tenant?.currency_symbol || '৳',
   default_tax_rate: props.tenant?.default_tax_rate ?? 5,
   invoice_prefix: props.tenant?.invoice_prefix || 'INV-',
-  receipt_header: props.tenant?.receipt_header || 'Thank you for shopping with Saba POS!',
+  receipt_header: props.tenant?.receipt_header || 'Thank you for shopping with International Office Technology (IOT POS)!',
   receipt_footer: props.tenant?.receipt_footer || 'Please retain receipt for exchange within 7 days.',
 });
 
