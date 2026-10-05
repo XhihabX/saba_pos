@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-05] — Exhaustive IOT Rebrand, High-Res Logo, Mouse-Free POS Counter & Production Deployment Sync
+**What:** Completed 100% exhaustive system rebranding to **IOT - International Office Technology** / **IOT POS** across all frontend pages, landing pages, email placeholders (`@iotpos.com`), settings modals, service worker (`public/sw.js`), and database seeders/migrations (`2026_10_05_000012_rename_tenant_and_store_branding.php`). Generated and integrated high-resolution logo (`public/images/logo.png`). Built full keyboard hotkey navigation system (`F1` Search Focus, `F2` Customer Add, `F4` Checkout, `F7`/`F8` Park/Resume Order, `ESC` Close Modals) with interactive Vue modals for Parked Orders, Shift Float Cash Reconciliation, and Customer Quick-Add. Completely removed all demo persona buttons from `Login.vue`. Recompiled Vite assets (`app-Chbf4IJP.js`, `app-IpRhja8c.css`) and verified live deployment sync on `https://xhihab.com`.
+**Why:** Provide a complete, production-ready enterprise solution for International Office Technology (IOT POS) with 100% mouse-free cashier ergonomics, clean authentication screens, and seamless context retention across devices.
+**How:** Refactored `Terminal.vue`, `Login.vue`, `ApplicationLogo.vue`, `Landing.vue`, `AuthenticatedLayout.vue`, `sw.js`, `PosController.php`, `AuthController.php`, `SuperAdminController.php`; added database migration for automated tenant rebranding; compiled production assets with Vite; updated documentation.
+**Where:** `resources/js/*`, `app/Http/Controllers/*`, `public/images/logo.png`, `public/sw.js`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** Complete context preservation on GitHub `origin/main` (`commit b95eaec`). Any agent resuming on another device reading `docs/ARCHITECTURE.md` and `docs/CHANGELOG.md` will have 100% full context.
+
+---
+
 ## [2026-10-05] — POS Workstation 100% Completion, Mouse-Free Hotkeys & Demo Login Removal
 **What:** Completed full mouse-free cashier hotkey system (`F1` Search, `F2` Customer Add, `F4` Checkout, `F7`/`F8` Hold Cart, `ESC` Close Modals), Parked Orders Resume/Discard drawer modal, Shift Register Float & Cash Reconciliation header modal, and Customer Quick-Add inline modal. Removed demo persona shortcut buttons and cleared default prefilled credentials in `Login.vue`.
 **Why:** Provide 100% mouse-free ergonomic counter performance for high-speed supermarket and retail cashiers, eliminate demo shortcuts from authentication screens, and achieve 100% production readiness.
