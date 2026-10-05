@@ -197,7 +197,7 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Plus, Search, X, Edit3, Trash2, FolderPlus } from 'lucide-vue-next';
+import { Plus, Search, X, Edit3, Trash2, FolderPlus, Tag, Scale } from 'lucide-vue-next';
 
 const props = defineProps({
   products: Object,
@@ -211,20 +211,24 @@ const showModal = ref(false);
 const isEditing = ref(false);
 const editingId = ref(null);
 const showCategoryModal = ref(false);
+const showBrandModal = ref(false);
+const showUnitModal = ref(false);
 
 const form = ref({
   name: '',
   sku: '',
   barcode: '',
   category_id: null,
+  brand_id: null,
+  unit_id: null,
   purchase_cost: 0,
   selling_price: 0,
   initial_stock: 20,
 });
 
-const categoryForm = ref({
-  name: '',
-});
+const categoryForm = ref({ name: '' });
+const brandForm = ref({ name: '' });
+const unitForm = ref({ name: '', short_name: '' });
 
 const openAddModal = () => {
   isEditing.value = false;
@@ -234,6 +238,8 @@ const openAddModal = () => {
     sku: 'SKU-' + Math.floor(1000 + Math.random() * 9000),
     barcode: '880' + Math.floor(100000000 + Math.random() * 900000000),
     category_id: props.categories?.[0]?.id || null,
+    brand_id: props.brands?.[0]?.id || null,
+    unit_id: props.units?.[0]?.id || null,
     purchase_cost: 0,
     selling_price: 0,
     initial_stock: 20,
@@ -249,6 +255,8 @@ const openEditModal = (product) => {
     sku: product.sku,
     barcode: product.barcode || '',
     category_id: product.category_id,
+    brand_id: product.brand_id,
+    unit_id: product.unit_id,
     purchase_cost: product.purchase_cost,
     selling_price: product.selling_price,
   };
@@ -299,6 +307,25 @@ const saveCategory = () => {
     onSuccess: () => {
       showCategoryModal.value = false;
       categoryForm.value.name = '';
+    }
+  });
+};
+
+const saveBrand = () => {
+  router.post('/products/brands', brandForm.value, {
+    onSuccess: () => {
+      showBrandModal.value = false;
+      brandForm.value.name = '';
+    }
+  });
+};
+
+const saveUnit = () => {
+  router.post('/products/units', unitForm.value, {
+    onSuccess: () => {
+      showUnitModal.value = false;
+      unitForm.value.name = '';
+      unitForm.value.short_name = '';
     }
   });
 };

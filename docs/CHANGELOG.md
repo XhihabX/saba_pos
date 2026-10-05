@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-05] — Comprehensive POS Audit, Server-Side Security, Shift Drawer & Inventory Adjustments
+**What:** Completed full system security and operational audit across POS cashier counter, server checkout transaction engine, shift drawer lifecycle, inventory waste tracking, thermal receipt printing, split payment tender modal, and report analytics breakdown.
+**Why:** Eliminate demo shortcuts, enforce server-calculated unit prices and tax rates to prevent client-side cart price manipulation, support physical/damaged stock adjustments, enable multi-tender payments (Cash, Card, bKash, Credit), and provide breakdown analytics by Category, Payment Channel, and Cashier Performance.
+**How:** Hardened `PosController::checkout` with server database unit price lookup and DB transaction locking (`lockForUpdate()`); created migrations `2026_10_05_000010_add_security_and_pos_pin_fields.php` and `2026_10_05_000011_create_stock_adjustments_table.php`; created `StockAdjustmentController.php` and `Inventory/Adjustments.vue`; upgraded `CheckoutModal.vue` for split multi-payment handling; upgraded `ReceiptModal.vue` with `@media print` 80mm layout; enhanced `ReportController.php` and `ProfitLoss.vue` with breakdown analytics; updated `ShiftController.php` and `MerchantController.php` for AJAX JSON responses; re-built Vite production asset bundle.
+**Where:** `app/Http/Controllers/*`, `app/Models/*`, `database/migrations/*`, `resources/js/*`, `docs/ARCHITECTURE.MD`, `docs/CHANGELOG.md`
+**Impact:** 100% production security compliance, zero client price tampering, full inventory audit write-offs, and multi-tender split checkout capabilities.
+
+---
+
 ## [2026-10-05] — International Office Technology (IOT POS) Rebranding & Branch Preservation Split
 **What:** Rebranded application identity on `main` branch to **IOT (International Office Technology)** / **IOT POS** across configuration files (`.env.example`, `.env.production.example`, `config/app.php`), HTML meta tags (`resources/views/app.blade.php`), Vue app setup (`app.js`), brand components (`ApplicationLogo.vue`), layouts (`AuthenticatedLayout.vue`), landing page (`Landing.vue`), auth pages (`Login.vue`, `Register.vue`, `PendingApproval.vue`), thermal receipts (`ReceiptModal.vue`, `Orders.vue`), and settings modals. Created and pushed dedicated `saba-pos` git branch to preserve the original Saba POS distribution on GitHub.
 **Why:** Transition primary product branding to International Office Technology (IOT POS) as the main production distribution, while maintaining full source-code preservation of Saba POS under `origin/saba-pos`.

@@ -60,6 +60,41 @@ class ReportController extends Controller
         // 5. Net Profit = Gross Profit - Expenses
         $netProfit = $grossProfit - $totalExpenses;
 
+        // 6. Sales Breakdown by Category
+        $salesByCategory = OrderItem::whereHas('order', function ($q) use ($startDate, $endDate, $tenantId) {
+            $q->where('tenant_id', $tenantId)
+              ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+        })->with('product.category')->get()
+          ->groupBy(fn($item) => $item->product->category->name ?? 'Uncategorized')
+          ->map(fn($items, $cat) => [
+              'category' => $cat,
+              'qty' => (float) $items->sum('quantity'),
+              'total' => (float) $items->sum('total'),
+          ])->values();
+
+        // 7. Sales Breakdown by Payment Method
+        $salesByPayment = \App\Models\OrderPayment::whereHas('order', function ($q) use ($startDate, $endDate, $tenantId) {
+            $q->where('tenant_id', $tenantId)
+              ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+        })->get()
+          ->groupBy('payment_method')
+          ->map(fn($payments, $method) => [
+              'method' => ucfirst(str_replace('_', ' ', $method)),
+              'total' => (float) $payments->sum('amount'),
+          ])->values();
+
+        // 8. Sales Breakdown by Cashier Staff
+        $salesByCashier = Order::where('tenant_id', $tenantId)
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->with('user')
+            ->get()
+            ->groupBy(fn($o) => $o->user->name ?? 'System Staff')
+            ->map(fn($orders, $name) => [
+                'cashier' => $name,
+                'order_count' => $orders->count(),
+                'total_sales' => (float) $orders->sum('grand_total'),
+            ])->values();
+
         return Inertia::render('Reports/ProfitLoss', [
             'startDate' => $startDate,
             'endDate' => $endDate,
@@ -68,6 +103,9 @@ class ReportController extends Controller
             'grossProfit' => (float) $grossProfit,
             'totalExpenses' => (float) $totalExpenses,
             'netProfit' => (float) $netProfit,
+            'salesByCategory' => $salesByCategory,
+            'salesByPayment' => $salesByPayment,
+            'salesByCashier' => $salesByCashier,
         ]);
     }
 }

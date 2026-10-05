@@ -144,3 +144,24 @@ const printReceipt = () => {
   window.print();
 };
 </script>
+
+<style scoped>
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #thermal-receipt, #thermal-receipt * {
+    visibility: visible !important;
+  }
+  #thermal-receipt {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 80mm !important;
+    padding: 2mm !important;
+    font-size: 11px !important;
+    background: white !important;
+    color: black !important;
+  }
+}
+</style>

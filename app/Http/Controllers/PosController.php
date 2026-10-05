@@ -162,40 +162,88 @@ class PosController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
-            'items.*.unit_price' => 'required|numeric|min:0',
             'items.*.discount' => 'nullable|numeric|min:0',
             'items.*.serial_number' => 'nullable|string',
-            'subtotal' => 'required|numeric',
-            'discount_amount' => 'nullable|numeric',
-            'tax_amount' => 'nullable|numeric',
-            'grand_total' => 'required|numeric',
-            'paid_amount' => 'required|numeric',
-            'change_return' => 'nullable|numeric',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'paid_amount' => 'required|numeric|min:0',
             'payment_method' => 'required|string',
             'payments' => 'nullable|array',
             'notes' => 'nullable|string',
+            'client_uuid' => 'nullable|string',
         ]);
 
         // Verify store belongs to merchant tenant
         $store = Store::where('id', $validated['store_id'])->where('tenant_id', $tenantId)->firstOrFail();
 
+        // Idempotency check for offline sync retry
+        if (!empty($validated['client_uuid'])) {
+            $existing = Order::where('tenant_id', $tenantId)->where('notes', 'LIKE', '%[UUID:' . $validated['client_uuid'] . ']%')->first();
+            if ($existing) {
+                $existing->load(['items', 'customer', 'store', 'payments']);
+                if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Order already processed (idempotent)',
+                        'invoice_no' => $existing->invoice_no,
+                        'grand_total' => $existing->grand_total,
+                    ], 200);
+                }
+                return redirect()->back()->with(['success' => 'Order already processed!', 'receipt' => $existing]);
+            }
+        }
+
         return DB::transaction(function () use ($validated, $tenantId, $store) {
-            // Pre-validate stock availability for all items to prevent overselling
+            $calculatedSubtotal = 0;
+            $itemsToProcess = [];
+
+            // Pre-validate stock & calculate authoritative server-side unit prices
             foreach ($validated['items'] as $item) {
                 $product = Product::where('id', $item['product_id'])->where('tenant_id', $tenantId)->firstOrFail();
                 $stock = Stock::where('store_id', $store->id)
                     ->where('product_id', $product->id)
                     ->lockForUpdate()
                     ->first();
-                $available = $stock ? $stock->quantity : 0;
-                if ($available < $item['quantity']) {
+
+                // Check store negative stock policy
+                $available = $stock ? (float) $stock->quantity : 0;
+                if (!$store->allow_negative_stock && $available < $item['quantity']) {
                     throw ValidationException::withMessages([
                         'cart' => ["Insufficient stock for '{$product->name}'. Available: {$available}, Requested: {$item['quantity']}."]
                     ]);
                 }
+
+                $unitPrice = (float) $product->selling_price;
+                $lineDiscount = (float) ($item['discount'] ?? 0);
+                $lineTotal = max(0, ($item['quantity'] * $unitPrice) - $lineDiscount);
+
+                $calculatedSubtotal += $lineTotal;
+
+                $itemsToProcess[] = [
+                    'product' => $product,
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $unitPrice,
+                    'discount' => $lineDiscount,
+                    'line_total' => $lineTotal,
+                    'serial_number' => $item['serial_number'] ?? null,
+                ];
             }
 
+            $discountAmount = (float) ($validated['discount_amount'] ?? 0);
+            $taxableSubtotal = max(0, $calculatedSubtotal - $discountAmount);
+            $taxRate = (float) ($store->default_tax_rate ?? 0);
+            $taxAmount = round(($taxableSubtotal * $taxRate) / 100, 2);
+            $grandTotal = max(0, round($taxableSubtotal + $taxAmount, 2));
+
+            $paidAmount = (float) $validated['paid_amount'];
+            $changeReturn = max(0, round($paidAmount - $grandTotal, 2));
+            $paymentStatus = $paidAmount >= $grandTotal ? 'paid' : ($paidAmount > 0 ? 'partial' : 'due');
+
             $invoiceNo = 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+
+            $notesText = $validated['notes'] ?? '';
+            if (!empty($validated['client_uuid'])) {
+                $notesText .= ' [UUID:' . $validated['client_uuid'] . ']';
+            }
 
             $order = Order::create([
                 'tenant_id' => $tenantId,
@@ -203,37 +251,33 @@ class PosController extends Controller
                 'store_id' => $store->id,
                 'customer_id' => $validated['customer_id'] ?? null,
                 'user_id' => auth()->id(),
-                'subtotal' => $validated['subtotal'],
-                'discount_amount' => $validated['discount_amount'] ?? 0,
-                'tax_amount' => $validated['tax_amount'] ?? 0,
-                'grand_total' => $validated['grand_total'],
-                'paid_amount' => $validated['paid_amount'],
-                'change_return' => $validated['change_return'] ?? 0,
-                'payment_status' => $validated['paid_amount'] >= $validated['grand_total'] ? 'paid' : ($validated['paid_amount'] > 0 ? 'partial' : 'due'),
+                'subtotal' => $calculatedSubtotal,
+                'discount_amount' => $discountAmount,
+                'tax_amount' => $taxAmount,
+                'grand_total' => $grandTotal,
+                'paid_amount' => $paidAmount,
+                'change_return' => $changeReturn,
+                'payment_status' => $paymentStatus,
                 'payment_method' => $validated['payment_method'],
-                'notes' => $validated['notes'] ?? null,
+                'notes' => trim($notesText) ?: null,
             ]);
 
-
-            foreach ($validated['items'] as $item) {
-                $product = Product::where('id', $item['product_id'])->where('tenant_id', $tenantId)->firstOrFail();
-                $total = ($item['quantity'] * $item['unit_price']) - ($item['discount'] ?? 0);
-
+            foreach ($itemsToProcess as $item) {
                 OrderItem::create([
                     'order_id' => $order->id,
-                    'product_id' => $product->id,
-                    'product_name' => $product->name,
-                    'serial_number' => $item['serial_number'] ?? null,
+                    'product_id' => $item['product']->id,
+                    'product_name' => $item['product']->name,
+                    'serial_number' => $item['serial_number'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
-                    'discount' => $item['discount'] ?? 0,
-                    'total' => $total,
+                    'discount' => $item['discount'],
+                    'total' => $item['line_total'],
                 ]);
 
                 // Deduct stock for store
                 $stock = Stock::firstOrCreate([
-                    'store_id' => $validated['store_id'],
-                    'product_id' => $product->id,
+                    'store_id' => $store->id,
+                    'product_id' => $item['product']->id,
                 ]);
                 $stock->decrement('quantity', $item['quantity']);
             }
@@ -244,7 +288,7 @@ class PosController extends Controller
                     OrderPayment::create([
                         'order_id' => $order->id,
                         'payment_method' => $payment['method'],
-                        'amount' => $payment['amount'],
+                        'amount' => (float) $payment['amount'],
                         'reference_no' => $payment['reference_no'] ?? null,
                     ]);
                 }
@@ -252,30 +296,37 @@ class PosController extends Controller
                 OrderPayment::create([
                     'order_id' => $order->id,
                     'payment_method' => $validated['payment_method'],
-                    'amount' => $validated['paid_amount'],
+                    'amount' => $paidAmount,
                 ]);
             }
 
-            // Update Customer Ledger for partial/due payments
-            if ($order->payment_status !== 'paid' && $order->customer_id) {
-                $dueAmount = $order->grand_total - $order->paid_amount;
-                if ($dueAmount > 0) {
-                    $customer = Customer::find($order->customer_id);
-                    if ($customer) {
-                        $customer->increment('due_balance', $dueAmount);
+            // Update Customer Ledger & Loyalty Points
+            if ($order->customer_id) {
+                $customer = Customer::find($order->customer_id);
+                if ($customer) {
+                    if ($paymentStatus !== 'paid') {
+                        $dueAmount = max(0, $grandTotal - $paidAmount);
+                        if ($dueAmount > 0) {
+                            $customer->increment('due_balance', $dueAmount);
+                        }
+                    }
+                    // Award 1 loyalty point per 100 currency units spent
+                    $earnedPoints = floor($grandTotal / 100);
+                    if ($earnedPoints > 0) {
+                        $customer->increment('points', $earnedPoints);
                     }
                 }
             }
 
             $order->load(['items', 'customer', 'store', 'payments']);
 
-            // Return JSON for Service Worker background sync requests
-            if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            if (request()->wantsJson() || request()->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => true,
                     'message' => 'Order completed successfully!',
                     'invoice_no' => $order->invoice_no,
                     'grand_total' => $order->grand_total,
+                    'order' => $order,
                 ], 200);
             }
 
@@ -288,6 +339,8 @@ class PosController extends Controller
 
     public function parkOrder(Request $request)
     {
+        $tenantId = $this->getTenantId();
+
         $validated = $request->validate([
             'store_id' => 'required|exists:stores,id',
             'customer_name' => 'nullable|string',
@@ -298,9 +351,10 @@ class PosController extends Controller
         $refNo = 'HOLD-' . strtoupper(substr(uniqid(), -6));
 
         ParkedOrder::create([
+            'tenant_id' => $tenantId,
             'reference_no' => $refNo,
             'store_id' => $validated['store_id'],
-            'customer_name' => $validated['customer_name'] ?? 'Walk-in',
+            'customer_name' => $validated['customer_name'] ?? 'Walk-in Customer',
             'cart_data' => $validated['cart_data'],
             'notes' => $validated['notes'] ?? null,
         ]);
@@ -310,35 +364,52 @@ class PosController extends Controller
 
     public function getParkedOrders(Request $request)
     {
-        $storeId = $request->input('store_id', 1);
-        $orders = ParkedOrder::where('store_id', $storeId)->latest()->get();
+        $tenantId = $this->getTenantId();
+        $storeId = (int) $request->input('store_id', 1);
+
+        $orders = ParkedOrder::where('tenant_id', $tenantId)
+            ->where('store_id', $storeId)
+            ->latest()
+            ->get();
 
         return response()->json($orders);
     }
 
     public function deleteParkedOrder($id)
     {
-        ParkedOrder::findOrFail($id)->delete();
+        $tenantId = $this->getTenantId();
+        ParkedOrder::where('id', $id)->where('tenant_id', $tenantId)->firstOrFail()->delete();
+
         return redirect()->back()->with('success', 'Parked order removed.');
     }
 
     public function verifyPin(Request $request)
     {
-        // Simple security: check if the PIN matches the user's ID or a default secure PIN.
-        // In a real app, users would have a pos_pin column. We check against a default '1234' securely on backend,
-        // or compare against a user setting. For now, since there's no DB column, we enforce a secure check.
-        // We will accept the user's ID padded with zeros (e.g. 0001) or a config-based PIN.
         $user = auth()->user();
-        $expectedPin = str_pad($user->id, 4, '0', STR_PAD_LEFT);
-        
-        if ($request->input('pin') === '1234') { // Allow 1234 for demo purposes but validated securely.
-             return response()->json(['success' => true]);
+        $pin = (string) $request->input('pin', '');
+
+        if (empty($pin)) {
+            return response()->json(['success' => false, 'message' => 'PIN is required.'], 422);
         }
-        
-        if ($request->input('pin') === $expectedPin) {
+
+        // 1. Check user pos_pin column if configured
+        if (!empty($user->pos_pin)) {
+            if ($user->pos_pin === $pin || \Illuminate\Support\Facades\Hash::check($pin, $user->pos_pin)) {
+                return response()->json(['success' => true]);
+            }
+        }
+
+        // 2. Check user ID padded PIN (e.g. user ID 1 => 0001) or cashier role check
+        $expectedPin = str_pad((string) $user->id, 4, '0', STR_PAD_LEFT);
+        if ($pin === $expectedPin) {
             return response()->json(['success' => true]);
         }
 
-        return response()->json(['success' => false]);
+        // 3. Compare with account password as fallback security check
+        if (\Illuminate\Support\Facades\Hash::check($pin, $user->password)) {
+            return response()->json(['success' => true]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Invalid Cashier PIN.'], 403);
     }
 }

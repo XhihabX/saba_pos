@@ -73,6 +73,14 @@ class ShiftController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Register shift opened successfully!',
+                'shift' => $shift,
+            ], 200);
+        }
+
         return redirect()->back()->with('success', 'Register shift opened successfully!');
     }
 
@@ -123,6 +131,14 @@ class ShiftController extends Controller
             'closed_at' => now(),
             'notes' => $validated['notes'] ?? null,
         ]);
+
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Shift closed & cash drawer reconciled!',
+                'shiftSummary' => $shift,
+            ], 200);
+        }
 
         return redirect()->back()->with([
             'success' => 'Shift closed & cash drawer reconciled!',

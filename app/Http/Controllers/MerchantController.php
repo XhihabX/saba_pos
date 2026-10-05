@@ -256,7 +256,7 @@ class MerchantController extends Controller
             'due_balance' => 'nullable|numeric|min:0',
         ]);
 
-        Customer::create([
+        $customer = Customer::create([
             'tenant_id' => $tenantId,
             'name' => $validated['name'],
             'phone' => $validated['phone'],
@@ -264,6 +264,14 @@ class MerchantController extends Controller
             'address' => $validated['address'] ?? null,
             'due_balance' => $validated['due_balance'] ?? 0.00,
         ]);
+
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+            return response()->json([
+                'success' => true,
+                'message' => "Customer '{$customer->name}' registered successfully.",
+                'customer' => $customer,
+            ], 201);
+        }
 
         return redirect()->back()->with('success', "Customer '{$validated['name']}' registered.");
     }

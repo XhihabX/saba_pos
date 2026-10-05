@@ -144,6 +144,8 @@ Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () 
     Route::post('/hrm/attendance/toggle', [AttendanceController::class, 'toggleClock'])->name('hrm.attendance.toggle');
 });
 
+use App\Http\Controllers\StockAdjustmentController;
+
 // 7. Core ERP Operations (Protected for Store Managers & Merchants)
 Route::middleware(['auth', EnsureStoreManager::class, EnsureActiveSubscription::class])->group(function () {
     // General ERP Overview & Inventory
@@ -151,9 +153,13 @@ Route::middleware(['auth', EnsureStoreManager::class, EnsureActiveSubscription::
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::post('/products/categories', [ProductController::class, 'storeCategory'])->name('products.categories.store');
+    Route::post('/products/brands', [ProductController::class, 'storeBrand'])->name('products.brands.store');
+    Route::post('/products/units', [ProductController::class, 'storeUnit'])->name('products.units.store');
     Route::post('/products/{id}/update', [ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{id}', [ProductController::class, 'delete'])->name('products.delete');
     Route::get('/products/barcodes', [BarcodeController::class, 'index'])->name('products.barcodes');
+    Route::get('/inventory/adjustments', [StockAdjustmentController::class, 'index'])->name('inventory.adjustments');
+    Route::post('/inventory/adjustments', [StockAdjustmentController::class, 'store'])->name('inventory.adjustments.store');
     Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
 
     // Store Expenses Management

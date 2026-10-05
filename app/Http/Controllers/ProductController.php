@@ -146,4 +146,35 @@ class ProductController extends Controller
 
         return redirect()->back()->with('success', "Category '{$validated['name']}' created!");
     }
+
+    public function storeBrand(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        Brand::firstOrCreate([
+            'name' => $validated['name'],
+        ], [
+            'slug' => \Illuminate\Support\Str::slug($validated['name']),
+        ]);
+
+        return redirect()->back()->with('success', "Brand '{$validated['name']}' created!");
+    }
+
+    public function storeUnit(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'short_name' => 'required|string|max:50',
+        ]);
+
+        Unit::firstOrCreate([
+            'short_name' => $validated['short_name'],
+        ], [
+            'name' => $validated['name'],
+        ]);
+
+        return redirect()->back()->with('success', "Unit '{$validated['name']}' created!");
+    }
 }

@@ -151,12 +151,12 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Depends on:** `LandingController`, `SaaSPlan`.
 - **Last updated:** 2026-10-04
 
-### 18. Web-Based cPanel Deployment Engine
-- **What it does:** Browser-accessible database migration, seeding, cache clearing, and route optimization script designed for cPanel shared hosting environments without SSH access.
-- **Where it lives:** `public/cpanel_setup.php`, `build_cpanel_subdomain_zip.py`
-- **Key design decisions:** Disables foreign key checks (`SET FOREIGN_KEY_CHECKS = 0`) during fresh migrations to cleanly clear pre-existing tables. Purges cached route manifests (`bootstrap/cache/routes-v7.php`).
-- **Depends on:** `Artisan`, `DB`, `Schema`.
-- **Last updated:** 2026-10-04
+### 19. Inventory Stock Adjustments & Waste Audit Management
+- **What it does:** Tracks inventory adjustments for damaged goods, expired stock, stolen items, write-offs, and physical inventory audit reconciliations with store-level stock quantity adjustments.
+- **Where it lives:** `app/Http/Controllers/StockAdjustmentController.php`, `app/Models/StockAdjustment.php`, `resources/js/Pages/Inventory/Adjustments.vue`
+- **Key design decisions:** Atomically updates `Stock` quantities based on adjustment type (`add` vs `sub`) within database transactions.
+- **Depends on:** `StockAdjustment`, `Product`, `Stock`, `Store`.
+- **Last updated:** 2026-10-05
 
 ## Data Model
 
@@ -166,6 +166,7 @@ Tenant (1) <---> (N) User (1) <---> (N) Order (1) <---> (N) OrderItem
 Tenant (1) <---> (N) Supplier (1) <---> (N) Purchase (1) <---> (N) PurchaseItem
 Tenant (1) <---> (N) Customer
 Tenant (1) <---> (N) AuditLog
+Tenant (1) <---> (N) StockAdjustment
 Store  (1) <---> (N) RegisterShift
 Store  (1) <---> (N) Expense
 Store  (1) <---> (N) StockTransfer (Source / Destination)

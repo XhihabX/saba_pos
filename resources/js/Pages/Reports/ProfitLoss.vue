@@ -81,6 +81,78 @@
           </div>
         </div>
       </div>
+
+      <!-- Sales Breakdown Grids -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Category Sales Breakdown -->
+        <div class="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
+          <h3 class="font-bold text-base font-heading text-slate-900 flex items-center justify-between">
+            <span>📦 Sales by Category</span>
+            <span class="text-xs text-slate-500 font-normal">({{ salesByCategory?.length || 0 }} Categories)</span>
+          </h3>
+          <div class="space-y-2 text-xs">
+            <div v-if="!salesByCategory || salesByCategory.length === 0" class="text-slate-400 py-4 text-center">
+              No sales data recorded yet.
+            </div>
+            <div 
+              v-for="item in salesByCategory" 
+              :key="item.category" 
+              class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex justify-between items-center"
+            >
+              <div>
+                <div class="font-bold text-slate-800">{{ item.category }}</div>
+                <div class="text-[10px] text-slate-500">{{ item.qty }} items sold</div>
+              </div>
+              <div class="font-bold text-slate-900 font-mono">৳{{ formatMoney(item.total) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Payment Method Breakdown -->
+        <div class="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
+          <h3 class="font-bold text-base font-heading text-slate-900 flex items-center justify-between">
+            <span>💳 Payment Channels</span>
+            <span class="text-xs text-slate-500 font-normal">({{ salesByPayment?.length || 0 }} Methods)</span>
+          </h3>
+          <div class="space-y-2 text-xs">
+            <div v-if="!salesByPayment || salesByPayment.length === 0" class="text-slate-400 py-4 text-center">
+              No payment transactions yet.
+            </div>
+            <div 
+              v-for="item in salesByPayment" 
+              :key="item.method" 
+              class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex justify-between items-center"
+            >
+              <div class="font-bold text-slate-800">{{ item.method }}</div>
+              <div class="font-bold text-emerald-700 font-mono">৳{{ formatMoney(item.total) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cashier Performance -->
+        <div class="p-6 rounded-3xl bg-white border border-slate-200 shadow-xs space-y-4">
+          <h3 class="font-bold text-base font-heading text-slate-900 flex items-center justify-between">
+            <span>👤 Cashier Staff Sales</span>
+            <span class="text-xs text-slate-500 font-normal">({{ salesByCashier?.length || 0 }} Cashiers)</span>
+          </h3>
+          <div class="space-y-2 text-xs">
+            <div v-if="!salesByCashier || salesByCashier.length === 0" class="text-slate-400 py-4 text-center">
+              No cashier sales recorded yet.
+            </div>
+            <div 
+              v-for="item in salesByCashier" 
+              :key="item.cashier" 
+              class="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex justify-between items-center"
+            >
+              <div>
+                <div class="font-bold text-slate-800">{{ item.cashier }}</div>
+                <div class="text-[10px] text-slate-500">{{ item.order_count }} orders processed</div>
+              </div>
+              <div class="font-bold text-indigo-700 font-mono">৳{{ formatMoney(item.total_sales) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </AuthenticatedLayout>
 </template>
@@ -96,6 +168,9 @@ const props = defineProps({
   grossProfit: Number,
   totalExpenses: Number,
   netProfit: Number,
+  salesByCategory: Array,
+  salesByPayment: Array,
+  salesByCashier: Array,
 });
 
 const formatMoney = (val) => {
