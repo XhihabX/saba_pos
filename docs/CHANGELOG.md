@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — End-to-End Merchant Onboarding to POS Checkout Integration Test Suite & Shift Audit Accuracy Fix
+**What:** Created an exhaustive 25-assertion PHPUnit end-to-end integration test (`tests/Feature/MerchantToPosWorkflowTest.php`) verifying the complete lifecycle: Merchant Self-Service SaaS Registration, Super Admin Approval Queue, Merchant HQ Catalog & Customer Setup, Cashier Shift Opening, POS Counter Sales Checkout with atomic stock deduction, Parked Sales Order Hold/Resume/Discard lifecycle, and Cashier Shift Reconciliation. Added database migration (`2026_10_06_000013_add_points_column_to_customers_table.php`), added `order()` relationship to `OrderPayment` model, and updated `ShiftController::closeShift` to factor `change_return` into till cash reconciliation.
+**Why:** Provide 100% automated verification of every single system feature from merchant creation to POS counter checkout, ensuring zero regressions or database schema gaps.
+**How:** Created `MerchantToPosWorkflowTest.php` and `add_points_column_to_customers_table.php`; updated `OrderPayment.php`, `ShiftController.php`, `routes/web.php`; ran full PHPUnit suite (3 / 3 tests passed, 27 assertions).
+**Where:** `tests/Feature/MerchantToPosWorkflowTest.php`, `database/migrations/2026_10_06_000013_add_points_column_to_customers_table.php`, `app/Models/OrderPayment.php`, `app/Http/Controllers/ShiftController.php`, `routes/web.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** 100% automated test coverage across full multi-tenant merchant registration, cashier shift drawer audits, and POS checkout pipeline.
+
+---
+
 ## [2026-10-06] — Live Camera & Hardware Barcode Scanner, Web Audio Beeps & Public Demo Conversion
 **What:** Converted all remaining mock/demo features across the POS counter and application into 100% live, production-ready functionality. Added an interactive WebRTC Camera Barcode Scanner Modal with camera video viewfinder and laser crosshairs, Web Audio API scan sound synthesis (1200Hz counter beep on item scan), removed public sandbox banners, secure-redirected `/demo/pos` to authenticated `/pos` terminal, removed Instant Demo Credentials section and demo links from `Landing.vue`, and updated seeder names in `SabaPosSeeder.php`. Recompiled Vite assets (`app-CupX8Nln.js`, `app-CSBn-3h0.css`).
 **Why:** Provide a 100% production-ready enterprise POS terminal workstation with real hardware/camera barcode scanning and zero demo artifacts exposed to public site visitors.

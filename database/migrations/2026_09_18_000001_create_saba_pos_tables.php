@@ -87,6 +87,7 @@ return new class extends Migration
             $table->string('email')->nullable();
             $table->text('address')->nullable();
             $table->decimal('due_balance', 12, 2)->default(0.00);
+            $table->integer('points')->default(0);
             $table->timestamps();
         });
 

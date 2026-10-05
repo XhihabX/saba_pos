@@ -10,4 +10,9 @@ class OrderPayment extends Model
     use HasFactory;
 
     protected $fillable = ['order_id', 'payment_method', 'amount', 'reference_no'];
+
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
 }

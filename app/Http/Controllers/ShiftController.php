@@ -117,7 +117,12 @@ class ShiftController extends Controller
               ->whereBetween('created_at', [$shift->opened_at, now()]);
         })->where('payment_method', 'mobile_wallet')->sum('amount');
 
-        $expectedCash = $shift->opening_cash + $cashSales;
+        $totalChangeReturn = \App\Models\Order::where('store_id', $shift->store_id)
+            ->where('user_id', $shift->user_id)
+            ->whereBetween('created_at', [$shift->opened_at, now()])
+            ->sum('change_return');
+
+        $expectedCash = $shift->opening_cash + $cashSales - $totalChangeReturn;
         $cashDiff = $validated['closing_cash_counted'] - $expectedCash;
 
         $shift->update([
