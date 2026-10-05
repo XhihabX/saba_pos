@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-05] — Hardened `AppServiceProvider` APP_URL Auto-Healing for Web Requests
+**What:** Updated `AppServiceProvider::boot()` to automatically detect incoming web request hosts (`HTTP_HOST`) and override `config('app.url')` when `app.url` contains `localhost`, `127.0.0.1`, or is executed under a cached configuration.
+**Why:** Running `php artisan config:cache` on servers where `.env` or local CLI defaults contained `https://localhost:8000` caused Ziggy (`@routes`) and Vite asset tags (`@vite`) to emit asset URLs pointing to `https://localhost:8000/build/assets/...`. Browsers visiting `https://xhihab.com` failed to fetch JavaScript/CSS assets from `localhost:8000`, causing a blank screen.
+**How:** Added `str_contains($currentConfigUrl, 'localhost')`, `str_contains($currentConfigUrl, '127.0.0.1')`, and `!empty($_SERVER['HTTP_HOST'])` checks in `AppServiceProvider::boot()` so that any web request dynamically sets `app.url` to the active domain (`https://xhihab.com`) and calls `URL::forceRootUrl(...)`.
+**Where:** `app/Providers/AppServiceProvider.php`, `docs/CHANGELOG.md`, `docs/ARCHITECTURE.md`
+**Impact:** Prevents blank screens caused by misconfigured `APP_URL` or `config:cache` stale values; guarantees Vite asset tags and Ziggy routes always resolve to `https://xhihab.com`.
+
+---
+
 ## [2026-10-04] — Custom Brand Logo Suite, Permanent Force Delete & Customer Credit Settlement Completion
 **What:** Integrated custom brand logo asset (`/images/logo.png`) and reusable Vue component (`ApplicationLogo.vue`) across all public navbar headers, auth views (`Login.vue`, `Register.vue`, `PendingApproval.vue`), and authenticated sidebars (`AuthenticatedLayout.vue`). Added `logo_url` column migration (`2026_10_04_000009_add_logo_url_to_tenants_table.php`) enabling merchants to configure custom brand logo URLs for thermal customer receipts and store headers. Implemented permanent force delete (`forceDeleteTenant`, `forceDeleteStore`, `forceDeleteUser`, `forceDeleteProduct`) and restore endpoints in `SuperAdminController.php` and `MerchantController.php` with confirmation modals in `RecycleBin.vue`. Implemented 1-click customer credit due payment settlement (`payCustomerDue`) in `MerchantController.php` and `Customers.vue`.
 **Why:** Provide a 100% production-ready enterprise SaaS ERP platform for live retail store management, enabling permanent database data purging, custom receipt logo branding, and automated credit balance settlement.

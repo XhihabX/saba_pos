@@ -61,7 +61,7 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
-        // Hardened auto-healing for APP_URL to prevent broken asset URLs or malformed Ziggy routes (e.g. http://:)
+        // Hardened auto-healing for APP_URL to prevent broken asset URLs or malformed Ziggy routes (e.g. http://: or localhost:8000)
         $host = $_SERVER['HTTP_HOST'] ?? 'xhihab.com';
         if (str_contains($host, ':') && !preg_match('/:\d+$/', $host)) {
             $host = preg_replace('/:.*$/', '', $host);
@@ -74,7 +74,14 @@ class AppServiceProvider extends ServiceProvider
         $targetUrl = $scheme . '://' . $host;
 
         $currentConfigUrl = (string) config('app.url');
-        if (empty($currentConfigUrl) || $currentConfigUrl === 'http://localhost' || str_contains($currentConfigUrl, 'http://:') || str_contains($currentConfigUrl, '://:')) {
+        if (
+            empty($currentConfigUrl) ||
+            str_contains($currentConfigUrl, 'localhost') ||
+            str_contains($currentConfigUrl, '127.0.0.1') ||
+            str_contains($currentConfigUrl, 'http://:') ||
+            str_contains($currentConfigUrl, '://:') ||
+            !empty($_SERVER['HTTP_HOST'])
+        ) {
             config(['app.url' => $targetUrl]);
         }
 
