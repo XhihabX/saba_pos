@@ -301,7 +301,7 @@ class SuperAdminController extends Controller
     public function settingsIndex()
     {
         $settings = [
-            'app_name' => config('app.name', 'Saba POS'),
+            'app_name' => config('app.name', 'IOT POS'),
             'bkash_number' => '01711000111',
             'nagad_number' => '01811000222',
             'bank_details' => "Bank: Dutch Bangla Bank Ltd\nA/C: 101-120-99882\nBranch: Banani, Dhaka",
