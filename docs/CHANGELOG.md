@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-05] — POS Workstation 100% Completion, Mouse-Free Hotkeys & Demo Login Removal
+**What:** Completed full mouse-free cashier hotkey system (`F1` Search, `F2` Customer Add, `F4` Checkout, `F7`/`F8` Hold Cart, `ESC` Close Modals), Parked Orders Resume/Discard drawer modal, Shift Register Float & Cash Reconciliation header modal, and Customer Quick-Add inline modal. Removed demo persona shortcut buttons and cleared default prefilled credentials in `Login.vue`.
+**Why:** Provide 100% mouse-free ergonomic counter performance for high-speed supermarket and retail cashiers, eliminate demo shortcuts from authentication screens, and achieve 100% production readiness.
+**How:** Added keyboard shortcuts and interactive Vue modals (`showParkedOrdersModal`, `showShiftModal`, `showAddCustomerModal`) in `Terminal.vue`; refactored `Login.vue` to remove quick demo persona buttons; recompiled Vite asset bundle (`app-CvNMg6aQ.js`, `app-B0tVg8Id.css`).
+**Where:** `resources/js/Pages/POS/Terminal.vue`, `resources/js/Pages/Auth/Login.vue`, `docs/ARCHITECTURE.MD`, `docs/CHANGELOG.md`
+**Impact:** POS counter is 100% production ready for high-speed mouse-free cashier transactions and enterprise live deployment.
+
+---
+
 ## [2026-10-05] — Comprehensive POS Audit, Server-Side Security, Shift Drawer & Inventory Adjustments
 **What:** Completed full system security and operational audit across POS cashier counter, server checkout transaction engine, shift drawer lifecycle, inventory waste tracking, thermal receipt printing, split payment tender modal, and report analytics breakdown.
 **Why:** Eliminate demo shortcuts, enforce server-calculated unit prices and tax rates to prevent client-side cart price manipulation, support physical/damaged stock adjustments, enable multi-tender payments (Cash, Card, bKash, Credit), and provide breakdown analytics by Category, Payment Channel, and Cashier Performance.

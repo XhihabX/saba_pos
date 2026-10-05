@@ -48,6 +48,16 @@
 
         <!-- Terminal Quick Action Tools -->
         <div class="flex items-center gap-2">
+          <!-- Register Shift Drawer Button -->
+          <button 
+            @click="openShiftModal"
+            class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-[11px] border border-slate-600 flex items-center gap-1.5 transition-all"
+            title="Register Shift Drawer Management"
+          >
+            <span class="w-2 h-2 rounded-full" :class="activeShift ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'"></span>
+            <span class="hidden sm:inline">{{ activeShift ? `Shift #${activeShift.id}` : 'Open Shift' }}</span>
+          </button>
+
           <!-- Terminal Lock Button (Stitch PIN Modal) -->
           <button 
             @click="showLockModal = true"
@@ -126,7 +136,7 @@
           ]"
         >
           <!-- Customer & Parked Orders Bar -->
-          <div class="p-3.5 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between gap-3">
+          <div class="p-3.5 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between gap-2">
             <div class="flex-1 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs">
               <User class="w-4 h-4 text-emerald-400 shrink-0" />
               <select 
@@ -138,6 +148,14 @@
                 </option>
               </select>
             </div>
+
+            <button 
+              @click="showAddCustomerModal = true" 
+              class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-emerald-400 border border-slate-700 flex items-center gap-1 shrink-0"
+              title="Add New Customer (F2)"
+            >
+              <span>+ New (F2)</span>
+            </button>
 
             <button 
               @click="openParkedOrdersModal" 
@@ -296,10 +314,11 @@
               <div class="flex-1 relative">
                 <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input 
+                  ref="searchInputRef"
                   type="text" 
                   v-model="searchQuery" 
                   @keydown.enter.prevent="handleSearchEnter"
-                  placeholder="Search products by Name, SKU, or Barcode (Scan & Press Enter)..." 
+                  placeholder="Search products by Name, SKU, or Barcode [F1]..." 
                   class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-400"
                 />
               </div>
@@ -429,6 +448,185 @@
         </button>
       </div>
     </div>
+
+    <!-- Parked / Suspended Orders Modal -->
+    <div v-if="showParkedOrdersModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl text-slate-100">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <Clock class="w-5 h-5 text-amber-400" />
+            <h3 class="text-base font-black font-heading">Suspended / Parked Orders ({{ parkedOrders.length }})</h3>
+          </div>
+          <button @click="showParkedOrdersModal = false" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+        </div>
+
+        <div class="max-h-96 overflow-y-auto space-y-3 custom-scrollbar">
+          <div v-if="parkedOrders.length === 0" class="text-center py-8 text-slate-500 text-xs">
+            No parked orders suspended in register drawer.
+          </div>
+
+          <div 
+            v-for="order in parkedOrders" 
+            :key="order.id" 
+            class="p-4 rounded-2xl bg-slate-800 border border-slate-700 space-y-2"
+          >
+            <div class="flex items-center justify-between text-xs font-bold">
+              <span class="text-amber-400 font-mono">{{ order.reference_no }}</span>
+              <span class="text-slate-400 text-[10px]">{{ new Date(order.created_at).toLocaleTimeString() }}</span>
+            </div>
+            <div class="text-xs text-slate-300">
+              Customer: <span class="font-bold text-white">{{ order.customer_name || 'Walk-in Customer' }}</span>
+            </div>
+            <div class="text-[11px] text-slate-400 font-mono">
+              Items: {{ order.cart_data?.length || 0 }} products
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-700">
+              <button 
+                @click="discardParkedOrder(order.id)" 
+                class="px-3 py-1.5 rounded-xl bg-rose-500/20 text-rose-400 hover:bg-rose-500/30 font-bold text-xs border border-rose-500/40"
+              >
+                Discard
+              </button>
+              <button 
+                @click="resumeParkedOrder(order)" 
+                class="px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md"
+              >
+                Resume Cart ➔
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Shift Register Drawer Modal -->
+    <div v-if="showShiftModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-slate-100">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full" :class="activeShift ? 'bg-emerald-400' : 'bg-rose-400'"></span>
+            <h3 class="text-base font-black font-heading">{{ activeShift ? `Close Shift #${activeShift.id}` : 'Open Register Shift' }}</h3>
+          </div>
+          <button @click="showShiftModal = false" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+        </div>
+
+        <div v-if="!activeShift" class="space-y-4">
+          <p class="text-xs text-slate-400">Enter starting cash float amount in till to activate register shift</p>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">Starting Cash Float (৳)</label>
+            <input 
+              type="number" 
+              v-model.number="openingCashInput" 
+              placeholder="5000.00" 
+              class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 font-mono text-sm focus:outline-none focus:border-emerald-400"
+            />
+          </div>
+          <button 
+            @click="handleOpenShift" 
+            :disabled="isShiftProcessing"
+            class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md"
+          >
+            {{ isShiftProcessing ? 'Opening...' : 'Start Cashier Register Shift' }}
+          </button>
+        </div>
+
+        <div v-else class="space-y-4 text-xs">
+          <div class="p-3 rounded-2xl bg-slate-800 border border-slate-700 space-y-1">
+            <div class="flex justify-between text-slate-400">
+              <span>Shift Started At:</span>
+              <span class="font-mono text-slate-200">{{ new Date(activeShift.opened_at).toLocaleTimeString() }}</span>
+            </div>
+            <div class="flex justify-between text-slate-400">
+              <span>Opening Float:</span>
+              <span class="font-mono text-emerald-400">৳{{ formatMoney(activeShift.opening_cash) }}</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">Physical Cash Count in Drawer (৳)</label>
+            <input 
+              type="number" 
+              v-model.number="closingCashInput" 
+              placeholder="0.00" 
+              class="w-full px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 font-mono text-sm focus:outline-none focus:border-emerald-400"
+            />
+          </div>
+
+          <button 
+            @click="handleCloseShift" 
+            :disabled="isShiftProcessing"
+            class="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-md"
+          >
+            {{ isShiftProcessing ? 'Reconciling...' : 'Close Shift & Audit Cash Drawer' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Add Customer Modal -->
+    <div v-if="showAddCustomerModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-slate-100">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <User class="w-5 h-5 text-emerald-400" />
+            <h3 class="text-base font-black font-heading">Register New Customer (F2)</h3>
+          </div>
+          <button @click="showAddCustomerModal = false" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+        </div>
+
+        <form @submit.prevent="submitNewCustomer" class="space-y-3 text-xs">
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">Customer Full Name *</label>
+            <input 
+              type="text" 
+              v-model="newCustomerForm.name" 
+              required 
+              placeholder="e.g. Tanvir Ahmed" 
+              class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:border-emerald-400"
+            />
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">Phone Number *</label>
+            <input 
+              type="text" 
+              v-model="newCustomerForm.phone" 
+              required 
+              placeholder="01700000000" 
+              class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 font-mono focus:outline-none focus:border-emerald-400"
+            />
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">Email Address</label>
+            <input 
+              type="email" 
+              v-model="newCustomerForm.email" 
+              placeholder="customer@example.com" 
+              class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:border-emerald-400"
+            />
+          </div>
+
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">Delivery / Billing Address</label>
+            <textarea 
+              v-model="newCustomerForm.address" 
+              rows="2" 
+              placeholder="House, Road, Area, City" 
+              class="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 focus:outline-none focus:border-emerald-400"
+            ></textarea>
+          </div>
+
+          <button 
+            type="submit" 
+            :disabled="isAddingCustomer"
+            class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-md mt-2"
+          >
+            {{ isAddingCustomer ? 'Registering...' : 'Save & Select Customer' }}
+          </button>
+        </form>
+      </div>
+    </div>
   </AuthenticatedLayout>
 </template>
 
@@ -475,12 +673,26 @@ const cart = ref([]);
 const orderDiscount = ref(0);
 const taxRate = ref(5.0);
 
+const searchInputRef = ref(null);
 const showCheckoutModal = ref(false);
 const showReceiptModal = ref(false);
 const showLockModal = ref(false);
+const showParkedOrdersModal = ref(false);
+const showShiftModal = ref(false);
+const showAddCustomerModal = ref(false);
+
 const pinEntered = ref('');
 const latestReceipt = ref(null);
 const isSubmitting = ref(false);
+
+const activeShift = ref(null);
+const openingCashInput = ref(5000);
+const closingCashInput = ref(0);
+const isShiftProcessing = ref(false);
+
+const localCustomers = ref([]);
+const newCustomerForm = ref({ name: '', phone: '', email: '', address: '' });
+const isAddingCustomer = ref(false);
 
 const isOnline = ref(navigator.onLine);
 const offlineQueue = ref([]);
@@ -493,7 +705,8 @@ const cachedProducts = ref([]);
 const parkedOrders = ref([]);
 
 const customersList = computed(() => {
-  return props.customers.length ? props.customers : [{ id: 1, name: 'Walk-in Customer', phone: '' }];
+  const combined = [...props.customers, ...localCustomers.value];
+  return combined.length ? combined : [{ id: 1, name: 'Walk-in Customer', phone: '' }];
 });
 
 // Use live Inertia props when online, fall back to IndexedDB cache when offline
@@ -742,6 +955,96 @@ const fetchParkedOrders = () => {
 
 const openParkedOrdersModal = () => {
   fetchParkedOrders();
+  showParkedOrdersModal.value = true;
+};
+
+const resumeParkedOrder = (order) => {
+  if (order.cart_data && Array.isArray(order.cart_data)) {
+    cart.value = order.cart_data;
+  }
+  discardParkedOrder(order.id);
+  showParkedOrdersModal.value = false;
+};
+
+const discardParkedOrder = (id) => {
+  router.delete(`/pos/parked/${id}`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      fetchParkedOrders();
+    }
+  });
+};
+
+const fetchShiftStatus = () => {
+  fetch(`/pos/shift/status?store_id=${selectedStoreId.value}`)
+    .then(r => r.json())
+    .then(data => {
+      activeShift.value = data.shift || null;
+    })
+    .catch(() => {});
+};
+
+const openShiftModal = () => {
+  fetchShiftStatus();
+  showShiftModal.value = true;
+};
+
+const handleOpenShift = async () => {
+  isShiftProcessing.value = true;
+  try {
+    const res = await window.axios.post('/pos/shift/open', {
+      store_id: selectedStoreId.value,
+      opening_cash: openingCashInput.value,
+    });
+    if (res.data.success) {
+      activeShift.value = res.data.shift;
+      showShiftModal.value = false;
+      showSyncNotification('success', '✅ Register shift activated successfully!');
+    }
+  } catch (e) {
+    alert('Failed to open shift.');
+  } finally {
+    isShiftProcessing.value = false;
+  }
+};
+
+const handleCloseShift = async () => {
+  if (!activeShift.value) return;
+  isShiftProcessing.value = true;
+  try {
+    const res = await window.axios.post('/pos/shift/close', {
+      shift_id: activeShift.value.id,
+      closing_cash_counted: closingCashInput.value,
+    });
+    if (res.data.success) {
+      activeShift.value = null;
+      showShiftModal.value = false;
+      showSyncNotification('success', '✅ Register shift closed & cash drawer reconciled!');
+    }
+  } catch (e) {
+    alert('Failed to close shift.');
+  } finally {
+    isShiftProcessing.value = false;
+  }
+};
+
+const submitNewCustomer = async () => {
+  if (!newCustomerForm.value.name || !newCustomerForm.value.phone) return;
+  isAddingCustomer.value = true;
+  try {
+    const res = await window.axios.post('/customers', newCustomerForm.value);
+    if (res.data && res.data.customer) {
+      localCustomers.value.push(res.data.customer);
+      selectedCustomerId.value = res.data.customer.id;
+      newCustomerForm.value = { name: '', phone: '', email: '', address: '' };
+      showAddCustomerModal.value = false;
+      showSyncNotification('success', `✅ Customer "${res.data.customer.name}" registered and selected!`);
+    }
+  } catch (e) {
+    alert('Failed to add customer.');
+  } finally {
+    isAddingCustomer.value = false;
+  }
 };
 
 const simulateBarcodeScan = () => {
@@ -773,7 +1076,41 @@ let barcodeBuffer = '';
 let lastKeyTime = 0;
 
 const handleGlobalKeyDown = (e) => {
-  if (showCheckoutModal.value || showLockModal.value || showReceiptModal.value) return;
+  if (e.key === 'F1') {
+    e.preventDefault();
+    searchInputRef.value?.focus();
+    return;
+  }
+
+  if (e.key === 'F2') {
+    e.preventDefault();
+    showAddCustomerModal.value = true;
+    return;
+  }
+
+  if (e.key === 'F4') {
+    e.preventDefault();
+    openCheckoutModal();
+    return;
+  }
+
+  if (e.key === 'F7' || e.key === 'F8') {
+    e.preventDefault();
+    parkActiveOrder();
+    return;
+  }
+
+  if (e.key === 'Escape') {
+    showCheckoutModal.value = false;
+    showReceiptModal.value = false;
+    showLockModal.value = false;
+    showParkedOrdersModal.value = false;
+    showShiftModal.value = false;
+    showAddCustomerModal.value = false;
+    return;
+  }
+
+  if (showCheckoutModal.value || showLockModal.value || showReceiptModal.value || showParkedOrdersModal.value || showShiftModal.value || showAddCustomerModal.value) return;
 
   const activeTag = document.activeElement?.tagName;
   const isInputTarget = ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag);
