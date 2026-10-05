@@ -3,16 +3,6 @@
     <!-- Kinetic POS Dark Mode Container (Google Stitch Design System) -->
     <div class="flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-slate-900 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
       
-      <!-- Public Sandbox Demo Banner -->
-      <div v-if="isDemoMode" class="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black px-4 py-2 flex items-center justify-between text-xs shadow-md shrink-0">
-        <div class="flex items-center gap-2">
-          <span>⚡ PUBLIC INTERACTIVE DEMO SANDBOX</span>
-          <span class="font-normal opacity-90 hidden sm:inline">• Test live barcode scanning, item checkout, and thermal receipt printing.</span>
-        </div>
-        <Link href="/register?plan=growth" class="px-3 py-1 rounded-lg bg-slate-950 text-white font-extrabold text-[11px] hover:bg-slate-900 transition-colors">
-          Start Free Trial ➔
-        </Link>
-      </div>
 
       <!-- Top Status Header & Offline Sync Bar -->
       <div class="px-4 sm:px-6 py-2.5 bg-slate-800 border-b border-slate-700 flex items-center justify-between text-xs shadow-md shrink-0">
@@ -324,10 +314,11 @@
               </div>
 
               <button 
-                @click="simulateBarcodeScan" 
+                @click="openCameraScanner" 
                 class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs border border-slate-700 flex items-center gap-1.5 shrink-0"
+                title="Live Camera & Laser Barcode Scanner"
               >
-                <Barcode class="w-4 h-4" />
+                <Barcode class="w-4 h-4 text-emerald-400" />
                 <span class="hidden sm:inline">Scan Barcode</span>
               </button>
             </div>
@@ -417,6 +408,54 @@
       :receipt="latestReceipt" 
       @close="showReceiptModal = false" 
     />
+
+    <!-- Live Camera & Hardware Barcode Scanner Modal -->
+    <div v-if="showCameraScannerModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl text-slate-100 text-center">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <Camera class="w-5 h-5 text-emerald-400" />
+            <h3 class="text-base font-black font-heading">Live Camera Barcode Scanner</h3>
+          </div>
+          <button @click="closeCameraScanner" class="text-slate-400 hover:text-white font-bold text-lg">✕</button>
+        </div>
+
+        <div class="relative bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 aspect-video flex items-center justify-center">
+          <video ref="cameraVideoRef" autoplay playsinline class="w-full h-full object-cover"></video>
+          
+          <!-- Scanner Crosshair Overlay -->
+          <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div class="w-48 h-28 border-2 border-emerald-400/80 rounded-xl relative animate-pulse shadow-[0_0_20px_rgba(52,211,153,0.3)]">
+              <div class="absolute inset-x-0 top-1/2 h-0.5 bg-rose-500 shadow-[0_0_8px_#f43f5e]"></div>
+            </div>
+          </div>
+
+          <div v-if="cameraError" class="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center p-4 text-xs">
+            <p class="text-amber-400 font-bold mb-1">⚠️ Camera Scanner Notice</p>
+            <p class="text-slate-400 text-center text-[11px] mb-3">{{ cameraError }}</p>
+            <button @click="focusSearchInput" class="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs">
+              Focus Search Input (F1)
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2 text-xs">
+          <p class="text-slate-400">Aim camera at barcode line or use USB laser scan gun</p>
+          <div class="flex items-center gap-2">
+            <input 
+              type="text" 
+              v-model="manualBarcodeInput" 
+              @keydown.enter.prevent="submitManualBarcode"
+              placeholder="Or type SKU / Barcode & press Enter" 
+              class="flex-1 px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 font-mono text-xs focus:outline-none focus:border-emerald-400"
+            />
+            <button @click="submitManualBarcode" class="px-3.5 py-2 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs">
+              Add Item
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Google Stitch Terminal Lock PIN Modal -->
     <div v-if="showLockModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
@@ -646,6 +685,7 @@ import {
   CreditCard, 
   Search, 
   Barcode, 
+  Camera,
   PackageSearch, 
   WifiOff, 
   RefreshCw,
@@ -680,6 +720,13 @@ const showLockModal = ref(false);
 const showParkedOrdersModal = ref(false);
 const showShiftModal = ref(false);
 const showAddCustomerModal = ref(false);
+
+const showCameraScannerModal = ref(false);
+const cameraVideoRef = ref(null);
+const cameraError = ref('');
+const cameraStream = ref(null);
+const manualBarcodeInput = ref('');
+let barcodeScanAnimFrame = null;
 
 const pinEntered = ref('');
 const latestReceipt = ref(null);
@@ -756,6 +803,24 @@ const formatMoney = (val) => {
   return Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
+const playScannerBeep = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, ctx.currentTime);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.08);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.08);
+  } catch (_) {}
+};
+
 const addToCart = (product) => {
   const stockAvailable = product.current_stock ?? product.stock ?? 999;
   const existing = cart.value.find(i => i.product_id === product.id);
@@ -784,6 +849,8 @@ const addToCart = (product) => {
       serial_number: '',
     });
   }
+
+  playScannerBeep();
 };
 
 const updateQty = (index, delta) => {
@@ -1047,10 +1114,94 @@ const submitNewCustomer = async () => {
   }
 };
 
-const simulateBarcodeScan = () => {
-  if (props.products.length > 0) {
-    const randomProduct = props.products[Math.floor(Math.random() * props.products.length)];
-    addToCart(randomProduct);
+const focusSearchInput = () => {
+  closeCameraScanner();
+  setTimeout(() => {
+    searchInputRef.value?.focus();
+  }, 100);
+};
+
+const openCameraScanner = async () => {
+  showCameraScannerModal.value = true;
+  cameraError.value = '';
+  manualBarcodeInput.value = '';
+
+  try {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      cameraStream.value = stream;
+      if (cameraVideoRef.value) {
+        cameraVideoRef.value.srcObject = stream;
+      }
+      startBarcodeDetectorLoop();
+    } else {
+      cameraError.value = 'Camera API not available. Use hardware laser scanner [F1].';
+    }
+  } catch (err) {
+    cameraError.value = 'Camera permission denied or not detected. Use hardware laser scanner [F1].';
+  }
+};
+
+const closeCameraScanner = () => {
+  if (cameraStream.value) {
+    cameraStream.value.getTracks().forEach(t => t.stop());
+    cameraStream.value = null;
+  }
+  if (barcodeScanAnimFrame) {
+    cancelAnimationFrame(barcodeScanAnimFrame);
+    barcodeScanAnimFrame = null;
+  }
+  showCameraScannerModal.value = false;
+};
+
+const startBarcodeDetectorLoop = () => {
+  if ('BarcodeDetector' in window) {
+    const barcodeDetector = new window.BarcodeDetector({
+      formats: ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e']
+    });
+
+    const detectFrame = async () => {
+      if (!showCameraScannerModal.value || !cameraVideoRef.value) return;
+      try {
+        const barcodes = await barcodeDetector.detect(cameraVideoRef.value);
+        if (barcodes.length > 0) {
+          const rawCode = barcodes[0].rawValue.trim().toLowerCase();
+          const match = allProducts.value.find(p =>
+            p.sku?.toLowerCase() === rawCode ||
+            p.barcode?.toLowerCase() === rawCode
+          );
+          if (match) {
+            addToCart(match);
+            closeCameraScanner();
+            return;
+          }
+        }
+      } catch (e) {}
+      if (showCameraScannerModal.value) {
+        barcodeScanAnimFrame = requestAnimationFrame(detectFrame);
+      }
+    };
+    detectFrame();
+  }
+};
+
+const submitManualBarcode = () => {
+  const code = manualBarcodeInput.value.trim().toLowerCase();
+  if (!code) return;
+
+  const match = allProducts.value.find(p =>
+    p.sku?.toLowerCase() === code ||
+    p.barcode?.toLowerCase() === code
+  );
+
+  if (match) {
+    addToCart(match);
+    manualBarcodeInput.value = '';
+    closeCameraScanner();
+  } else {
+    alert(`No product found matching SKU/Barcode "${code}"`);
   }
 };
 
@@ -1107,10 +1258,11 @@ const handleGlobalKeyDown = (e) => {
     showParkedOrdersModal.value = false;
     showShiftModal.value = false;
     showAddCustomerModal.value = false;
+    closeCameraScanner();
     return;
   }
 
-  if (showCheckoutModal.value || showLockModal.value || showReceiptModal.value || showParkedOrdersModal.value || showShiftModal.value || showAddCustomerModal.value) return;
+  if (showCheckoutModal.value || showLockModal.value || showReceiptModal.value || showParkedOrdersModal.value || showShiftModal.value || showAddCustomerModal.value || showCameraScannerModal.value) return;
 
   const activeTag = document.activeElement?.tagName;
   const isInputTarget = ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeTag);

@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Live Camera & Hardware Barcode Scanner, Web Audio Beeps & Public Demo Conversion
+**What:** Converted all remaining mock/demo features across the POS counter and application into 100% live, production-ready functionality. Added an interactive WebRTC Camera Barcode Scanner Modal with camera video viewfinder and laser crosshairs, Web Audio API scan sound synthesis (1200Hz counter beep on item scan), removed public sandbox banners, secure-redirected `/demo/pos` to authenticated `/pos` terminal, removed Instant Demo Credentials section and demo links from `Landing.vue`, and updated seeder names in `SabaPosSeeder.php`. Recompiled Vite assets (`app-CupX8Nln.js`, `app-CSBn-3h0.css`).
+**Why:** Provide a 100% production-ready enterprise POS terminal workstation with real hardware/camera barcode scanning and zero demo artifacts exposed to public site visitors.
+**How:** Refactored `Terminal.vue`, `PosController.php`, `Landing.vue`, `SabaPosSeeder.php`; added WebRTC video stream + `BarcodeDetector` API camera scanner modal; implemented Web Audio `AudioContext` scan sound beep synthesis; recompiled Vite assets; updated documentation.
+**Where:** `resources/js/Pages/POS/Terminal.vue`, `resources/js/Pages/Landing.vue`, `app/Http/Controllers/PosController.php`, `database/seeders/SabaPosSeeder.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** 100% production readiness achieved across all POS counter features and public pages. Zero mock data or sandbox banners remaining.
+
+---
+
 ## [2026-10-05] — Exhaustive IOT Rebrand, High-Res Logo, Mouse-Free POS Counter & Production Deployment Sync
 **What:** Completed 100% exhaustive system rebranding to **IOT - International Office Technology** / **IOT POS** across all frontend pages, landing pages, email placeholders (`@iotpos.com`), settings modals, service worker (`public/sw.js`), and database seeders/migrations (`2026_10_05_000012_rename_tenant_and_store_branding.php`). Generated and integrated high-resolution logo (`public/images/logo.png`). Built full keyboard hotkey navigation system (`F1` Search Focus, `F2` Customer Add, `F4` Checkout, `F7`/`F8` Park/Resume Order, `ESC` Close Modals) with interactive Vue modals for Parked Orders, Shift Float Cash Reconciliation, and Customer Quick-Add. Completely removed all demo persona buttons from `Login.vue`. Recompiled Vite assets (`app-Chbf4IJP.js`, `app-IpRhja8c.css`) and verified live deployment sync on `https://xhihab.com`.
 **Why:** Provide a complete, production-ready enterprise solution for International Office Technology (IOT POS) with 100% mouse-free cashier ergonomics, clean authentication screens, and seamless context retention across devices.

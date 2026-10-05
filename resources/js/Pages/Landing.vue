@@ -11,7 +11,6 @@
         <a href="#report" class="hover:text-emerald-600 transition-colors">System Capabilities</a>
         <a href="#modules" class="hover:text-emerald-600 transition-colors">Portals & Modules</a>
         <a href="#pricing" class="hover:text-emerald-600 transition-colors">SaaS Plans</a>
-        <a href="#demo" class="hover:text-emerald-600 transition-colors">Test Personas</a>
       </nav>
 
       <div class="flex items-center gap-3">
@@ -52,11 +51,11 @@
       <!-- Primary Action CTAs -->
       <div class="flex flex-wrap justify-center gap-4 mb-16">
         <Link 
-          href="/demo/pos" 
+          href="/pos" 
           class="px-7 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-xl shadow-emerald-600/25 transition-all transform hover:-translate-y-0.5 flex items-center gap-2.5"
         >
           <Zap class="w-4 h-4 text-amber-300 fill-amber-300" />
-          <span>⚡ Try Interactive POS Terminal Demo</span>
+          <span>⚡ Launch POS Workstation</span>
         </Link>
         <Link 
           href="/register?plan=growth" 
@@ -201,53 +200,7 @@
       </div>
     </section>
 
-    <!-- Test Drive Personas Section -->
-    <section id="demo" class="py-16 px-6 lg:px-12 max-w-7xl mx-auto">
-      <div class="bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl p-8 sm:p-12 text-white shadow-2xl relative overflow-hidden">
-        <div class="relative z-10 max-w-3xl">
-          <span class="text-xs font-black uppercase tracking-widest text-emerald-400 mb-2 block">Live Test Personas</span>
-          <h2 class="text-3xl font-black font-heading mb-4">Instant Demo Credentials</h2>
-          <p class="text-sm text-slate-300 mb-8 leading-relaxed">
-            Test drive any portal tier using pre-provisioned demo persona accounts.
-          </p>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono">
-            <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
-              <div class="font-sans font-extrabold text-rose-400">👑 Super Admin SaaS</div>
-              <div class="text-slate-200">Email: admin@iot.com</div>
-              <div class="text-slate-400">Password: Admin-iot2026?</div>
-            </div>
-
-            <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
-              <div class="font-sans font-extrabold text-indigo-400">🏢 Merchant HQ CEO</div>
-              <div class="text-slate-200">Email: merchant@iotpos.com</div>
-              <div class="text-slate-400">Password: 123456</div>
-            </div>
-
-            <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
-              <div class="font-sans font-extrabold text-cyan-400">⚙️ Store Manager</div>
-              <div class="text-slate-200">Email: manager@iotpos.com</div>
-              <div class="text-slate-400">Password: 123456</div>
-            </div>
-
-            <div class="p-4 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
-              <div class="font-sans font-extrabold text-emerald-400">⚡ Cashier Terminal</div>
-              <div class="text-slate-200">Email: cashier@iotpos.com</div>
-              <div class="text-slate-400">Password: 123456</div>
-            </div>
-          </div>
-
-          <div class="mt-8 flex gap-4">
-            <Link 
-              href="/login" 
-              class="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg transition-all"
-            >
-              Sign In to Live Portal
-            </Link>
-          </div>
-        </div>
-      </div>
-    </section>
 
     <!-- Transparent SaaS Subscription Plans -->
     <section id="pricing" class="py-20 px-6 lg:px-12 max-w-7xl mx-auto border-t border-slate-200">

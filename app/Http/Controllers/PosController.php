@@ -35,80 +35,10 @@ class PosController extends Controller
 
     public function sandboxDemo()
     {
-        $demoStores = [
-            [
-                'id' => 1,
-                'name' => 'Flagship Retail Outlet (Demo Sandbox)',
-                'code' => 'DEMO-001',
-                'address' => 'Banani, Dhaka',
-                'currency_symbol' => '৳',
-                'default_tax_rate' => 5.00,
-            ]
-        ];
-
-        $demoCategories = [
-            ['id' => 1, 'name' => 'Fashion & Apparel', 'slug' => 'fashion'],
-            ['id' => 2, 'name' => 'Electronics & Gadgets', 'slug' => 'electronics'],
-            ['id' => 3, 'name' => 'Groceries & Snacks', 'slug' => 'groceries'],
-        ];
-
-        $demoCustomers = [
-            ['id' => 1, 'name' => 'Walk-in Retail Customer', 'phone' => '01700000000', 'email' => 'walkin@iotpos.com'],
-            ['id' => 2, 'name' => 'Tanvir Ahmed (VIP Member)', 'phone' => '01811112222', 'email' => 'tanvir@example.com'],
-        ];
-
-        $demoProducts = [
-            [
-                'id' => 101, 
-                'name' => 'Premium Polo Shirt (Black - L)', 
-                'sku' => 'TSH-BLK-L', 
-                'barcode' => '8901001', 
-                'selling_price' => 1450.00, 
-                'current_stock' => 45, 
-                'category_id' => 1, 
-                'category' => ['name' => 'Fashion & Apparel']
-            ],
-            [
-                'id' => 102, 
-                'name' => 'Wireless Bluetooth Earbuds', 
-                'sku' => 'EAR-WRL-01', 
-                'barcode' => '8901002', 
-                'selling_price' => 3200.00, 
-                'current_stock' => 18, 
-                'category_id' => 2, 
-                'category' => ['name' => 'Electronics & Gadgets']
-            ],
-            [
-                'id' => 103, 
-                'name' => 'Organic Green Tea (250g Pack)', 
-                'sku' => 'TEA-GRN-250', 
-                'barcode' => '8901003', 
-                'selling_price' => 450.00, 
-                'current_stock' => 120, 
-                'category_id' => 3, 
-                'category' => ['name' => 'Groceries & Snacks']
-            ],
-            [
-                'id' => 104, 
-                'name' => 'Smart Fitness Watch Series 5', 
-                'sku' => 'WTC-SMT-05', 
-                'barcode' => '8901004', 
-                'selling_price' => 5800.00, 
-                'current_stock' => 8, 
-                'category_id' => 2, 
-                'category' => ['name' => 'Electronics & Gadgets']
-            ],
-        ];
-
-        return Inertia::render('POS/Terminal', [
-            'stores' => $demoStores,
-            'currentStoreId' => 1,
-            'categories' => $demoCategories,
-            'customers' => $demoCustomers,
-            'products' => $demoProducts,
-            'parkedCount' => 0,
-            'isDemoMode' => true,
-        ]);
+        if (auth()->check()) {
+            return redirect()->route('pos.index');
+        }
+        return redirect()->route('login')->with('info', 'Please log in with your cashier or merchant credentials to access the POS Workstation.');
     }
 
     public function index(Request $request)

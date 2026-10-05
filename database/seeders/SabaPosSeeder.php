@@ -31,11 +31,11 @@ class SabaPosSeeder extends Seeder
             'expires_at' => date('Y-m-d H:i:s', strtotime('+30 days')),
         ]);
 
-        // Pending Merchant Registration for Super Admin Queue Demo
+        // Pending Merchant Registration for Super Admin Approval Queue
         Tenant::create([
-            'name' => 'Apex Footwear Outlet (Pending Demo)',
+            'name' => 'Apex Footwear Outlet (Pending Approval)',
             'code' => 'TENANT-002',
-            'email' => 'apex@demo.com',
+            'email' => 'apex@iotpos.com',
             'phone' => '+880 1799 888777',
             'plan_name' => 'Starter Single Outlet',
             'subscription_status' => 'pending_approval',
