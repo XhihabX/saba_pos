@@ -174,10 +174,26 @@ class SupplierController extends Controller
         $tenantId = $this->getTenantId();
         $purchase = Purchase::whereHas('store', function ($q) use ($tenantId) {
             $q->where('tenant_id', $tenantId);
-        })->where('id', $id)->firstOrFail();
+        })->with(['items', 'supplier'])->where('id', $id)->firstOrFail();
 
-        $purchase->delete();
+        return DB::transaction(function () use ($purchase) {
+            foreach ($purchase->items as $item) {
+                $stock = Stock::where('store_id', $purchase->store_id)
+                    ->where('product_id', $item->product_id)
+                    ->first();
+                if ($stock) {
+                    $stock->decrement('quantity', min($stock->quantity, $item->quantity));
+                }
+            }
 
-        return redirect()->back()->with('success', 'Purchase Order record deleted successfully.');
+            $due = max(0, $purchase->total_amount - $purchase->paid_amount);
+            if ($due > 0 && $purchase->supplier) {
+                $purchase->supplier->decrement('due_balance', min($purchase->supplier->due_balance, $due));
+            }
+
+            $purchase->delete();
+
+            return redirect()->back()->with('success', 'Purchase Order deleted and store inventory adjusted.');
+        });
     }
 }

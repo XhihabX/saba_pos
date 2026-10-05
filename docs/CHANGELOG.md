@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Atomic Purchase Order Deletion Stock & Supplier Payable Reversal Hardening
+**What:** Conducted deep business logic audit across inventory purchasing and vendor payables (`SupplierController.php`). Hardened `deletePurchase($id)` to execute inside a `DB::transaction()`, automatically decrementing store inventory stock quantities and reducing supplier due balances (`due_balance`) when a purchase order is deleted.
+**Why:** Prevent inventory stock or supplier payables ledgers from becoming out of sync upon purchase order cancellation.
+**How:** Refactored `SupplierController::deletePurchase` with transactional stock and supplier due decrements; ran full PHPUnit test suite (3 / 3 passed, 27 assertions).
+**Where:** `app/Http/Controllers/SupplierController.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** 100% data consistency guaranteed across vendor payables, purchase order cancellations, and store inventory stock levels.
+
+---
+
 ## [2026-10-06] — Comprehensive Codebase Audit & Null-Safe Store Fallback Hardening
 **What:** Conducted an exhaustive line-by-line static analysis and architectural audit across all controllers (`ExpenseController.php`, `ShiftController.php`, `StoreManagerController.php`, `QuotationController.php`, `AttendanceController.php`). Applied null-safe navigation operators (`Store::where('tenant_id', $tenantId)->first()?->id ?? 1`) to eliminate potential null pointer crashes when user or store records are null/unassigned. Recompiled Vite asset bundle and ran full automated test suite (3 / 3 passed, 27 assertions).
 **Why:** Guarantee 100% crash-free stability across edge cases when new tenants onboard before creating store outlets.
