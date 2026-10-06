@@ -4,13 +4,13 @@
 @layer base {
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: #f8fafc;
+    background-color: #f1f5f9;
     color: #0f172a;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
 
   .dark body {
-    background-color: #020617;
+    background-color: #0f172a;
     color: #f8fafc;
   }
 

@@ -1,6 +1,6 @@
 <template>
   <!-- Full Screen Container (Dual Light & Dark Theme) -->
-  <div class="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex font-sans antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-200">
+  <div class="min-h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 flex font-sans antialiased selection:bg-emerald-500 selection:text-white transition-colors duration-200">
     
     <!-- Left Theme-Adaptive Sidebar -->
     <aside 
@@ -664,7 +664,7 @@
       </div>
 
       <!-- Main Page Content Body -->
-      <main class="flex-1 flex flex-col min-w-0 bg-slate-100 dark:bg-slate-950 transition-colors">
+      <main class="flex-1 flex flex-col min-w-0 bg-slate-100 dark:bg-slate-900 transition-colors">
         <slot />
       </main>
     </div>

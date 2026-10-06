@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — POS Terminal Dual Theme (Light & Soft Dark Mode) Harmonization
+**What:** Fixed theme inheritance and updated color schemes across [`app.blade.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/views/app.blade.php), [`app.css`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/css/app.css), [`AuthenticatedLayout.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Layouts/AuthenticatedLayout.vue), [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue), and [`ShiftModal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Components/POS/ShiftModal.vue). Replaced hardcoded `bg-slate-950` pitch-black backgrounds with soft dark slate-900 (`#0f172a`) and light mode slate-100 (`#f1f5f9`). Added explicit Sun/Moon theme switcher button to POS header action bar. Rebuilt Vite production bundle (`app-DZsGw0VW.js`, `app-DTpGNF7A.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Fix POS terminal remaining stuck in dark mode or appearing pitch-black by enabling seamless 1-click toggling between clean Light Mode and eye-friendly Soft Dark Mode.
+**How:** Removed hardcoded `bg-slate-950` from root `app.blade.php`, added dual theme classes across POS modals and terminal views, added quick theme toggle to POS header, ran `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `resources/views/app.blade.php`, `resources/css/app.css`, `resources/js/Layouts/AuthenticatedLayout.vue`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/Components/POS/ShiftModal.vue`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** POS Counter Workstation (`/pos`) seamlessly toggles between Light Mode and Soft Dark Mode with crisp readability and zero pitch-black background issues.
+
+---
+
 ## [2026-10-06] — Active Bilingual (English & Bengali) Sidebar & Terminal UI Localization
 **What:** Wired up dynamic `t(...)` i18n translation calls across all sidebar navigation links, role headers, section titles, and POS workstation controls in [`AuthenticatedLayout.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Layouts/AuthenticatedLayout.vue) and [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue). Expanded translation dictionary in [`messages.js`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/i18n/messages.js). Rebuilt Vite production bundle (`app-Id-fDJSA.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Ensure selecting **🇧🇩 বাংলা (Bangla)** actively translates the entire portal menu, navigation links, and terminal buttons into Bengali in real-time.

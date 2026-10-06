@@ -1,23 +1,23 @@
 <template>
   <AuthenticatedLayout>
-    <!-- Kinetic POS Dark Mode Container (Google Stitch Design System) -->
-    <div class="flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-slate-900 text-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
+    <!-- Kinetic POS Bilingual Dual-Theme Container (Light & Soft Dark Mode) -->
+    <div class="flex-1 flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans selection:bg-emerald-500 selection:text-white transition-colors duration-200">
       
 
       <!-- Top Status Header & Offline Sync Bar -->
-      <div class="px-4 sm:px-6 py-2.5 bg-slate-800 border-b border-slate-700 flex items-center justify-between text-xs shadow-md shrink-0">
+      <div class="px-4 sm:px-6 py-2.5 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs shadow-xs shrink-0">
         <div class="flex items-center gap-3">
           <!-- Mobile Tab Switcher (< lg screens) -->
-          <div class="flex lg:hidden items-center bg-slate-900 p-1 rounded-xl border border-slate-700 text-xs font-semibold">
+          <div class="flex lg:hidden items-center bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold">
             <button 
               @click="mobileActiveTab = 'catalog'" 
-              :class="['px-3 py-1 rounded-lg font-bold transition-all', mobileActiveTab === 'catalog' ? 'bg-emerald-500 text-slate-950 font-black shadow' : 'text-slate-400']"
+              :class="['px-3 py-1 rounded-lg font-bold transition-all', mobileActiveTab === 'catalog' ? 'bg-emerald-500 text-slate-950 font-black shadow' : 'text-slate-600 dark:text-slate-400']"
             >
               🛍️ Catalog
             </button>
             <button 
               @click="mobileActiveTab = 'cart'" 
-              :class="['px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1', mobileActiveTab === 'cart' ? 'bg-emerald-500 text-slate-950 font-black shadow' : 'text-slate-400']"
+              :class="['px-3 py-1 rounded-lg font-bold transition-all flex items-center gap-1', mobileActiveTab === 'cart' ? 'bg-emerald-500 text-slate-950 font-black shadow' : 'text-slate-600 dark:text-slate-400']"
             >
               🛒 Cart ({{ totalCartQty }})
             </button>
@@ -25,28 +25,39 @@
 
           <!-- Network Connection Status Indicator -->
           <div class="flex items-center gap-2">
-            <span v-if="isOnline" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-bold text-[11px]">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              CLOUD CONNECTED
+            <span v-if="isOnline" class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-bold text-[11px]">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
+              {{ t('online_mode') }}
             </span>
-            <span v-else class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 font-bold text-[11px]">
-              <WifiOff class="w-3.5 h-3.5 text-amber-400" />
-              OFFLINE RESILIENT (Selling Enabled)
+            <span v-else class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-bold text-[11px]">
+              <WifiOff class="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
+              {{ t('offline_mode') }}
             </span>
           </div>
         </div>
 
         <!-- Terminal Quick Action Tools -->
         <div class="flex items-center gap-2">
+          <!-- ☀️ / 🌙 Theme Switcher Toggle -->
+          <button 
+            @click="toggleTheme" 
+            class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-[11px] border border-slate-200 dark:border-slate-600 flex items-center gap-1.5 transition-all active:scale-95 shadow-2xs"
+            :title="isDarkMode ? 'Switch to Light Theme' : 'Switch to Soft Dark Theme'"
+          >
+            <Sun v-if="isDarkMode" class="w-3.5 h-3.5 text-amber-500 fill-amber-500/20" />
+            <Moon v-else class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span class="hidden sm:inline">{{ isDarkMode ? 'Light' : 'Dark' }}</span>
+          </button>
+
           <!-- Store Outlet Selector (Multi-Store Support) -->
-          <div v-if="stores.length > 1" class="px-2.5 py-1.5 rounded-xl bg-slate-700/80 border border-slate-600 flex items-center gap-1.5 text-[11px] font-bold">
-            <StoreIcon class="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <div v-if="stores.length > 1" class="px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700/80 border border-slate-200 dark:border-slate-600 flex items-center gap-1.5 text-[11px] font-bold text-slate-800 dark:text-slate-100">
+            <StoreIcon class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <select 
               v-model="selectedStoreId" 
               @change="switchStoreOutlet"
-              class="bg-transparent text-slate-100 font-bold focus:outline-none cursor-pointer"
+              class="bg-transparent text-slate-900 dark:text-slate-100 font-bold focus:outline-none cursor-pointer"
             >
-              <option v-for="s in stores" :key="s.id" :value="s.id" class="bg-slate-800 text-white">
+              <option v-for="s in stores" :key="s.id" :value="s.id" class="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                 {{ s.name }}
               </option>
             </select>
@@ -55,37 +66,37 @@
           <!-- Register Shift Drawer Button -->
           <button 
             @click="openShiftModal"
-            class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-[11px] border border-slate-600 flex items-center gap-1.5 transition-all"
+            class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-[11px] border border-slate-200 dark:border-slate-600 flex items-center gap-1.5 transition-all"
             title="Register Shift Drawer Management"
           >
-            <span class="w-2 h-2 rounded-full" :class="activeShift ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'"></span>
-            <span class="hidden sm:inline">{{ activeShift ? `Shift #${activeShift.id}` : 'Open Shift' }}</span>
+            <span class="w-2 h-2 rounded-full" :class="activeShift ? 'bg-emerald-500 dark:bg-emerald-400 animate-pulse' : 'bg-rose-500 dark:bg-rose-400'"></span>
+            <span class="hidden sm:inline">{{ activeShift ? `Shift #${activeShift.id}` : t('open_shift') }}</span>
           </button>
 
-          <!-- Terminal Lock Button (Stitch PIN Modal) -->
+          <!-- Terminal Lock Button -->
           <button 
             @click="showLockModal = true"
-            class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-[11px] border border-slate-600 flex items-center gap-1.5 transition-all"
+            class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-[11px] border border-slate-200 dark:border-slate-600 flex items-center gap-1.5 transition-all"
             title="Lock POS Terminal Workstation"
           >
-            <Lock class="w-3.5 h-3.5 text-amber-400" />
+            <Lock class="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" />
             <span class="hidden sm:inline">Lock Station</span>
           </button>
 
           <Link 
             href="/hrm/attendance" 
-            class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-[11px] border border-slate-600 flex items-center gap-1.5 transition-all"
+            class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-[11px] border border-slate-200 dark:border-slate-600 flex items-center gap-1.5 transition-all"
           >
-            <Clock class="w-3.5 h-3.5 text-emerald-400" />
-            <span class="hidden sm:inline">Staff Clock</span>
+            <Clock class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span class="hidden sm:inline">{{ t('attendance') }}</span>
           </Link>
 
           <Link 
             href="/products/barcodes" 
-            class="px-3 py-1.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-[11px] border border-slate-600 flex items-center gap-1.5 transition-all"
+            class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold text-[11px] border border-slate-200 dark:border-slate-600 flex items-center gap-1.5 transition-all"
           >
-            <Barcode class="w-3.5 h-3.5 text-indigo-400" />
-            <span class="hidden sm:inline">Barcodes</span>
+            <Barcode class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span class="hidden sm:inline">{{ t('barcodes') }}</span>
           </Link>
 
           <button 
@@ -106,48 +117,34 @@
           v-if="syncNotification"
           :class="[
             'px-4 py-2.5 text-xs font-bold text-center shrink-0 transition-all',
-            syncNotification.type === 'success' ? 'bg-emerald-500/20 text-emerald-300 border-b border-emerald-500/30' :
-            syncNotification.type === 'queued'  ? 'bg-amber-500/20 text-amber-300 border-b border-amber-500/30' :
-                                                  'bg-rose-500/20 text-rose-300 border-b border-rose-500/30',
+            syncNotification.type === 'success' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-b border-emerald-500/30' :
+            syncNotification.type === 'queued'  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-b border-amber-500/30' :
+                                                  'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-b border-rose-500/30',
           ]"
         >
           {{ syncNotification.message }}
         </div>
       </transition>
 
-      <!-- Offline Catalog Fallback Badge -->
-      <div
-        v-if="!isOnline && cachedProducts.length > 0"
-        class="px-4 py-1.5 text-[11px] text-center text-amber-300 bg-amber-900/30 border-b border-amber-700/40 font-semibold shrink-0"
-      >
-        📦 Showing {{ cachedProducts.length }} products from offline catalog cache — sales fully operational
-      </div>
-      <div
-        v-if="!isOnline && cachedProducts.length === 0 && allProducts.length === 0"
-        class="px-4 py-1.5 text-[11px] text-center text-rose-300 bg-rose-900/30 border-b border-rose-700/40 font-semibold shrink-0"
-      >
-        ⚠️ No offline product cache available. Please open POS while connected to Internet to enable offline selling.
-      </div>
-
-      <!-- Main Layout Body (Google Stitch Split Screen) -->
+      <!-- Main Layout Body (Split Screen Register) -->
       <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
         
         <!-- LEFT COLUMN: Cart Register & Order Summary Drawer -->
         <div 
           :class="[
-            'w-full lg:w-[480px] xl:w-[540px] border-r border-slate-800 bg-slate-900 flex-col h-full shadow-2xl',
+            'w-full lg:w-[480px] xl:w-[540px] border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex-col h-full shadow-xl',
             mobileActiveTab === 'cart' ? 'flex' : 'hidden lg:flex'
           ]"
         >
           <!-- Customer & Parked Orders Bar -->
-          <div class="p-3.5 border-b border-slate-800 bg-slate-900/90 flex items-center justify-between gap-2">
-            <div class="flex-1 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs">
-              <User class="w-4 h-4 text-emerald-400 shrink-0" />
+          <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 flex items-center justify-between gap-2">
+            <div class="flex-1 flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs">
+              <User class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <select 
                 v-model="selectedCustomerId" 
-                class="w-full bg-transparent text-slate-100 font-bold focus:outline-none cursor-pointer"
+                class="w-full bg-transparent text-slate-900 dark:text-slate-100 font-bold focus:outline-none cursor-pointer"
               >
-                <option v-for="c in customersList" :key="c.id" :value="c.id" class="bg-slate-800 text-white">
+                <option v-for="c in customersList" :key="c.id" :value="c.id" class="bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
                   {{ c.name }} {{ c.phone ? `(${c.phone})` : '' }}
                 </option>
               </select>
@@ -155,7 +152,7 @@
 
             <button 
               @click="showAddCustomerModal = true" 
-              class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-emerald-400 border border-slate-700 flex items-center gap-1 shrink-0"
+              class="px-2.5 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-bold text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-700 flex items-center gap-1 shrink-0"
               title="Add New Customer (F2)"
             >
               <span>+ New (F2)</span>
@@ -163,81 +160,81 @@
 
             <button 
               @click="openParkedOrdersModal" 
-              class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-amber-400 border border-slate-700 flex items-center gap-1.5 shrink-0"
+              class="px-3.5 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-xs font-bold text-amber-600 dark:text-amber-400 border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 shrink-0"
             >
-              <Clock class="w-4 h-4 text-amber-400" />
+              <Clock class="w-4 h-4 text-amber-500 dark:text-amber-400" />
               <span>Held ({{ parkedOrders.length }})</span>
             </button>
           </div>
 
           <!-- Cart Line Items List (Scrollable) -->
           <div class="flex-1 overflow-y-auto p-3.5 space-y-2.5 custom-scrollbar">
-            <div v-if="cart.length === 0" class="h-full flex flex-col items-center justify-center text-slate-500 py-16">
-              <ShoppingCart class="w-14 h-14 text-slate-700 mb-3 animate-bounce" />
-              <p class="font-extrabold text-sm text-slate-300">Terminal Cart is Empty</p>
+            <div v-if="cart.length === 0" class="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 py-16">
+              <ShoppingCart class="w-14 h-14 text-slate-300 dark:text-slate-700 mb-3 animate-bounce" />
+              <p class="font-extrabold text-sm text-slate-700 dark:text-slate-300">Terminal Cart is Empty</p>
               <p class="text-xs text-slate-500">Scan barcode or tap catalog items to build register order</p>
             </div>
 
             <div 
               v-for="(item, index) in cart" 
               :key="item.product_id" 
-              class="p-3.5 rounded-2xl bg-slate-800/90 border border-slate-700/80 hover:border-emerald-500/50 transition-all flex flex-col gap-2 shadow-sm"
+              class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-500/50 transition-all flex flex-col gap-2 shadow-xs"
             >
               <!-- Top Row: Product Title & Price -->
               <div class="flex items-start justify-between gap-2">
                 <div>
-                  <div class="font-bold text-xs text-slate-100 font-heading leading-snug">
+                  <div class="font-bold text-xs text-slate-900 dark:text-slate-100 font-heading leading-snug">
                     {{ item.name }}
                   </div>
-                  <div class="text-[10px] text-slate-400 font-mono">
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                     SKU: {{ item.sku }} | ৳{{ formatMoney(item.unit_price) }}
                   </div>
                 </div>
-                <button @click="removeFromCart(index)" class="p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors">
+                <button @click="removeFromCart(index)" class="p-1 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 transition-colors">
                   <Trash2 class="w-4 h-4" />
                 </button>
               </div>
 
               <!-- Serial / IMEI Input -->
-              <div v-if="item.has_serial" class="flex items-center gap-2 bg-slate-900/60 p-2 rounded-xl border border-slate-700">
-                <span class="text-[10px] font-bold text-emerald-400 font-mono">S/N:</span>
+              <div v-if="item.has_serial" class="flex items-center gap-2 bg-slate-100 dark:bg-slate-900/60 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 font-mono">S/N:</span>
                 <input 
                   type="text" 
                   v-model="item.serial_number" 
                   placeholder="Enter Serial / IMEI #" 
-                  class="flex-1 px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-600 text-[11px] text-slate-100 focus:outline-none focus:border-emerald-400 font-mono"
+                  class="flex-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-[11px] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500 font-mono"
                 />
               </div>
 
               <!-- Line Discount Input -->
-              <div class="flex items-center justify-between gap-2 bg-slate-900/40 px-2.5 py-1 rounded-xl border border-slate-700/80 text-[10px]">
-                <span class="font-bold text-rose-400 font-mono">Item Discount (৳):</span>
+              <div class="flex items-center justify-between gap-2 bg-slate-100 dark:bg-slate-900/40 px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700/80 text-[10px]">
+                <span class="font-bold text-rose-600 dark:text-rose-400 font-mono">Item Discount (৳):</span>
                 <input 
                   type="number" 
                   v-model.number="item.discount" 
                   min="0"
                   step="1"
                   placeholder="0.00" 
-                  class="w-24 px-2 py-0.5 rounded-lg bg-slate-800 border border-slate-600 text-[11px] text-slate-100 text-right focus:outline-none focus:border-emerald-400 font-mono"
+                  class="w-24 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-[11px] text-slate-900 dark:text-slate-100 text-right focus:outline-none focus:border-emerald-500 font-mono"
                 />
               </div>
 
               <!-- Stepper & Line Total -->
-              <div class="flex items-center justify-between pt-1 border-t border-slate-700/60">
-                <div class="flex items-center gap-1.5 bg-slate-900 p-1 rounded-xl border border-slate-700">
-                  <button @click="updateQty(index, -1)" class="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold flex items-center justify-center text-xs">
+              <div class="flex items-center justify-between pt-1 border-t border-slate-200 dark:border-slate-700/60">
+                <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                  <button @click="updateQty(index, -1)" class="w-6 h-6 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold flex items-center justify-center text-xs">
                     -
                   </button>
-                  <span class="px-2 font-mono text-xs font-black text-emerald-400 min-w-[20px] text-center">
+                  <span class="px-2 font-mono text-xs font-black text-emerald-600 dark:text-emerald-400 min-w-[20px] text-center">
                     {{ item.quantity }}
                   </span>
-                  <button @click="updateQty(index, 1)" class="w-6 h-6 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold flex items-center justify-center text-xs">
+                  <button @click="updateQty(index, 1)" class="w-6 h-6 rounded-lg bg-white dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold flex items-center justify-center text-xs">
                     +
                   </button>
                 </div>
 
                 <div class="text-right">
-                  <span class="text-xs font-black font-mono text-emerald-400">
+                  <span class="text-xs font-black font-mono text-emerald-600 dark:text-emerald-400">
                     ৳{{ formatMoney(Math.max(0, (item.quantity * item.unit_price) - (item.discount || 0))) }}
                   </span>
                 </div>
@@ -246,19 +243,19 @@
           </div>
 
           <!-- Order Summary & Checkout Drawer -->
-          <div class="p-4 border-t border-slate-800 bg-slate-900 space-y-3 shrink-0">
-            <!-- Quick Cash Tendering Presets (Stitch Kinetic POS Feature) -->
+          <div class="p-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3 shrink-0">
+            <!-- Quick Cash Tendering Presets -->
             <div>
-              <div class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 mb-1.5 flex items-center justify-between">
+              <div class="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-1.5 flex items-center justify-between">
                 <span>Quick Cash Tendering</span>
-                <span class="text-emerald-400 font-mono">1-TAP TENDER</span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-mono">1-TAP TENDER</span>
               </div>
               <div class="grid grid-cols-6 gap-1.5">
                 <button 
                   v-for="amt in [50, 100, 500, 1000, 2000, 5000]" 
                   :key="amt"
                   @click="applyQuickTender(amt)"
-                  class="py-1.5 rounded-lg bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-slate-200 font-mono font-bold text-xs border border-slate-700 transition-all text-center"
+                  class="py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-slate-800 dark:text-slate-200 font-mono font-bold text-xs border border-slate-200 dark:border-slate-700 transition-all text-center"
                 >
                   ৳{{ amt }}
                 </button>
@@ -268,29 +265,29 @@
             <!-- Discount & Tax Inputs -->
             <div class="grid grid-cols-2 gap-3 text-xs">
               <div>
-                <label class="block text-[10px] text-slate-400 font-bold mb-1 uppercase">Discount (৳)</label>
+                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1 uppercase">{{ t('discount') }} (৳)</label>
                 <input 
                   type="number" 
                   v-model.number="orderDiscount" 
                   placeholder="0.00" 
-                  class="w-full px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-slate-100 font-mono text-xs focus:outline-none focus:border-emerald-400"
+                  class="w-full px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono text-xs focus:outline-none focus:border-emerald-500"
                 />
               </div>
               <div>
-                <label class="block text-[10px] text-slate-400 font-bold mb-1 uppercase">Tax / VAT ({{ taxRate }}%)</label>
-                <div class="w-full px-3 py-1.5 rounded-xl bg-slate-800 border border-slate-700 text-emerald-400 font-mono text-xs font-bold">
+                <label class="block text-[10px] text-slate-500 dark:text-slate-400 font-bold mb-1 uppercase">{{ t('tax_vat') }} ({{ taxRate }}%)</label>
+                <div class="w-full px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold">
                   ৳{{ formatMoney(taxAmount) }}
                 </div>
               </div>
             </div>
 
-            <!-- Total Bar (Google Stitch Glowing Neon Highlight) -->
-            <div class="p-3.5 rounded-2xl bg-gradient-to-r from-slate-800 to-slate-900 border border-emerald-500/40 flex items-center justify-between glow-mint">
+            <!-- Total Bar -->
+            <div class="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-slate-800 dark:to-slate-900 border border-emerald-300 dark:border-emerald-500/40 flex items-center justify-between shadow-xs">
               <div>
-                <div class="text-[10px] text-emerald-400 font-extrabold uppercase tracking-widest">Total Payable</div>
-                <div class="text-xs text-slate-400 font-mono">Items: {{ totalCartQty }}</div>
+                <div class="text-[10px] text-emerald-700 dark:text-emerald-400 font-extrabold uppercase tracking-widest">{{ t('grand_total') }}</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400 font-mono">Items: {{ totalCartQty }}</div>
               </div>
-              <div class="text-2xl font-black font-heading text-emerald-400">
+              <div class="text-2xl font-black font-heading text-emerald-700 dark:text-emerald-400">
                 ৳{{ formatMoney(grandTotal) }}
               </div>
             </div>
@@ -300,19 +297,19 @@
               <button 
                 @click="parkActiveOrder" 
                 :disabled="cart.length === 0"
-                class="py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-amber-400 font-bold text-xs border border-slate-700 flex flex-col items-center justify-center gap-0.5 disabled:opacity-40 transition-all"
+                class="py-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-amber-600 dark:text-amber-400 font-bold text-xs border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center gap-0.5 disabled:opacity-40 transition-all"
               >
-                <PauseCircle class="w-4 h-4 text-amber-400" />
-                <span>Hold (F7)</span>
+                <PauseCircle class="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                <span>{{ t('park_order') }} (F7)</span>
               </button>
 
               <button 
                 @click="quickCashCheckout" 
                 :disabled="cart.length === 0"
-                class="col-span-2 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40 transition-all"
+                class="col-span-2 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40 transition-all"
               >
-                <Zap class="w-5 h-5 text-slate-950 fill-slate-950" />
-                <span>CHARGE | ৳{{ formatMoney(grandTotal) }}</span>
+                <Zap class="w-5 h-5 text-white fill-white" />
+                <span>{{ t('checkout') }} | ৳{{ formatMoney(grandTotal) }}</span>
               </button>
             </div>
           </div>
@@ -321,12 +318,12 @@
         <!-- RIGHT COLUMN: Product Catalog Grid & Search -->
         <div 
           :class="[
-            'flex-1 flex-col h-full bg-slate-950',
+            'flex-1 flex-col h-full bg-slate-50 dark:bg-slate-950',
             mobileActiveTab === 'catalog' ? 'flex' : 'hidden lg:flex'
           ]"
         >
           <!-- Search & Category Filters Bar -->
-          <div class="p-4 border-b border-slate-800 bg-slate-900 space-y-3">
+          <div class="p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
             <div class="flex items-center gap-3">
               <div class="flex-1 relative">
                 <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -335,17 +332,17 @@
                   type="text" 
                   v-model="searchQuery" 
                   @keydown.enter.prevent="handleSearchEnter"
-                  placeholder="Search products by Name, SKU, or Barcode [F1]..." 
-                  class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-400"
+                  :placeholder="t('search_placeholder')" 
+                  class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500"
                 />
               </div>
 
               <button 
                 @click="openCameraScanner" 
-                class="px-3.5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 font-bold text-xs border border-slate-700 flex items-center gap-1.5 shrink-0"
+                class="px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-emerald-600 dark:text-emerald-400 font-bold text-xs border border-slate-200 dark:border-slate-700 flex items-center gap-1.5 shrink-0"
                 title="Live Camera & Laser Barcode Scanner"
               >
-                <Barcode class="w-4 h-4 text-emerald-400" />
+                <Barcode class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span class="hidden sm:inline">Scan Barcode</span>
               </button>
             </div>
@@ -354,7 +351,7 @@
             <div class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
               <button 
                 @click="selectedCategoryId = null"
-                :class="['px-4 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all', selectedCategoryId === null ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700']"
+                :class="['px-4 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all', selectedCategoryId === null ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700']"
               >
                 All Items
               </button>
@@ -362,7 +359,7 @@
                 v-for="cat in categories" 
                 :key="cat.id" 
                 @click="selectedCategoryId = cat.id"
-                :class="['px-4 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all', selectedCategoryId === cat.id ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700']"
+                :class="['px-4 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all', selectedCategoryId === cat.id ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700']"
               >
                 {{ cat.name }}
               </button>
@@ -371,9 +368,9 @@
 
           <!-- Product Cards Grid -->
           <div class="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar">
-            <div v-if="filteredProducts.length === 0" class="h-full flex flex-col items-center justify-center text-slate-500 py-16">
-              <PackageSearch class="w-14 h-14 text-slate-700 mb-3" />
-              <p class="font-extrabold text-sm text-slate-300">No products found</p>
+            <div v-if="filteredProducts.length === 0" class="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 py-16">
+              <PackageSearch class="w-14 h-14 text-slate-300 dark:text-slate-700 mb-3" />
+              <p class="font-extrabold text-sm text-slate-700 dark:text-slate-300">No products found</p>
               <p class="text-xs text-slate-500">Try changing search query or category filter</p>
             </div>
 
@@ -382,31 +379,31 @@
                 v-for="product in filteredProducts" 
                 :key="product.id" 
                 @click="addToCart(product)"
-                class="p-4 rounded-2xl bg-slate-900 border border-slate-800 hover:border-emerald-400/80 transition-all cursor-pointer group flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/5"
+                class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/80 transition-all cursor-pointer group flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/5"
               >
                 <div>
                   <div class="flex items-center justify-between text-[10px] mb-2">
-                    <span class="text-emerald-400 font-bold truncate max-w-[60%]">
+                    <span class="text-emerald-600 dark:text-emerald-400 font-bold truncate max-w-[60%]">
                       {{ product.category?.name || 'General' }}
                     </span>
-                    <span :class="['px-2 py-0.5 rounded-full font-bold font-mono', product.current_stock > 5 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' : (product.current_stock > 0 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-rose-500/10 text-rose-400 border border-rose-500/30')]">
+                    <span :class="['px-2 py-0.5 rounded-full font-bold font-mono', product.current_stock > 5 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : (product.current_stock > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30')]">
                       {{ product.current_stock }} left
                     </span>
                   </div>
 
-                  <h4 class="font-bold text-xs text-slate-100 group-hover:text-emerald-400 transition-colors line-clamp-2 mb-1 font-heading">
+                  <h4 class="font-bold text-xs text-slate-900 dark:text-slate-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors line-clamp-2 mb-1 font-heading">
                     {{ product.name }}
                   </h4>
-                  <div class="text-[10px] text-slate-400 font-mono">
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                     SKU: {{ product.sku }}
                   </div>
                 </div>
 
-                <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-800">
-                  <span class="font-black text-sm font-heading text-slate-100">
+                <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
+                  <span class="font-black text-sm font-heading text-slate-900 dark:text-slate-100">
                     ৳{{ formatMoney(product.selling_price) }}
                   </span>
-                  <span class="w-7 h-7 rounded-xl bg-slate-800 group-hover:bg-emerald-500 text-slate-300 group-hover:text-slate-950 flex items-center justify-center transition-all font-black text-xs">
+                  <span class="w-7 h-7 rounded-xl bg-slate-100 dark:bg-slate-800 group-hover:bg-emerald-500 text-slate-700 dark:text-slate-300 group-hover:text-slate-950 flex items-center justify-center transition-all font-black text-xs">
                     +
                   </span>
                 </div>
@@ -720,6 +717,8 @@ import {
   WifiOff, 
   RefreshCw,
   Lock,
+  Sun,
+  Moon,
   Store as StoreIcon
 } from 'lucide-vue-next';
 
@@ -742,6 +741,30 @@ const searchQuery = ref('');
 const presetTender = ref(0);
 const cart = ref([]);
 const orderDiscount = ref(0);
+const isDarkMode = ref(false);
+
+const initTheme = () => {
+  if (typeof window === 'undefined') return;
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    isDarkMode.value = true;
+    document.documentElement.classList.add('dark');
+  } else {
+    isDarkMode.value = false;
+    document.documentElement.classList.remove('dark');
+  }
+};
+
+const toggleTheme = () => {
+  isDarkMode.value = !isDarkMode.value;
+  if (isDarkMode.value) {
+    document.documentElement.classList.add('dark');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
+  }
+};
 
 const isGuestCustomer = computed(() => {
   return !selectedCustomerId.value || selectedCustomerId.value === 1 || selectedCustomerId.value === '1';
@@ -1594,6 +1617,9 @@ const registerServiceWorker = async () => {
 };
 
 onMounted(async () => {
+  // 0. Initialize theme mode from localStorage
+  initTheme();
+
   // 1. Register Service Worker
   await registerServiceWorker();
 
