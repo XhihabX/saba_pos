@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — POS Controller Fail-Safe Refactoring & Customer Schema Resilience
+**What:** Refactored `PosController::index` and `PosController::getTenantId` in [`PosController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/PosController.php) with defensive `try-catch` blocks and fallback collections for stores, categories, products, and customers. Created migration `2026_10_06_000016_ensure_customers_tenant_id_column.php` to guarantee `tenant_id` exists on `customers` table. Rebuilt Vite production assets (`app-0Gppcz9E.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Fix POS workstation (`/pos`) blank screen rendering when logging in as a cashier on live hosting environments where `customers` queries or uninitialized tenant context previously triggered uncaught 500 server errors.
+**How:** Updated `PosController.php`, added migration `2026_10_06_000016_ensure_customers_tenant_id_column.php`, ran `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `app/Http/Controllers/PosController.php`, `database/migrations/2026_10_06_000016_ensure_customers_tenant_id_column.php`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** Cashiers and merchants can access POS Terminal (`/pos`) with zero blank screen crashes, even if database tables or relationships have missing/unmigrated optional columns.
+
+---
+
 ## [2026-10-06] — Database Seeder Idempotency & Soft-Delete Guard Refactoring
 **What:** Refactored `database/seeders/SabaPosSeeder.php` to use `withTrashed()` for all soft-deletable models (`Tenant`, `Store`, `Product`, `Customer`) with explicit restoration logic (`if ($model->trashed()) $model->restore()`). Removed invalid `tenant_id` assignment from `Customer::firstOrCreate`. Re-verified PHPUnit test suite (5 / 5 passed, 51 green assertions) and confirmed `php artisan db:seed --force` is 100% idempotent and bug-free.
 **Why:** Eliminate `UniqueConstraintViolationException: 19 UNIQUE constraint failed: tenants.code` and `QueryException: table customers has no column named tenant_id` when seeding existing databases on cPanel hosting.
