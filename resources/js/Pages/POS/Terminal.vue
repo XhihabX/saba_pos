@@ -734,8 +734,8 @@ const props = defineProps({
 
 const page = usePage();
 const mobileActiveTab = ref('catalog');
-const selectedStoreId = ref(props.currentStoreId);
-const selectedCustomerId = ref(props.customers[0]?.id || null);
+const selectedStoreId = ref(props.currentStoreId || 1);
+const selectedCustomerId = ref(props.customers?.[0]?.id || null);
 const selectedCategoryId = ref(null);
 const searchQuery = ref('');
 const presetTender = ref(0);
@@ -756,7 +756,8 @@ const switchStoreOutlet = () => {
 };
 
 const currentStore = computed(() => {
-  return props.stores.find(s => s.id === selectedStoreId.value) || props.stores[0] || null;
+  const storeList = Array.isArray(props.stores) ? props.stores : [];
+  return storeList.find(s => s.id === selectedStoreId.value) || storeList[0] || null;
 });
 
 const taxRate = computed(() => {
@@ -802,13 +803,15 @@ const cachedProducts = ref([]);
 const parkedOrders = ref([]);
 
 const customersList = computed(() => {
-  const combined = [...props.customers, ...localCustomers.value];
+  const safePropCustomers = Array.isArray(props.customers) ? props.customers : [];
+  const safeLocalCustomers = Array.isArray(localCustomers.value) ? localCustomers.value : [];
+  const combined = [...safePropCustomers, ...safeLocalCustomers];
   return combined.length ? combined : [{ id: 1, name: 'Walk-in Customer', phone: '' }];
 });
 
 // Use live Inertia props when online, fall back to IndexedDB cache when offline
 const allProducts = computed(() => {
-  return (props.products && props.products.length > 0) ? props.products : cachedProducts.value;
+  return (Array.isArray(props.products) && props.products.length > 0) ? props.products : (cachedProducts.value || []);
 });
 
 const filteredProducts = computed(() => {

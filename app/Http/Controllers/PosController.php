@@ -47,7 +47,22 @@ class PosController extends Controller
         $tenantId = $this->getTenantId();
 
         $stores = Store::where('tenant_id', $tenantId)->where('is_active', true)->get();
-        $storeId = (int) $request->input('store_id', $stores->first()->id ?? 0);
+        if ($stores->isEmpty()) {
+            $stores = Store::where('tenant_id', $tenantId)->get();
+        }
+        if ($stores->isEmpty()) {
+            $defaultStore = Store::create([
+                'tenant_id' => $tenantId,
+                'name' => 'Main Flagship Outlet',
+                'code' => 'STORE-001',
+                'currency_symbol' => '৳',
+                'default_tax_rate' => 5.00,
+                'is_active' => true,
+            ]);
+            $stores = collect([$defaultStore]);
+        }
+
+        $storeId = (int) $request->input('store_id', $stores->first()->id ?? 1);
 
         // Ensure requested store belongs to user's tenant
         if (!$stores->pluck('id')->contains($storeId) && $stores->isNotEmpty()) {
