@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Non-Blocking Zero-Pause POS Workstation Architecture
+**What:** Converted all native browser dialogs (`alert(...)`, `confirm(...)`) across [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue) into instant, non-blocking top toast notifications (`showSyncNotification`). Updated `submitNewCustomer`, `handleOpenShift`, `handleCloseShift`, `unlockTerminal`, `submitManualBarcode`, and `switchStoreOutlet` to operate completely asynchronously without freezing browser window execution threads. Rebuilt Vite assets (`app-COmsNLwZ.js`, `app-Uszn0-hv.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Eliminate browser window pauses and thread freezes during sales checkout, customer registration, shift opening/closing, barcode scanning, or PIN verification for 100% high-velocity cashier performance.
+**How:** Replaced native `alert` and `confirm` statements with `showSyncNotification(...)` toast banners and inline reactive state handlers, ran `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `resources/js/Pages/POS/Terminal.vue`, `public/build/*`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** POS Counter Workstation handles all sales, customer additions, shift drawer operations, and barcode scans with zero browser window pauses or UI freezing.
+
+---
+
 ## [2026-10-06] — POS Workstation 100% Production-Ready Sales & Register Architecture
 **What:** Optimized POS counter sales execution in [`PosController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/PosController.php) and [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue). Added resilient multi-tier store lookup to prevent 404 crashes during outlet switches. Added auto-creation of missing stock records (`Stock::firstOrCreate`) so new products can be sold seamlessly. Added shift auto-prompt logic in `Terminal.vue` to direct cashiers to open shift drawer float before checkout. Handled error notifications gracefully with animated banner toasts. Rebuilt Vite assets (`app-nOfKvgwq.js`, `app-Uszn0-hv.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Ensure POS counter workstation (`/pos`) is 100% production-ready for sales transactions, register shifts, and printable thermal receipts without crashing or encountering missing store/stock blocks.

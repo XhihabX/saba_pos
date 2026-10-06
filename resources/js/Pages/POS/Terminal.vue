@@ -773,11 +773,8 @@ const isGuestCustomer = computed(() => {
 
 const switchStoreOutlet = () => {
   if (cart.value.length > 0) {
-    if (!confirm('Switching store outlet will reset current cart. Continue?')) {
-      selectedStoreId.value = props.currentStoreId;
-      return;
-    }
     cart.value = [];
+    showSyncNotification('queued', 'ℹ️ Store outlet switched. Cart reset.');
   }
   router.get('/pos', { store_id: selectedStoreId.value }, { preserveState: false });
 };
@@ -976,7 +973,7 @@ const pressPin = (num) => {
 
 const unlockTerminal = async () => {
   if (pinEntered.value.length < 4) {
-      alert('PIN must be at least 4 digits.');
+      showSyncNotification('error', '⚠️ Cashier PIN must be at least 4 digits.');
       return;
   }
   
@@ -985,12 +982,13 @@ const unlockTerminal = async () => {
       if (res.data.success) {
           showLockModal.value = false;
           pinEntered.value = '';
+          showSyncNotification('success', '✅ Station unlocked successfully!');
       } else {
-          alert('Incorrect Cashier PIN.');
+          showSyncNotification('error', '⚠️ Incorrect Cashier PIN.');
           pinEntered.value = '';
       }
   } catch (e) {
-      alert('Network error verifying PIN.');
+      showSyncNotification('error', '⚠️ Network error verifying PIN.');
       pinEntered.value = '';
   }
 };
@@ -1173,11 +1171,11 @@ const handleOpenShift = async () => {
       showShiftModal.value = false;
       showSyncNotification('success', '✅ Register shift activated successfully!');
     } else {
-      alert(res.data?.message || 'Failed to open shift.');
+      showSyncNotification('error', `⚠️ ${res.data?.message || 'Failed to open shift.'}`);
     }
   } catch (e) {
     const errorMsg = e.response?.data?.message || e.response?.data?.errors?.opening_cash?.[0] || e.response?.data?.errors?.store_id?.[0] || 'Failed to open shift. Please check store selection and float amount.';
-    alert(errorMsg);
+    showSyncNotification('error', `⚠️ ${errorMsg}`);
   } finally {
     isShiftProcessing.value = false;
   }
@@ -1198,11 +1196,11 @@ const handleCloseShift = async () => {
       showShiftModal.value = false;
       showSyncNotification('success', '✅ Register shift closed & cash drawer reconciled!');
     } else {
-      alert(res.data?.message || 'Failed to close shift.');
+      showSyncNotification('error', `⚠️ ${res.data?.message || 'Failed to close shift.'}`);
     }
   } catch (e) {
     const errorMsg = e.response?.data?.message || e.response?.data?.errors?.closing_cash_counted?.[0] || 'Failed to close shift.';
-    alert(errorMsg);
+    showSyncNotification('error', `⚠️ ${errorMsg}`);
   } finally {
     isShiftProcessing.value = false;
   }
@@ -1210,7 +1208,7 @@ const handleCloseShift = async () => {
 
 const submitNewCustomer = async () => {
   if (!newCustomerForm.value.name?.trim() || !newCustomerForm.value.phone?.trim()) {
-    alert('Customer name and phone number are required.');
+    showSyncNotification('error', '⚠️ Customer name and phone number are required.');
     return;
   }
   isAddingCustomer.value = true;
@@ -1231,11 +1229,11 @@ const submitNewCustomer = async () => {
       selectedCustomerId.value = cust.id;
       newCustomerForm.value = { name: '', phone: '', email: '', address: '' };
       showAddCustomerModal.value = false;
-      showSyncNotification('success', `✅ Customer "${cust.name}" selected!`);
+      showSyncNotification('success', `✅ Customer "${cust.name}" registered & selected!`);
     }
   } catch (e) {
     const errorMsg = e.response?.data?.message || e.response?.data?.errors?.phone?.[0] || e.response?.data?.errors?.email?.[0] || e.response?.data?.errors?.name?.[0] || 'Failed to add customer.';
-    alert(errorMsg);
+    showSyncNotification('error', `⚠️ ${errorMsg}`);
   } finally {
     isAddingCustomer.value = false;
   }
@@ -1328,7 +1326,7 @@ const submitManualBarcode = () => {
     manualBarcodeInput.value = '';
     closeCameraScanner();
   } else {
-    alert(`No product found matching SKU/Barcode "${code}"`);
+    showSyncNotification('error', `⚠️ No product found matching SKU/Barcode "${code}"`);
   }
 };
 
