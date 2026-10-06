@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Thermal Receipt Modal Null Guard & POS Workstation Mount Safety
+**What:** Added null guards (`v-if="show && receipt"`) and optional chaining (`receipt?.store`, `receipt?.items`) in [`ReceiptModal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Components/POS/ReceiptModal.vue). Rebuilt Vite production assets (`app-0Gppcz9E.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Eliminate JavaScript uncaught `TypeError` crashes when POS Terminal mounts before a receipt has been rendered, guaranteeing zero blank page crashes.
+**How:** Updated `ReceiptModal.vue`; executed `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `resources/js/Components/POS/ReceiptModal.vue`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** POS Workstation (`/pos`) and thermal invoice preview mount safely without blank screen errors.
+
+---
+
 ## [2026-10-06] — POS Terminal Component Initialization Guardrails & Blank Screen Fix
 **What:** Fixed root cause of blank screen initialization failure on POS Terminal page ([`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue)). Added defensive array fallbacks and optional chaining to `props.stores`, `props.customers`, and `props.products` accesses (`props.customers?.[0]?.id`, `Array.isArray(props.stores)`). Added automatic store outlet fallback in [`PosController::index`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/PosController.php). Rebuilt Vite production assets (`app-D2ShO9B6.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Eliminate JavaScript uncaught `TypeError` crashes when POS Terminal mounts with missing/empty store or customer arrays, preventing blank page rendering.

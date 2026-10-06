@@ -1,5 +1,5 @@
 <template>
-  <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+  <div v-if="show && receipt" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
     <div class="bg-white border border-slate-200 rounded-3xl max-w-md w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
       <!-- Header Bar -->
       <div class="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
@@ -15,33 +15,33 @@
       <!-- Printable Receipt View -->
       <div class="p-6 overflow-y-auto flex-1 bg-white text-slate-900 font-mono text-xs shadow-inner" id="thermal-receipt">
         <div class="text-center mb-4 border-b border-dashed border-slate-400 pb-3">
-          <div v-if="receipt.is_offline" class="mb-2 py-1 px-2 bg-amber-100 border border-amber-400 rounded text-[10px] font-bold text-amber-900 uppercase">
+          <div v-if="receipt?.is_offline" class="mb-2 py-1 px-2 bg-amber-100 border border-amber-400 rounded text-[10px] font-bold text-amber-900 uppercase">
             ⚡ Offline Counter Sale (Queued for Cloud Sync)
           </div>
-          <img v-if="receipt.store?.logo_url" :src="receipt.store.logo_url" alt="Store Logo" class="h-10 mx-auto mb-2 object-contain" />
-          <h2 class="text-base font-extrabold uppercase tracking-wide">{{ receipt.store?.name || receipt.store_name || 'IOT POS Store' }}</h2>
-          <p class="text-[11px] text-slate-600">{{ receipt.store?.address || 'Main Branch' }}</p>
-          <p class="text-[11px] text-slate-600 font-bold">BIN: {{ receipt.store?.bin_number || receipt.store?.vat_number || '123456789-0000' }} | MUSAK-6.3</p>
-          <p class="text-[11px] text-slate-600">Tel: {{ receipt.store?.phone || '+880 1700 000000' }}</p>
-          <p class="text-[10px] text-slate-500 mt-1 font-bold">{{ receipt.store?.receipt_header || 'NBR Statutory Tax Invoice / Receipt' }}</p>
+          <img v-if="receipt?.store?.logo_url" :src="receipt.store.logo_url" alt="Store Logo" class="h-10 mx-auto mb-2 object-contain" />
+          <h2 class="text-base font-extrabold uppercase tracking-wide">{{ receipt?.store?.name || receipt?.store_name || 'IOT POS Store' }}</h2>
+          <p class="text-[11px] text-slate-600">{{ receipt?.store?.address || 'Main Branch' }}</p>
+          <p class="text-[11px] text-slate-600 font-bold">BIN: {{ receipt?.store?.bin_number || receipt?.store?.vat_number || '123456789-0000' }} | MUSAK-6.3</p>
+          <p class="text-[11px] text-slate-600">Tel: {{ receipt?.store?.phone || '+880 1700 000000' }}</p>
+          <p class="text-[10px] text-slate-500 mt-1 font-bold">{{ receipt?.store?.receipt_header || 'NBR Statutory Tax Invoice / Receipt' }}</p>
         </div>
 
         <div class="mb-3 text-[11px] space-y-0.5 border-b border-dashed border-slate-400 pb-2">
           <div class="flex justify-between">
             <span>Invoice #:</span>
-            <span class="font-bold">{{ receipt.invoice_no }}</span>
+            <span class="font-bold">{{ receipt?.invoice_no }}</span>
           </div>
           <div class="flex justify-between">
             <span>Date & Time:</span>
-            <span>{{ formatDate(receipt.created_at) }}</span>
+            <span>{{ formatDate(receipt?.created_at) }}</span>
           </div>
           <div class="flex justify-between">
             <span>Customer:</span>
-            <span class="font-semibold">{{ receipt.customer?.name || 'Walk-in Customer' }}</span>
+            <span class="font-semibold">{{ receipt?.customer?.name || 'Walk-in Customer' }}</span>
           </div>
           <div class="flex justify-between">
             <span>Cashier:</span>
-            <span class="font-semibold">{{ receipt.user?.name || receipt.cashier_name || `Cashier #${receipt.user_id || 1}` }}</span>
+            <span class="font-semibold">{{ receipt?.user?.name || receipt?.cashier_name || `Cashier #${receipt?.user_id || 1}` }}</span>
           </div>
         </div>
 
@@ -56,7 +56,7 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-200">
-            <tr v-for="item in receipt.items" :key="item.id">
+            <tr v-for="item in (receipt?.items || [])" :key="item.id">
               <td class="py-1 pr-1">
                 <div class="font-semibold">{{ item.product_name }}</div>
                 <div v-if="item.serial_number" class="text-[9px] text-slate-500">S/N: {{ item.serial_number }}</div>
@@ -72,27 +72,27 @@
         <div class="space-y-1 text-xs border-b border-dashed border-slate-400 pb-3">
           <div class="flex justify-between">
             <span>Subtotal:</span>
-            <span>৳{{ formatMoney(receipt.subtotal) }}</span>
+            <span>৳{{ formatMoney(receipt?.subtotal) }}</span>
           </div>
-          <div v-if="receipt.discount_amount > 0" class="flex justify-between text-rose-700">
+          <div v-if="receipt?.discount_amount > 0" class="flex justify-between text-rose-700">
             <span>Discount:</span>
-            <span>-৳{{ formatMoney(receipt.discount_amount) }}</span>
+            <span>-৳{{ formatMoney(receipt?.discount_amount) }}</span>
           </div>
           <div class="flex justify-between">
-            <span>VAT / Tax ({{ receipt.store?.default_tax_rate || 5 }}%):</span>
-            <span>৳{{ formatMoney(receipt.tax_amount) }}</span>
+            <span>VAT / Tax ({{ receipt?.store?.default_tax_rate || 5 }}%):</span>
+            <span>৳{{ formatMoney(receipt?.tax_amount) }}</span>
           </div>
           <div class="flex justify-between text-sm font-extrabold border-t border-slate-900 pt-1 mt-1">
             <span>Grand Total:</span>
-            <span>৳{{ formatMoney(receipt.grand_total) }}</span>
+            <span>৳{{ formatMoney(receipt?.grand_total) }}</span>
           </div>
           <div class="flex justify-between font-semibold pt-1">
-            <span>Paid ({{ receipt.payment_method }}):</span>
-            <span>৳{{ formatMoney(receipt.paid_amount) }}</span>
+            <span>Paid ({{ receipt?.payment_method }}):</span>
+            <span>৳{{ formatMoney(receipt?.paid_amount) }}</span>
           </div>
-          <div v-if="receipt.change_return > 0" class="flex justify-between text-emerald-700 font-bold">
+          <div v-if="receipt?.change_return > 0" class="flex justify-between text-emerald-700 font-bold">
             <span>Change Return:</span>
-            <span>৳{{ formatMoney(receipt.change_return) }}</span>
+            <span>৳{{ formatMoney(receipt?.change_return) }}</span>
           </div>
         </div>
 
