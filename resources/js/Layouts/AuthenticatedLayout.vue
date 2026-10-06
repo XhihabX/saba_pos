@@ -172,7 +172,7 @@
         <!-- 🏢 MERCHANT HQ PORTAL MENU -->
         <div v-if="userRole === 'merchant'">
           <div v-if="!sidebarCollapsed" class="px-3 mb-2 text-[10px] font-extrabold uppercase tracking-widest text-indigo-600 dark:text-indigo-400">
-            Merchant HQ & Chain
+            {{ t('merchant') }}
           </div>
           <div class="space-y-1">
             <Link 
@@ -183,7 +183,7 @@
               ]"
             >
               <Building2 class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Executive BI Overview</span>
+              <span v-if="!sidebarCollapsed">{{ t('dashboard') }}</span>
             </Link>
             <Link 
               href="/merchant/stores"
@@ -193,7 +193,7 @@
               ]"
             >
               <Store class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Store Outlets Manager</span>
+              <span v-if="!sidebarCollapsed">{{ t('stores') }}</span>
             </Link>
             <Link 
               href="/merchant/users"
@@ -203,7 +203,7 @@
               ]"
             >
               <UserCheck class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Staff & Role Access</span>
+              <span v-if="!sidebarCollapsed">{{ t('staff_access') }}</span>
             </Link>
             <Link 
               href="/merchant/customers"
@@ -213,7 +213,7 @@
               ]"
             >
               <Users class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Customer CRM & Loyalty</span>
+              <span v-if="!sidebarCollapsed">{{ t('customers') }}</span>
             </Link>
             <Link 
               href="/merchant/orders"
@@ -223,7 +223,7 @@
               ]"
             >
               <Receipt class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Chain Sales Orders</span>
+              <span v-if="!sidebarCollapsed">{{ t('orders') }}</span>
             </Link>
             <Link 
               href="/products"
@@ -233,7 +233,7 @@
               ]"
             >
               <Package class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Products Catalog</span>
+              <span v-if="!sidebarCollapsed">{{ t('products') }}</span>
             </Link>
             <Link 
               href="/products/barcodes"
@@ -243,7 +243,7 @@
               ]"
             >
               <Barcode class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Barcode Label Generator</span>
+              <span v-if="!sidebarCollapsed">{{ t('barcodes') }}</span>
             </Link>
             <Link 
               href="/inventory/adjustments"
@@ -253,7 +253,7 @@
               ]"
             >
               <Boxes class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Stock Adjustments</span>
+              <span v-if="!sidebarCollapsed">{{ t('stock_adjustments') }}</span>
             </Link>
             <Link 
               href="/merchant/suppliers"
@@ -263,7 +263,7 @@
               ]"
             >
               <Truck class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Supplier Directory</span>
+              <span v-if="!sidebarCollapsed">{{ t('suppliers') }}</span>
             </Link>
             <Link 
               href="/merchant/purchases"
@@ -273,7 +273,7 @@
               ]"
             >
               <ShoppingBag class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Inventory Purchases</span>
+              <span v-if="!sidebarCollapsed">{{ t('purchases') }}</span>
             </Link>
             <Link 
               href="/sales/quotations"
@@ -283,7 +283,7 @@
               ]"
             >
               <FileText class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Sales Quotations</span>
+              <span v-if="!sidebarCollapsed">{{ t('quotations') }}</span>
             </Link>
             <Link 
               href="/expenses"
@@ -293,7 +293,7 @@
               ]"
             >
               <DollarSign class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Store Expenses</span>
+              <span v-if="!sidebarCollapsed">{{ t('expenses') }}</span>
             </Link>
             <Link 
               href="/hrm/attendance"
@@ -303,7 +303,7 @@
               ]"
             >
               <Clock class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Staff Attendance & Clock</span>
+              <span v-if="!sidebarCollapsed">{{ t('attendance') }}</span>
             </Link>
             <Link 
               href="/reports/profit-loss"
@@ -313,7 +313,7 @@
               ]"
             >
               <TrendingUp class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Profit & Loss Accounting</span>
+              <span v-if="!sidebarCollapsed">{{ t('profit_loss') }}</span>
             </Link>
             <Link 
               href="/reports/vat"
@@ -323,7 +323,7 @@
               ]"
             >
               <Receipt class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">NBR VAT (Mushak 6.3)</span>
+              <span v-if="!sidebarCollapsed">{{ t('vat_report') }}</span>
             </Link>
             <Link 
               href="/reports/stock"
@@ -333,7 +333,7 @@
               ]"
             >
               <Boxes class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Stock Valuation & FEFO</span>
+              <span v-if="!sidebarCollapsed">{{ t('reports') }}</span>
             </Link>
             <Link 
               href="/merchant/settings"
@@ -343,7 +343,7 @@
               ]"
             >
               <Settings class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Merchant HQ Settings</span>
+              <span v-if="!sidebarCollapsed">{{ t('settings') }}</span>
             </Link>
             <Link 
               href="/merchant/subscription"
@@ -353,7 +353,7 @@
               ]"
             >
               <CreditCard class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Billing & SaaS Plan</span>
+              <span v-if="!sidebarCollapsed">{{ t('billing_plan') }}</span>
             </Link>
             <Link 
               href="/merchant/audit-logs"
@@ -363,7 +363,7 @@
               ]"
             >
               <ShieldCheck class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <span v-if="!sidebarCollapsed">Merchant Audit Logs</span>
+              <span v-if="!sidebarCollapsed">{{ t('audit_logs') }}</span>
             </Link>
           </div>
         </div>
@@ -371,7 +371,7 @@
         <!-- ⚙️ STORE MANAGER PORTAL MENU -->
         <div v-if="userRole === 'store_manager'">
           <div v-if="!sidebarCollapsed" class="px-3 mb-2 text-[10px] font-extrabold uppercase tracking-widest text-cyan-700">
-            Branch Operations
+            {{ t('store_manager') }}
           </div>
           <div class="space-y-1">
             <Link 
@@ -382,7 +382,7 @@
               ]"
             >
               <Store class="w-4 h-4 text-cyan-600 shrink-0" />
-              <span v-if="!sidebarCollapsed">Branch Overview</span>
+              <span v-if="!sidebarCollapsed">{{ t('dashboard') }}</span>
             </Link>
             <Link 
               href="/manager/shifts"
@@ -392,7 +392,7 @@
               ]"
             >
               <Clock class="w-4 h-4 text-cyan-600 shrink-0" />
-              <span v-if="!sidebarCollapsed">Register Shift Audits</span>
+              <span v-if="!sidebarCollapsed">{{ t('shifts') }}</span>
             </Link>
             <Link 
               href="/manager/transfers"
@@ -402,7 +402,7 @@
               ]"
             >
               <Truck class="w-4 h-4 text-cyan-600 shrink-0" />
-              <span v-if="!sidebarCollapsed">Stock Transfers</span>
+              <span v-if="!sidebarCollapsed">{{ t('inventory') }}</span>
             </Link>
             <Link 
               href="/manager/returns"
@@ -412,7 +412,7 @@
               ]"
             >
               <ShoppingBag class="w-4 h-4 text-cyan-600 shrink-0" />
-              <span v-if="!sidebarCollapsed">Returns & Refunds</span>
+              <span v-if="!sidebarCollapsed">{{ t('orders') }}</span>
             </Link>
             <Link 
               :href="route('sales.quotations')"
@@ -422,7 +422,7 @@
               ]"
             >
               <FileText class="w-4 h-4 text-cyan-600 shrink-0" />
-              <span v-if="!sidebarCollapsed">Sales Quotations</span>
+              <span v-if="!sidebarCollapsed">{{ t('quotations') }}</span>
             </Link>
             <Link 
               :href="route('expenses.index')"
@@ -432,7 +432,7 @@
               ]"
             >
               <DollarSign class="w-4 h-4 text-cyan-600 shrink-0" />
-              <span v-if="!sidebarCollapsed">Store Expenses</span>
+              <span v-if="!sidebarCollapsed">{{ t('expenses') }}</span>
             </Link>
             <Link 
               :href="route('hrm.attendance')"
@@ -442,7 +442,7 @@
               ]"
             >
               <Clock class="w-4 h-4 text-cyan-600 shrink-0" />
-              <span v-if="!sidebarCollapsed">Staff Clock & HRM</span>
+              <span v-if="!sidebarCollapsed">{{ t('attendance') }}</span>
             </Link>
             <Link 
               href="/manager/audit-logs"
@@ -452,7 +452,7 @@
               ]"
             >
               <ShieldCheck class="w-4 h-4 text-cyan-600 shrink-0" />
-              <span v-if="!sidebarCollapsed">Branch Audit Logs</span>
+              <span v-if="!sidebarCollapsed">{{ t('audit_logs') }}</span>
             </Link>
           </div>
         </div>
@@ -460,7 +460,7 @@
         <!-- ⚡ CASHIER PORTAL MENU -->
         <div v-if="userRole === 'cashier'">
           <div v-if="!sidebarCollapsed" class="px-3 mb-2 text-[10px] font-extrabold uppercase tracking-widest text-emerald-700">
-            Cashier Workstation
+            {{ t('cashier') }}
           </div>
           <div class="space-y-1">
             <Link 
@@ -470,7 +470,7 @@
               ]"
             >
               <Zap class="w-4 h-4 text-emerald-600 shrink-0" />
-              <span v-if="!sidebarCollapsed">POS Terminal Workstation</span>
+              <span v-if="!sidebarCollapsed">{{ t('pos_terminal') }}</span>
             </Link>
             <Link 
               :href="route('hrm.attendance')"
@@ -480,7 +480,7 @@
               ]"
             >
               <Clock class="w-4 h-4 text-emerald-600 shrink-0" />
-              <span v-if="!sidebarCollapsed">Shift Clock In/Out</span>
+              <span v-if="!sidebarCollapsed">{{ t('attendance') }}</span>
             </Link>
           </div>
         </div>
@@ -495,7 +495,7 @@
           class="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all"
         >
           <Zap class="w-4 h-4 text-amber-300 fill-amber-300 shrink-0" />
-          <span v-if="!sidebarCollapsed">Open POS Counter</span>
+          <span v-if="!sidebarCollapsed">{{ t('pos_terminal') }}</span>
         </Link>
       </div>
     </aside>

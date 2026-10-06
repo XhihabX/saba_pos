@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Active Bilingual (English & Bengali) Sidebar & Terminal UI Localization
+**What:** Wired up dynamic `t(...)` i18n translation calls across all sidebar navigation links, role headers, section titles, and POS workstation controls in [`AuthenticatedLayout.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Layouts/AuthenticatedLayout.vue) and [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue). Expanded translation dictionary in [`messages.js`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/i18n/messages.js). Rebuilt Vite production bundle (`app-Id-fDJSA.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Ensure selecting **🇧🇩 বাংলা (Bangla)** actively translates the entire portal menu, navigation links, and terminal buttons into Bengali in real-time.
+**How:** Replaced hardcoded text in `AuthenticatedLayout.vue` and `Terminal.vue` with `t(...)` functions, ran `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `resources/js/Layouts/AuthenticatedLayout.vue`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/i18n/messages.js`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** Selecting **🇧🇩 বাংলা** or **🇬🇧 English** in the topbar dynamically updates the entire sidebar menu and portal navigation in real time.
+
+---
+
 ## [2026-10-06] — Bilingual English & Bangla Language Selector & i18n Integration
 **What:** Refactored language switcher in [`AuthenticatedLayout.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Layouts/AuthenticatedLayout.vue) to exclusively offer functional **🇬🇧 English** (`en`) and **🇧🇩 বাংলা (Bangla)** (`bn`) options. Bound selector to reactive `setLang(lang)` handler and local storage persistence dictionary [`messages.js`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/i18n/messages.js). Rebuilt Vite production assets (`app-BcArSypw.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Eliminate dummy non-functional placeholder languages (Spanish, Arabic, French) and ensure smooth, instant language switching between English and Bengali across all portals.

@@ -701,6 +701,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { router, usePage, Link } from '@inertiajs/vue3';
+import { t } from '@/i18n/messages';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import CheckoutModal from '@/Components/POS/CheckoutModal.vue';
 import ReceiptModal from '@/Components/POS/ReceiptModal.vue';
