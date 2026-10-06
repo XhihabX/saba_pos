@@ -508,7 +508,7 @@
     ></div>
 
     <!-- Right Container (Header + Main Body) -->
-    <div class="flex-1 flex flex-col min-w-0 min-h-screen">
+    <div class="flex-1 flex flex-col min-w-0 min-h-screen max-w-[1920px] mx-auto w-full">
       
       <!-- Top Navigation Bar -->
       <header class="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 shadow-xs transition-colors">

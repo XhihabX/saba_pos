@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-emerald-500 selection:text-white">
     
     <!-- SaaS Public Header Navbar -->
-    <header class="h-20 border-b border-slate-200 bg-white/90 backdrop-blur-xl px-6 lg:px-12 flex items-center justify-between sticky top-0 z-50 shadow-xs">
+    <header class="h-20 border-b border-slate-200 bg-white/90 backdrop-blur-xl px-4 sm:px-6 lg:px-12 flex items-center justify-between sticky top-0 z-50 shadow-xs">
       <div class="flex items-center gap-3">
         <ApplicationLogo size="md" :show-text="true" subtitle="International Office Technology" />
       </div>
@@ -13,7 +13,7 @@
         <a href="#pricing" class="hover:text-emerald-600 transition-colors">SaaS Plans</a>
       </nav>
 
-      <div class="flex items-center gap-3">
+      <div class="hidden md:flex items-center gap-3">
         <Link 
           href="/login" 
           class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 transition-all"
@@ -27,6 +27,43 @@
           <Sparkles class="w-4 h-4 text-amber-300" />
           <span>Register Store</span>
         </Link>
+      </div>
+
+      <!-- Mobile Hamburger Button -->
+      <button 
+        @click="mobileNavOpen = !mobileNavOpen"
+        class="md:hidden p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+        aria-label="Toggle Navigation Menu"
+      >
+        <Menu v-if="!mobileNavOpen" class="w-6 h-6" />
+        <X v-else class="w-6 h-6 text-emerald-600" />
+      </button>
+
+      <!-- Mobile Dropdown Navigation Menu -->
+      <div 
+        v-if="mobileNavOpen"
+        class="absolute top-20 left-0 right-0 bg-white border-b border-slate-200 p-6 shadow-2xl md:hidden space-y-4 text-center z-50 animate-in slide-in-from-top-2 duration-200"
+      >
+        <nav class="flex flex-col gap-4 text-xs font-extrabold text-slate-700 uppercase tracking-wider">
+          <a href="#report" @click="mobileNavOpen = false" class="py-2 hover:text-emerald-600 border-b border-slate-100">System Capabilities</a>
+          <a href="#modules" @click="mobileNavOpen = false" class="py-2 hover:text-emerald-600 border-b border-slate-100">Portals & Modules</a>
+          <a href="#pricing" @click="mobileNavOpen = false" class="py-2 hover:text-emerald-600 border-b border-slate-100">SaaS Plans</a>
+        </nav>
+        <div class="pt-2 flex flex-col gap-2">
+          <Link 
+            href="/login" 
+            class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs border border-slate-200 transition-all"
+          >
+            Sign In
+          </Link>
+          <Link 
+            href="/register" 
+            class="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2"
+          >
+            <Sparkles class="w-4 h-4 text-amber-300" />
+            <span>Register Store</span>
+          </Link>
+        </div>
       </div>
     </header>
 
@@ -286,6 +323,7 @@
 </template>
 
 <script setup>
+import { ref } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { 
@@ -301,7 +339,11 @@ import {
   Lock, 
   Barcode, 
   TrendingUp, 
-  Clock 
+  Clock,
+  Menu,
+  X
 } from 'lucide-vue-next';
+
+const mobileNavOpen = ref(false);
 </script>
 

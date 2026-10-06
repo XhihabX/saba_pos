@@ -377,7 +377,7 @@
               <p class="text-xs text-slate-500">Try changing search query or category filter</p>
             </div>
 
-            <div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3 sm:gap-4">
               <div 
                 v-for="product in filteredProducts" 
                 :key="product.id" 
