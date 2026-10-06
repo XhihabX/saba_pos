@@ -36,6 +36,29 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::get('/demo/pos', [PosController::class, 'sandboxDemo'])->name('pos.demo');
 
+// Database Migration & Seeding Helper Route for cPanel Production Setup
+Route::get('/setup-database-seed', function () {
+    try {
+        \Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+        \Illuminate\Support\Facades\Artisan::call('db:seed', ['--force' => true]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Database successfully migrated and seeded with default IOT POS accounts!',
+            'accounts' => [
+                'Super Admin' => 'admin@iotpos.com / password123',
+                'Merchant CEO' => 'merchant@iotpos.com / password123',
+                'Store Manager' => 'manager@iotpos.com / password123',
+                'Cashier POS' => 'cashier@iotpos.com / password123',
+            ]
+        ]);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+});
+
 // 3. Super Admin Portal Layer (SaaS Platform Owner & CEO)
 Route::prefix('super-admin')->middleware(['auth', EnsureSuperAdmin::class])->group(function () {
     Route::redirect('/', '/super-admin/dashboard');

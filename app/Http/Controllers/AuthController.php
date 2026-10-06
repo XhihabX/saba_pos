@@ -44,7 +44,7 @@ class AuthController extends Controller
     public function switchRole($role)
     {
         $roleMap = [
-            'super_admin' => 'admin@iot.com',
+            'super_admin' => 'admin@iotpos.com',
             'merchant' => 'merchant@iotpos.com',
             'store_manager' => 'manager@iotpos.com',
             'cashier' => 'cashier@iotpos.com',

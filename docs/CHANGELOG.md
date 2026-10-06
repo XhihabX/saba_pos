@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Database Migration & Seeding Helper Route Implementation
+**What:** Added automated database setup route `/setup-database-seed` in [`routes/web.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/routes/web.php). Fixed `super_admin` role map fallback in [`AuthController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/AuthController.php) (`admin@iotpos.com`). Rebuilt Vite production assets (`app-0Gppcz9E.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Provide instant 1-click database migration and seeding for production deployments, ensuring `admin@iotpos.com`, `merchant@iotpos.com`, `manager@iotpos.com`, and `cashier@iotpos.com` accounts exist in the live database.
+**How:** Updated `routes/web.php` and `AuthController.php`; executed `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `routes/web.php`, `app/Http/Controllers/AuthController.php`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** Production database can be seeded instantly via web helper or cPanel terminal.
+
+---
+
 ## [2026-10-06] — Thermal Receipt Modal Null Guard & POS Workstation Mount Safety
 **What:** Added null guards (`v-if="show && receipt"`) and optional chaining (`receipt?.store`, `receipt?.items`) in [`ReceiptModal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Components/POS/ReceiptModal.vue). Rebuilt Vite production assets (`app-0Gppcz9E.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Eliminate JavaScript uncaught `TypeError` crashes when POS Terminal mounts before a receipt has been rendered, guaranteeing zero blank page crashes.
