@@ -4,7 +4,7 @@
     <!-- SaaS Public Header Navbar -->
     <header class="h-20 border-b border-slate-200 bg-white/90 backdrop-blur-xl px-6 lg:px-12 flex items-center justify-between sticky top-0 z-50 shadow-xs">
       <div class="flex items-center gap-3">
-        <ApplicationLogo size="md" :show-text="true" subtitle="Enterprise SaaS Infrastructure" />
+        <ApplicationLogo size="md" :show-text="true" subtitle="International Office Technology" />
       </div>
 
       <nav class="hidden md:flex items-center gap-8 text-xs font-extrabold text-slate-600 uppercase tracking-wider">

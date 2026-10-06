@@ -8,14 +8,8 @@
         <div class="absolute -bottom-10 -left-10 w-64 h-64 bg-emerald-500/20 blur-3xl rounded-full"></div>
 
         <div>
-          <div class="flex items-center gap-3 mb-8">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-600 flex items-center justify-center font-black text-2xl text-white shadow-lg">
-              S
-            </div>
-            <div>
-              <span class="font-black text-2xl font-heading tracking-tight text-white block">IOT POS</span>
-              <span class="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">International Office Technology</span>
-            </div>
+          <div class="mb-8">
+            <ApplicationLogo size="lg" :show-text="true" subtitle="International Office Technology" />
           </div>
 
           <h2 class="text-2xl lg:text-3xl font-black font-heading leading-tight mb-4 text-white">
@@ -450,6 +444,7 @@
 <script setup>
 import { ref } from 'vue';
 import { router, Link } from '@inertiajs/vue3';
+import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { 
   Building, 
   Phone, 

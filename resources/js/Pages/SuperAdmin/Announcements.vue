@@ -154,7 +154,7 @@ const showCreateModal = ref(false);
 const announcements = ref([
   {
     id: 1,
-    title: 'Saba POS v2.4 Platform Upgrade',
+    title: 'IOT POS v2.4 Platform Upgrade',
     message: 'New cashier barcode scanning hotkeys and bKash instant verification ledger active.',
     target_tier: 'All',
     priority: 'info',

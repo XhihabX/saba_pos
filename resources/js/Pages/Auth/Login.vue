@@ -3,7 +3,7 @@
     <div class="max-w-md w-full bg-white border border-slate-200 rounded-3xl p-8 shadow-xl space-y-6">
       <!-- Header -->
       <div class="text-center space-y-2 flex flex-col items-center">
-        <ApplicationLogo size="lg" :show-text="true" subtitle="SaaS Enterprise POS & ERP" />
+        <ApplicationLogo size="lg" :show-text="true" subtitle="International Office Technology" />
         <p class="text-xs text-slate-500 font-medium mt-2">Log in to access your ERP dashboard and POS terminal</p>
       </div>
 

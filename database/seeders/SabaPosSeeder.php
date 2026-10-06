@@ -64,15 +64,15 @@ class SabaPosSeeder extends Seeder
 
         $secondStore = Store::create([
             'tenant_id' => $tenant->id,
-            'name' => 'Saba Cafe & Bistro',
+            'name' => 'IOT Cafe & Bistro',
             'code' => 'STORE-002',
             'phone' => '+880 1800 111222',
-            'email' => 'cafe@sabapos.com',
+            'email' => 'cafe@iotpos.com',
             'address' => 'Road 11, Banani, Dhaka',
             'vat_number' => 'VAT-88410-BD',
             'currency_symbol' => '৳',
             'default_tax_rate' => 7.50,
-            'receipt_header' => 'Saba Cafe & Gourmet Bistro',
+            'receipt_header' => 'IOT Cafe & Gourmet Bistro',
             'receipt_footer' => 'Taste the fresh brew!',
             'is_active' => true,
         ]);
@@ -81,7 +81,7 @@ class SabaPosSeeder extends Seeder
         // Portal 1: Super Admin
         User::create([
             'name' => 'Super Admin Platform CEO',
-            'email' => 'admin@sabapos.com',
+            'email' => 'admin@iotpos.com',
             'password' => Hash::make('password123'),
             'role' => 'super_admin',
             'tenant_id' => null,
@@ -91,7 +91,7 @@ class SabaPosSeeder extends Seeder
         // Portal 2: Merchant CEO
         User::create([
             'name' => 'Merchant Business Owner',
-            'email' => 'merchant@sabapos.com',
+            'email' => 'merchant@iotpos.com',
             'password' => Hash::make('password123'),
             'role' => 'merchant',
             'tenant_id' => $tenant->id,
@@ -101,7 +101,7 @@ class SabaPosSeeder extends Seeder
         // Portal 3: Store Manager
         User::create([
             'name' => 'Banani Branch Supervisor',
-            'email' => 'manager@sabapos.com',
+            'email' => 'manager@iotpos.com',
             'password' => Hash::make('password123'),
             'role' => 'store_manager',
             'tenant_id' => $tenant->id,
@@ -111,7 +111,7 @@ class SabaPosSeeder extends Seeder
         // Portal 4: Cashier Terminal User
         $cashier = User::create([
             'name' => 'Front-Desk Cashier',
-            'email' => 'cashier@sabapos.com',
+            'email' => 'cashier@iotpos.com',
             'password' => Hash::make('password123'),
             'role' => 'cashier',
             'tenant_id' => $tenant->id,

@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Universal Branding Alignment & Demo Login Removal Completion
+**What:** Completed full system visual and textual branding alignment to **IOT - International Office Technology** across all entry points: Homepage header navbar (`Landing.vue`), Login header & subtitle (`Login.vue`), Registration sidebar logo component (`Register.vue`), and all 5 portal sidebars (`AuthenticatedLayout.vue`). Updated `Announcements.vue` title (`IOT POS v2.4 Platform Upgrade`), aligned IndexedDB name in `Terminal.vue` (`IotPosDB`), and updated default seeder names/emails in `SabaPosSeeder.php` (`@iotpos.com`). Verified complete removal of all demo quick-login shortcut buttons and prefilled credentials on `Login.vue`. Recompiled Vite assets (`app-BmYg4I7_.js`, `app-DBPmRjhu.css`) and verified test suite (4 / 4 passed, 30 green assertions).
+**Why:** Guarantee 100% brand consistency across all public marketing pages, authentication screens, sidebar branding, and POS counter terminals for International Office Technology.
+**How:** Refactored `ApplicationLogo.vue`, `Landing.vue`, `Login.vue`, `Register.vue`, `Announcements.vue`, `Terminal.vue`, `SabaPosSeeder.php`; rebuilt Vite assets; ran PHPUnit suite.
+**Where:** `resources/js/*`, `database/seeders/SabaPosSeeder.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** 100% clean, professional enterprise authentication and brand consistency across all platform pages.
+
+---
+
 ## [2026-10-06] — Comprehensive POS Counter Misfunctions & Logic Gaps Resolution
 **What:** Conducted an exhaustive audit and fixed 10 critical misfunctions, logic gaps, offline sync risks, and UX bottlenecks across the POS Counter Workstation. Enforced backend open shift validation (`PosController::checkout`), disabled Customer Credit mode for Walk-in guest customers, fixed 1-tap quick cash tendering presets (`৳50` - `৳5000`), added a multi-store branch outlet switcher to POS header, added cart line-item discount inputs, hardened offline sync against false-positive order deletion on redirect/non-JSON responses, resolved customer name hardcoding on parked orders, honored store `allow_negative_stock` policy on cart additions, enabled `Enter` key submission on checkout modal, and rendered store logo & dynamic cashier name on thermal receipts.
 **Why:** Provide a 100% flawless, enterprise-ready POS counter experience with zero unhandled edge cases, bulletproof offline sync security, accurate shift audits, and seamless multi-store governance.

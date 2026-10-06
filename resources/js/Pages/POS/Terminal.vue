@@ -1357,7 +1357,7 @@ const handleGlobalKeyDown = (e) => {
 // =====================================================================
 // IndexedDB Helpers (in-page, mirrors the SW helpers)
 // =====================================================================
-const DB_NAME = 'SabaPosDB';
+const DB_NAME = 'IotPosDB';
 const DB_VERSION = 2;
 let _idb = null;
 
