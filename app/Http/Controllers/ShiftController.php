@@ -8,6 +8,7 @@ use App\Models\Store;
 use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
 
 class ShiftController extends Controller
 {
