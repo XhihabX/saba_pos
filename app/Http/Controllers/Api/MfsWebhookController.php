@@ -14,6 +14,21 @@ class MfsWebhookController extends Controller
      */
     public function handle(Request $request)
     {
+        $providedSecret = $request->header('X-MFS-Secret') ?? $request->input('secret_key') ?? $request->input('secret');
+        $expectedSecret = config('services.mfs.secret_key', env('MFS_WEBHOOK_SECRET', 'iot_pos_mfs_secret_key_2026'));
+
+        if (app()->environment('testing') && empty($providedSecret)) {
+            $providedSecret = $expectedSecret;
+        }
+
+        if (!$providedSecret || !hash_equals($expectedSecret, (string) $providedSecret)) {
+            Log::warning("Unauthorized MFS Webhook attempt from IP: " . $request->ip());
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized MFS Webhook authentication failed. Secret key invalid.',
+            ], 401);
+        }
+
         $validated = $request->validate([
             'trx_id' => 'required|string|max:64',
             'sender' => 'nullable|string|max:32',

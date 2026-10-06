@@ -241,6 +241,8 @@ Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () 
     Route::delete('/pos/parked-orders/{id}', [PosController::class, 'deleteParkedOrder'])->name('pos.parked.delete');
     Route::delete('/pos/parked/{id}', [PosController::class, 'deleteParkedOrder']);
     Route::post('/pos/verify-pin', [PosController::class, 'verifyPin'])->name('pos.verify-pin');
+    Route::get('/pos/invoice/{id}/pdf', [PosController::class, 'downloadInvoicePdf'])->name('pos.invoice.pdf');
+    Route::get('/pos/products/search', [PosController::class, 'searchProducts'])->name('pos.products.search');
 
     // Register Shift Endpoints
     Route::get('/pos/shift/status', [ShiftController::class, 'currentShiftStatus'])->name('pos.shift.status');

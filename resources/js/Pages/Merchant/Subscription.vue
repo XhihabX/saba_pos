@@ -121,9 +121,13 @@
           </div>
 
           <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800">
-            <button class="w-full py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-extrabold text-xs transition-colors">
-              Download Latest PDF Invoice
-            </button>
+            <a 
+              href="/pos/invoice/1/pdf" 
+              target="_blank" 
+              class="block w-full text-center py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs transition-all shadow-md shadow-emerald-600/20"
+            >
+              📄 Download Latest PDF Invoice
+            </a>
           </div>
         </div>
       </div>

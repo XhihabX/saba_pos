@@ -137,13 +137,14 @@ class PosController extends Controller
             }
         }
 
-        // 4. Products with stock level
+        // 4. Products with stock level (Initial 100 limit for high-capacity catalog scaling)
         try {
             $products = Product::where('tenant_id', $tenantId)
                 ->where('is_active', true)
                 ->with(['category', 'unit', 'stocks' => function ($q) use ($storeId) {
                     $q->where('store_id', $storeId);
                 }])
+                ->limit(100)
                 ->get()
                 ->map(function ($p) {
                     $stock = $p->stocks ? $p->stocks->first() : null;
@@ -497,10 +498,48 @@ class PosController extends Controller
         }
 
         // 3. Compare with account password as fallback security check
-        if (\Illuminate\Support\Facades\Hash::check($pin, $user->password)) {
-            return response()->json(['success' => true]);
+        return response()->json(['success' => false, 'message' => 'Invalid Cashier PIN.'], 403);
+    }
+
+    public function downloadInvoicePdf($id)
+    {
+        $tenantId = $this->getTenantId();
+        $order = Order::where('tenant_id', $tenantId)
+            ->with(['items.product', 'customer', 'store', 'user', 'payments'])
+            ->where('id', $id)
+            ->first() ?? Order::with(['items.product', 'customer', 'store', 'user', 'payments'])->findOrFail($id);
+
+        return view('pdf.invoice', ['order' => $order]);
+    }
+
+    public function searchProducts(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+        $storeId = (int) $request->input('store_id', 1);
+        $q = trim((string) $request->input('q', ''));
+
+        if (empty($q)) {
+            return response()->json([]);
         }
 
-        return response()->json(['success' => false, 'message' => 'Invalid Cashier PIN.'], 403);
+        $products = Product::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->where(function($query) use ($q) {
+                $query->where('name', 'LIKE', "%{$q}%")
+                      ->orWhere('sku', 'LIKE', "%{$q}%")
+                      ->orWhere('barcode', 'LIKE', "%{$q}%");
+            })
+            ->with(['category', 'unit', 'stocks' => function ($sq) use ($storeId) {
+                $sq->where('store_id', $storeId);
+            }])
+            ->limit(50)
+            ->get()
+            ->map(function ($p) {
+                $stock = $p->stocks ? $p->stocks->first() : null;
+                $p->current_stock = $stock ? (float) $stock->quantity : 0;
+                return $p;
+            });
+
+        return response()->json($products);
     }
 }

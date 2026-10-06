@@ -110,14 +110,23 @@
       <div class="p-4 border-t border-slate-200 flex gap-3 bg-slate-50">
         <button 
           @click="printReceipt" 
-          class="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all"
+          class="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 active:scale-95 transition-all"
         >
           <Printer class="w-4 h-4" />
           <span>Print Thermal Receipt</span>
         </button>
+
+        <a 
+          :href="`/pos/invoice/${receipt?.id || 1}/pdf`" 
+          target="_blank" 
+          class="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-1 transition-all"
+        >
+          📄 View PDF
+        </a>
+
         <button 
           @click="$emit('close')" 
-          class="px-5 py-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-sm"
+          class="px-5 py-3 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs"
         >
           Close
         </button>
