@@ -109,6 +109,7 @@ Route::prefix('merchant')->middleware(['auth', EnsureMerchant::class, EnsureActi
     Route::delete('/customers/{id}', [MerchantController::class, 'deleteCustomer'])->name('merchant.customers.delete');
     Route::post('/customers/{id}/pay-due', [MerchantController::class, 'payCustomerDue'])->name('merchant.customers.pay-due');
     Route::get('/orders', [MerchantController::class, 'ordersIndex'])->name('merchant.orders');
+    Route::get('/audit-logs', [MerchantController::class, 'auditLogsIndex'])->name('merchant.auditlogs');
 });
 
 // 5. Store Manager Portal Layer (Branch Operations & Shift Audit)
@@ -123,6 +124,7 @@ Route::prefix('manager')->middleware(['auth', EnsureStoreManager::class, EnsureA
     Route::get('/expenses', [ExpenseController::class, 'index'])->name('manager.expenses');
     Route::get('/quotations', [QuotationController::class, 'index'])->name('manager.quotations');
     Route::get('/reports', [ReportController::class, 'profitLoss'])->name('manager.reports');
+    Route::get('/audit-logs', [StoreManagerController::class, 'auditLogsIndex'])->name('manager.auditlogs');
 });
 
 // 6. Cashier Terminal Layer & Operational ERP Operations (Protected)

@@ -86,6 +86,20 @@ class StockAdjustmentController extends Controller
                 $stock->increment('quantity', $validated['quantity']);
             }
 
+            \App\Services\AuditLogger::log(
+                'stock_adjusted',
+                "Adjusted inventory stock for product '{$product->name}': {$validated['type']} {$validated['quantity']} units",
+                [
+                    'reference_no' => $refNo,
+                    'product_id' => $product->id,
+                    'product_name' => $product->name,
+                    'type' => $validated['type'],
+                    'quantity' => $validated['quantity'],
+                ],
+                $store->id,
+                $tenantId
+            );
+
             return redirect()->back()->with('success', "Stock adjustment '{$refNo}' recorded successfully!");
         });
     }

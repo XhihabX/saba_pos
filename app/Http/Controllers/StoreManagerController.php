@@ -75,4 +75,43 @@ class StoreManagerController extends Controller
             'shifts' => $shifts,
         ]);
     }
+
+    public function auditLogsIndex(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+        $storeId = auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
+
+        $query = \App\Models\AuditLog::where('tenant_id', $tenantId)
+            ->where(function($q) use ($storeId) {
+                $q->where('store_id', $storeId)->orWhereNull('store_id');
+            })
+            ->with(['user', 'store']);
+
+        if ($request->filled('action')) {
+            $query->where('action', $request->input('action'));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function($q) use ($search) {
+                $q->where('description', 'LIKE', "%{$search}%")
+                  ->orWhere('user_name', 'LIKE', "%{$search}%")
+                  ->orWhere('action', 'LIKE', "%{$search}%");
+            });
+        }
+
+        $logs = $query->latest()->paginate(25)->withQueryString();
+
+        $stats = [
+            'total_actions' => \App\Models\AuditLog::where('tenant_id', $tenantId)->where('store_id', $storeId)->count(),
+            'pos_sales_count' => \App\Models\AuditLog::where('tenant_id', $tenantId)->where('store_id', $storeId)->where('action', 'pos_checkout')->count(),
+            'shift_audits_count' => \App\Models\AuditLog::where('tenant_id', $tenantId)->where('store_id', $storeId)->whereIn('action', ['shift_opened', 'shift_closed'])->count(),
+        ];
+
+        return Inertia::render('Manager/AuditLogs', [
+            'logs' => $logs,
+            'stats' => $stats,
+            'filters' => $request->only(['action', 'search']),
+        ]);
+    }
 }

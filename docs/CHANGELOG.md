@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Universal Multi-Portal Audit Security Logging & Brand Palette Harmonization
+**What:** Implemented Universal Audit Security Logging across **ALL 4 Portals** (`super_admin`, `merchant`, `store_manager`, `cashier`) via `AuditLogger` service (`app/Services/AuditLogger.php`) and migration `2026_10_06_000014_add_store_id_and_payload_to_audit_logs_table.php`. Created dedicated Audit Security Log Viewers for Merchant HQ (`/merchant/audit-logs`) and Store Manager (`/manager/audit-logs`). Hardened action logging across sales checkouts, register float reconciliations, supervisor PIN overrides, stock waste write-offs, supplier purchase orders, returns, customer due collections, and staff account management. Refactored color palette across all portal views (`bg-slate-50 dark:bg-slate-950`, `bg-white dark:bg-slate-900`, `border-slate-200 dark:border-slate-800`, `text-slate-900 dark:text-slate-100`) for 100% theme harmony. Recompiled Vite production assets (`app-B0T2xfeQ.js`, `app-C0LbrpXL.css`) and verified automated test suite (4 / 4 passed, 30 green assertions).
+**Why:** Provide 100% security accountability and compliance auditing for store owners and branch managers while guaranteeing flawless visual presentation across Light and Dark themes.
+**How:** Created `AuditLogger.php`, `2026_10_06_000014_add_store_id_and_payload_to_audit_logs_table.php`, `Merchant/AuditLogs.vue`, `Manager/AuditLogs.vue`; updated `PosController.php`, `ShiftController.php`, `MerchantController.php`, `StoreManagerController.php`, `StockAdjustmentController.php`, `AuditLog.php`, `AuthenticatedLayout.vue`, `SuperAdmin/Dashboard.vue`, `routes/web.php`.
+**Where:** `app/Services/AuditLogger.php`, `app/Http/Controllers/*`, `resources/js/*`, `routes/web.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** Complete international SaaS enterprise audit compliance and 100% light/dark mode color palette harmony across all platform portals.
+
+---
+
 ## [2026-10-06] — Universal Branding Alignment & Demo Login Removal Completion
 **What:** Completed full system visual and textual branding alignment to **IOT - International Office Technology** across all entry points: Homepage header navbar (`Landing.vue`), Login header & subtitle (`Login.vue`), Registration sidebar logo component (`Register.vue`), and all 5 portal sidebars (`AuthenticatedLayout.vue`). Updated `Announcements.vue` title (`IOT POS v2.4 Platform Upgrade`), aligned IndexedDB name in `Terminal.vue` (`IotPosDB`), and updated default seeder names/emails in `SabaPosSeeder.php` (`@iotpos.com`). Verified complete removal of all demo quick-login shortcut buttons and prefilled credentials on `Login.vue`. Recompiled Vite assets (`app-BmYg4I7_.js`, `app-DBPmRjhu.css`) and verified test suite (4 / 4 passed, 30 green assertions).
 **Why:** Guarantee 100% brand consistency across all public marketing pages, authentication screens, sidebar branding, and POS counter terminals for International Office Technology.

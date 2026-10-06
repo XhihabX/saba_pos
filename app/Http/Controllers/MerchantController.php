@@ -326,5 +326,47 @@ class MerchantController extends Controller
             'stats' => $stats,
         ]);
     }
+
+    public function auditLogsIndex(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+        
+        $query = \App\Models\AuditLog::where('tenant_id', $tenantId)
+            ->with(['user', 'store']);
+
+        if ($request->filled('store_id')) {
+            $query->where('store_id', $request->input('store_id'));
+        }
+
+        if ($request->filled('action')) {
+            $query->where('action', $request->input('action'));
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function($q) use ($search) {
+                $q->where('description', 'LIKE', "%{$search}%")
+                  ->orWhere('user_name', 'LIKE', "%{$search}%")
+                  ->orWhere('action', 'LIKE', "%{$search}%");
+            });
+        }
+
+        $logs = $query->latest()->paginate(25)->withQueryString();
+        $stores = Store::where('tenant_id', $tenantId)->get(['id', 'name']);
+        
+        $stats = [
+            'total_actions' => \App\Models\AuditLog::where('tenant_id', $tenantId)->count(),
+            'pos_sales_count' => \App\Models\AuditLog::where('tenant_id', $tenantId)->where('action', 'pos_checkout')->count(),
+            'shift_audits_count' => \App\Models\AuditLog::where('tenant_id', $tenantId)->whereIn('action', ['shift_opened', 'shift_closed'])->count(),
+            'stock_adjustments_count' => \App\Models\AuditLog::where('tenant_id', $tenantId)->where('action', 'stock_adjusted')->count(),
+        ];
+
+        return Inertia::render('Merchant/AuditLogs', [
+            'logs' => $logs,
+            'stores' => $stores,
+            'stats' => $stats,
+            'filters' => $request->only(['store_id', 'action', 'search']),
+        ]);
+    }
 }
 

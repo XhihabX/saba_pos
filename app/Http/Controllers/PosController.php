@@ -14,6 +14,7 @@ use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Services\AuditLogger;
 use Inertia\Inertia;
 
 class PosController extends Controller
@@ -262,6 +263,18 @@ class PosController extends Controller
             }
 
             $order->load(['items', 'customer', 'store', 'payments', 'user']);
+
+            AuditLogger::log(
+                'pos_checkout',
+                "Processed sale invoice {$order->invoice_no} for total ৳{$order->grand_total}",
+                [
+                    'invoice_no' => $order->invoice_no,
+                    'grand_total' => $order->grand_total,
+                    'payment_method' => $order->payment_method,
+                    'payment_status' => $order->payment_status,
+                ],
+                $store->id
+            );
 
             if (request()->wantsJson() || request()->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([

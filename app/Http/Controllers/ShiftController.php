@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\RegisterShift;
 use App\Models\Store;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -73,6 +74,14 @@ class ShiftController extends Controller
             'notes' => $validated['notes'] ?? null,
         ]);
 
+        AuditLogger::log(
+            'shift_opened',
+            "Opened register shift with initial float ৳{$shift->opening_cash}",
+            ['opening_cash' => $shift->opening_cash, 'shift_id' => $shift->id],
+            $store->id,
+            $tenantId
+        );
+
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([
                 'success' => true,
@@ -136,6 +145,21 @@ class ShiftController extends Controller
             'closed_at' => now(),
             'notes' => $validated['notes'] ?? null,
         ]);
+
+        AuditLogger::log(
+            'shift_closed',
+            "Closed register shift. Expected cash ৳{$expectedCash}, counted cash ৳{$validated['closing_cash_counted']}, difference ৳{$cashDiff}",
+            [
+                'shift_id' => $shift->id,
+                'expected_cash' => $expectedCash,
+                'closing_cash_counted' => $validated['closing_cash_counted'],
+                'cash_difference' => $cashDiff,
+                'cash_sales' => $cashSales,
+                'card_sales' => $cardSales,
+            ],
+            $shift->store_id,
+            $tenantId
+        );
 
         if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
             return response()->json([

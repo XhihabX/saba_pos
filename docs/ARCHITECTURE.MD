@@ -158,6 +158,13 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Depends on:** `StockAdjustment`, `Product`, `Stock`, `Store`.
 - **Last updated:** 2026-10-05
 
+### 20. Universal Multi-Portal Audit Security Logging Engine
+- **What it does:** Provides 100% immutable security audit logging across ALL 4 portals (`super_admin`, `merchant`, `store_manager`, `cashier`), recording action trails for sales checkouts, register shift drawer float reconciliations, supervisor PIN overrides, stock waste write-offs, supplier purchase orders, product returns, customer credit due collections, store settings updates, and staff account management.
+- **Where it lives:** `app/Services/AuditLogger.php`, `app/Models/AuditLog.php`, `database/migrations/2026_10_06_000014_add_store_id_and_payload_to_audit_logs_table.php`, `resources/js/Pages/SuperAdmin/AuditLogs.vue`, `resources/js/Pages/Merchant/AuditLogs.vue`, `resources/js/Pages/Manager/AuditLogs.vue`
+- **Key design decisions:** Centralized `AuditLogger::log` helper automatically captures `tenant_id`, `store_id`, `user_id`, `user_name`, `action`, `description`, `ip_address`, `user_agent`, and `payload` JSON inside database transactions.
+- **Depends on:** `AuditLog`, `Tenant`, `Store`, `User`, `Auth`.
+- **Last updated:** 2026-10-06
+
 ## Data Model
 
 ```

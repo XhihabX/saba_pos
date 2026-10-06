@@ -335,6 +335,16 @@
               <CreditCard class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span v-if="!sidebarCollapsed">Billing & SaaS Plan</span>
             </Link>
+            <Link 
+              href="/merchant/audit-logs"
+              :class="[
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
+                $page.component === 'Merchant/AuditLogs' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
+              ]"
+            >
+              <ShieldCheck class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span v-if="!sidebarCollapsed">Merchant Audit Logs</span>
+            </Link>
           </div>
         </div>
 
@@ -408,11 +418,21 @@
               :href="route('hrm.attendance')"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
-                $page.component === 'HRM/Attendance' ? 'bg-cyan-50 text-cyan-900 border-cyan-300 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                $page.component === 'HRM/Attendance' ? 'bg-cyan-50 dark:bg-cyan-950/70 text-cyan-900 dark:text-cyan-300 border-cyan-300 dark:border-cyan-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
               ]"
             >
               <Clock class="w-4 h-4 text-cyan-600 shrink-0" />
               <span v-if="!sidebarCollapsed">Staff Clock & HRM</span>
+            </Link>
+            <Link 
+              href="/manager/audit-logs"
+              :class="[
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
+                $page.component === 'Manager/AuditLogs' ? 'bg-cyan-50 dark:bg-cyan-950/70 text-cyan-900 dark:text-cyan-300 border-cyan-300 dark:border-cyan-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
+              ]"
+            >
+              <ShieldCheck class="w-4 h-4 text-cyan-600 shrink-0" />
+              <span v-if="!sidebarCollapsed">Branch Audit Logs</span>
             </Link>
           </div>
         </div>

@@ -1,6 +1,6 @@
 <template>
   <AuthenticatedLayout>
-    <div class="p-4 sm:p-6 lg:p-8 w-full space-y-8 bg-slate-50/70 min-h-screen">
+    <div class="p-4 sm:p-6 lg:p-8 w-full space-y-8 bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-slate-100 transition-colors duration-200">
       <!-- 👑 Hero SaaS Command Center Header -->
       <div class="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-900 via-rose-950 to-slate-900 text-white p-6 sm:p-8 shadow-xl border border-slate-800">
         <!-- Background Decorative Glows -->
@@ -56,16 +56,16 @@
       <!-- 📊 KPI Metrics Grid -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <!-- MRR Card -->
-        <div class="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden group">
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden group">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Monthly Recurring Revenue</span>
-            <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Monthly Recurring Revenue</span>
+            <div class="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
               <DollarSign class="w-5 h-5" />
             </div>
           </div>
           <div>
-            <div class="text-3xl font-black font-heading text-slate-900">৳{{ formatMoney(totalMrr) }}</div>
-            <div class="flex items-center gap-1 text-[11px] font-bold text-emerald-600 mt-1">
+            <div class="text-3xl font-black font-heading text-slate-900 dark:text-white">৳{{ formatMoney(totalMrr) }}</div>
+            <div class="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 mt-1">
               <TrendingUp class="w-3.5 h-3.5" />
               <span>Active subscriptions MRR</span>
             </div>
@@ -73,46 +73,46 @@
         </div>
 
         <!-- Pending Approval Card -->
-        <div class="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden group">
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden group">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending Approvals</span>
-            <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Pending Approvals</span>
+            <div class="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
               <Clock class="w-5 h-5" />
             </div>
           </div>
           <div>
-            <div class="text-3xl font-black font-heading text-amber-600">{{ pendingTenantsCount || 0 }} Merchants</div>
-            <div class="text-[11px] font-semibold text-amber-700 mt-1">Awaiting bKash / Nagad verification</div>
+            <div class="text-3xl font-black font-heading text-amber-600 dark:text-amber-400">{{ pendingTenantsCount || 0 }} Merchants</div>
+            <div class="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mt-1">Awaiting bKash / Nagad verification</div>
           </div>
         </div>
 
         <!-- Onboarded Businesses Card -->
-        <div class="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden group">
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden group">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Onboarded Merchants</span>
-            <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Onboarded Merchants</span>
+            <div class="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold">
               <Building2 class="w-5 h-5" />
             </div>
           </div>
           <div>
-            <div class="text-3xl font-black font-heading text-slate-900">{{ totalTenants }} Businesses</div>
-            <div class="text-[11px] font-medium text-slate-500 mt-1">
-              <span class="text-emerald-600 font-bold">{{ activeTenants }} Active</span> • <span class="text-rose-600 font-bold">{{ suspendedTenants }} Suspended</span>
+            <div class="text-3xl font-black font-heading text-slate-900 dark:text-white">{{ totalTenants }} Businesses</div>
+            <div class="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1">
+              <span class="text-emerald-600 dark:text-emerald-400 font-bold">{{ activeTenants }} Active</span> • <span class="text-rose-600 dark:text-rose-400 font-bold">{{ suspendedTenants }} Suspended</span>
             </div>
           </div>
         </div>
 
         <!-- Gross Sales Card -->
-        <div class="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden group">
+        <div class="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-md transition-all space-y-3 relative overflow-hidden group">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Platform Gross GMV</span>
-            <div class="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+            <span class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Platform Gross GMV</span>
+            <div class="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center font-bold">
               <Activity class="w-5 h-5" />
             </div>
           </div>
           <div>
-            <div class="text-3xl font-black font-heading text-slate-900">৳{{ formatMoney(totalPlatformSales) }}</div>
-            <div class="text-[11px] font-medium text-slate-500 mt-1">Processed across registers</div>
+            <div class="text-3xl font-black font-heading text-slate-900 dark:text-white">৳{{ formatMoney(totalPlatformSales) }}</div>
+            <div class="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1">Processed across registers</div>
           </div>
         </div>
       </div>
