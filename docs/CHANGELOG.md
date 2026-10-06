@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — LiteSpeed Web Server LSCache Purge & No-Cache Header Configuration
+**What:** Added `X-LSCACHE-PURGE "*"` and `Cache-Control: no-cache, no-store, must-revalidate` directives to [`public/.htaccess`](file:///Users/macbookairm1/Downloads/Saba%20POS/public/.htaccess). Rebuilt Vite production assets (`app-C9wHNDiy.js`, `app-DGK_7Rs1.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Force LiteSpeed Web Server on cPanel to instantly purge stale HTML page cache upon deployment, preventing web servers from serving cached HTML containing pre-rebrand `Saba POS` DOM strings.
+**How:** Updated `public/.htaccess`; executed `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `public/.htaccess`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** LiteSpeed Web Server and browser caches immediately invalidate stale pre-rebrand HTML page responses upon deployment.
+
+---
+
 ## [2026-10-06] — Production Build Asset Git Tracking & Deployment Synchronization Fix
 **What:** Removed `/public/build` from `.gitignore` and committed fresh compiled Vite production bundles (`public/build/manifest.json`, `app-B60f5YTF.js`, `app-BSyU_k7d.css`) directly to `origin/main`. Verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Fix root cause of cPanel deployment cache mismatch. Previous `.gitignore` prevented compiled frontend JS assets from being pushed to GitHub, causing server deployments (`git pull`) to retain legacy pre-rebrand JavaScript bundles containing old `Saba POS` header references and `#demo` links.
