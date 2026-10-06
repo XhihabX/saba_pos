@@ -161,6 +161,17 @@ class PosController extends Controller
             $parkedCount = 0;
         }
 
+        // 6. Active Cashier Shift Status
+        try {
+            $activeShift = \App\Models\RegisterShift::where('tenant_id', $tenantId)
+                ->where('user_id', auth()->id())
+                ->where('store_id', $storeId)
+                ->where('status', 'open')
+                ->first();
+        } catch (\Throwable $e) {
+            $activeShift = null;
+        }
+
         return Inertia::render('POS/Terminal', [
             'stores' => $stores,
             'currentStoreId' => (int) $storeId,
@@ -168,6 +179,7 @@ class PosController extends Controller
             'customers' => $customers,
             'products' => $products,
             'parkedCount' => $parkedCount,
+            'initialActiveShift' => $activeShift,
         ]);
     }
 

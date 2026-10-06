@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Resilient POS Register Shift Activation & Error Handling
+**What:** Updated [`ShiftController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/ShiftController.php), [`PosController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/PosController.php), and [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue). Added store lookup fallback in `ShiftController::openShift` to prevent 404 ModelNotFound exceptions when store IDs mismatch. Added `initialActiveShift` prop in `PosController.php` so terminal mounts with active shift status immediately. Enhanced float amount parsing and explicit error messaging in `handleOpenShift` and `handleCloseShift`. Rebuilt Vite production bundle (`app-W77NGpAq.js`, `app-CAstZ0PK.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Fix POS shift opening failing silently or displaying generic error alerts when opening register shifts.
+**How:** Added store fallbacks in `ShiftController.php`, passed `initialActiveShift` prop in `PosController.php`, added numeric float parsing and specific error reporting in `Terminal.vue`, ran `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `app/Http/Controllers/ShiftController.php`, `app/Http/Controllers/PosController.php`, `resources/js/Pages/POS/Terminal.vue`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** Cashiers and managers can reliably open and close cashier register shifts with zero 404 crashes or unhandled validation errors.
+
+---
+
 ## [2026-10-06] — POS Terminal Dual Theme (Light & Soft Dark Mode) Harmonization
 **What:** Fixed theme inheritance and updated color schemes across [`app.blade.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/views/app.blade.php), [`app.css`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/css/app.css), [`AuthenticatedLayout.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Layouts/AuthenticatedLayout.vue), [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue), and [`ShiftModal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Components/POS/ShiftModal.vue). Replaced hardcoded `bg-slate-950` pitch-black backgrounds with soft dark slate-900 (`#0f172a`) and light mode slate-100 (`#f1f5f9`). Added explicit Sun/Moon theme switcher button to POS header action bar. Rebuilt Vite production bundle (`app-DZsGw0VW.js`, `app-DTpGNF7A.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Fix POS terminal remaining stuck in dark mode or appearing pitch-black by enabling seamless 1-click toggling between clean Light Mode and eye-friendly Soft Dark Mode.

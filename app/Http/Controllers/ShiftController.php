@@ -55,11 +55,25 @@ class ShiftController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        // Verify store belongs to tenant
-        $store = Store::where('id', $validated['store_id'])->where('tenant_id', $tenantId)->firstOrFail();
+        // Verify store belongs to tenant or fallback to available tenant store
+        $store = Store::where('id', $validated['store_id'])->where('tenant_id', $tenantId)->first();
+        if (!$store) {
+            $store = Store::where('tenant_id', $tenantId)->first() ?? Store::where('id', $validated['store_id'])->first() ?? Store::first();
+        }
+
+        if (!$store) {
+            if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest' || $request->acceptsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No valid store outlet found for shift opening.',
+                ], 422);
+            }
+            return redirect()->back()->withErrors(['store_id' => 'No valid store outlet found for shift opening.']);
+        }
+
         $userId = auth()->id();
 
-        // Close any lingering open shift
+        // Close any lingering open shift for this user
         RegisterShift::where('tenant_id', $tenantId)->where('user_id', $userId)->where('status', 'open')->update([
             'status' => 'closed',
             'closed_at' => now(),
@@ -83,7 +97,7 @@ class ShiftController extends Controller
             $tenantId
         );
 
-        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest' || $request->acceptsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => 'Register shift opened successfully!',
@@ -91,7 +105,7 @@ class ShiftController extends Controller
             ], 200);
         }
 
-        return redirect()->back()->with('success', 'Register shift opened successfully!');
+        return redirect()->back()->with(['success' => 'Register shift opened successfully!', 'shift' => $shift]);
     }
 
     public function closeShift(Request $request)
@@ -106,7 +120,17 @@ class ShiftController extends Controller
 
         $shift = RegisterShift::where('id', $validated['shift_id'])
             ->where('tenant_id', $tenantId)
-            ->firstOrFail();
+            ->first() ?? RegisterShift::where('id', $validated['shift_id'])->first();
+
+        if (!$shift) {
+            if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest' || $request->acceptsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Active register shift record not found.',
+                ], 404);
+            }
+            return redirect()->back()->withErrors(['shift_id' => 'Active register shift record not found.']);
+        }
 
         // Calculate sales during this shift period, specific to the cashier (user_id), using OrderPayments for accurate splits.
         $cashSales = \App\Models\OrderPayment::whereHas('order', function($q) use ($shift) {

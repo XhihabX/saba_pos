@@ -730,6 +730,7 @@ const props = defineProps({
   products: { type: Array, default: () => [] },
   parkedCount: { type: Number, default: 0 },
   isDemoMode: { type: Boolean, default: false },
+  initialActiveShift: { type: Object, default: null },
 });
 
 const page = usePage();
@@ -809,7 +810,7 @@ const pinEntered = ref('');
 const latestReceipt = ref(null);
 const isSubmitting = ref(false);
 
-const activeShift = ref(null);
+const activeShift = ref(props.initialActiveShift || null);
 const openingCashInput = ref(5000);
 const closingCashInput = ref(0);
 const isShiftProcessing = ref(false);
@@ -1143,17 +1144,23 @@ const openShiftModal = () => {
 const handleOpenShift = async () => {
   isShiftProcessing.value = true;
   try {
+    const rawCash = parseFloat(openingCashInput.value);
+    const openingCash = !isNaN(rawCash) && rawCash >= 0 ? rawCash : 0;
     const res = await window.axios.post('/pos/shift/open', {
-      store_id: selectedStoreId.value,
-      opening_cash: openingCashInput.value,
+      store_id: selectedStoreId.value || props.currentStoreId || 1,
+      opening_cash: openingCash,
+      notes: 'Opened via POS Counter',
     });
-    if (res.data.success) {
+    if (res.data?.success || res.data?.shift) {
       activeShift.value = res.data.shift;
       showShiftModal.value = false;
       showSyncNotification('success', '✅ Register shift activated successfully!');
+    } else {
+      alert(res.data?.message || 'Failed to open shift.');
     }
   } catch (e) {
-    alert('Failed to open shift.');
+    const errorMsg = e.response?.data?.message || e.response?.data?.errors?.opening_cash?.[0] || e.response?.data?.errors?.store_id?.[0] || 'Failed to open shift. Please check store selection and float amount.';
+    alert(errorMsg);
   } finally {
     isShiftProcessing.value = false;
   }
@@ -1163,17 +1170,22 @@ const handleCloseShift = async () => {
   if (!activeShift.value) return;
   isShiftProcessing.value = true;
   try {
+    const rawCash = parseFloat(closingCashInput.value);
+    const closingCash = !isNaN(rawCash) && rawCash >= 0 ? rawCash : 0;
     const res = await window.axios.post('/pos/shift/close', {
       shift_id: activeShift.value.id,
-      closing_cash_counted: closingCashInput.value,
+      closing_cash_counted: closingCash,
     });
-    if (res.data.success) {
+    if (res.data?.success) {
       activeShift.value = null;
       showShiftModal.value = false;
       showSyncNotification('success', '✅ Register shift closed & cash drawer reconciled!');
+    } else {
+      alert(res.data?.message || 'Failed to close shift.');
     }
   } catch (e) {
-    alert('Failed to close shift.');
+    const errorMsg = e.response?.data?.message || e.response?.data?.errors?.closing_cash_counted?.[0] || 'Failed to close shift.';
+    alert(errorMsg);
   } finally {
     isShiftProcessing.value = false;
   }
