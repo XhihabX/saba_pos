@@ -14,18 +14,45 @@ class MfsWebhookController extends Controller
      */
     public function handle(Request $request)
     {
+        $timestamp = (int) ($request->header('X-MFS-Timestamp') ?? $request->input('timestamp') ?? time());
+        $providedSignature = $request->header('X-MFS-Signature') ?? $request->input('signature');
         $providedSecret = $request->header('X-MFS-Secret') ?? $request->input('secret_key') ?? $request->input('secret');
+
         $expectedSecret = config('services.mfs.secret_key', env('MFS_WEBHOOK_SECRET', 'iot_pos_mfs_secret_key_2026'));
 
-        if (app()->environment('testing') && empty($providedSecret)) {
-            $providedSecret = $expectedSecret;
+        // 1. Timestamp Drift Replay Protection (5-minute / 300s window)
+        if (!app()->environment('testing') && abs(time() - $timestamp) > 300) {
+            Log::warning("MFS Webhook Replay Blocked: Expired timestamp {$timestamp} from IP: " . $request->ip());
+            return response()->json([
+                'success' => false,
+                'message' => 'MFS Webhook request expired or replay attempt detected.',
+            ], 403);
         }
 
-        if (!$providedSecret || !hash_equals($expectedSecret, (string) $providedSecret)) {
+        // 2. HMAC-SHA256 or Secret Key Verification
+        $isValidAuth = false;
+        if (!empty($providedSecret) && hash_equals($expectedSecret, (string) $providedSecret)) {
+            $isValidAuth = true;
+        }
+
+        if (!empty($providedSignature)) {
+            $trxIdForSig = strtoupper(trim((string) $request->input('trx_id', '')));
+            $amountForSig = (string) $request->input('amount', '');
+            $expectedSignature = hash_hmac('sha256', "{$timestamp}.{$trxIdForSig}.{$amountForSig}", $expectedSecret);
+            if (hash_equals($expectedSignature, (string) $providedSignature)) {
+                $isValidAuth = true;
+            }
+        }
+
+        if (app()->environment('testing') && empty($providedSecret) && empty($providedSignature)) {
+            $isValidAuth = true;
+        }
+
+        if (!$isValidAuth) {
             Log::warning("Unauthorized MFS Webhook attempt from IP: " . $request->ip());
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized MFS Webhook authentication failed. Secret key invalid.',
+                'message' => 'Unauthorized MFS Webhook authentication failed. Valid HMAC signature or secret key required.',
             ], 401);
         }
 

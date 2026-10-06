@@ -542,4 +542,53 @@ class PosController extends Controller
 
         return response()->json($products);
     }
+
+    public function downloadMushak63($id)
+    {
+        $tenantId = $this->getTenantId();
+        $order = Order::where('tenant_id', $tenantId)
+            ->with(['items.product', 'customer', 'store', 'user', 'payments'])
+            ->where('id', $id)
+            ->first() ?? Order::with(['items.product', 'customer', 'store', 'user', 'payments'])->findOrFail($id);
+
+        return view('pdf.mushak63', ['order' => $order]);
+    }
+
+    public function exportSalesCsv(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+        $orders = Order::where('tenant_id', $tenantId)
+            ->with(['customer', 'store', 'user'])
+            ->latest()
+            ->limit(1000)
+            ->get();
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="sales_report_' . date('Ymd_His') . '.csv"',
+        ];
+
+        $callback = function () use ($orders) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, ['Invoice No', 'Date', 'Store', 'Customer', 'Subtotal', 'Discount', 'VAT (Tax)', 'Grand Total', 'Payment Method', 'Payment Status']);
+
+            foreach ($orders as $order) {
+                fputcsv($file, [
+                    $order->invoice_no,
+                    $order->created_at->format('Y-m-d H:i:s'),
+                    $order->store->name ?? 'N/A',
+                    $order->customer->name ?? 'Walk-in Customer',
+                    $order->subtotal,
+                    $order->discount_amount,
+                    $order->tax_amount,
+                    $order->grand_total,
+                    $order->payment_method,
+                    $order->payment_status,
+                ]);
+            }
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
 }

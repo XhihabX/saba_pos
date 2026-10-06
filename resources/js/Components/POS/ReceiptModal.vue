@@ -119,9 +119,17 @@
         <a 
           :href="`/pos/invoice/${receipt?.id || 1}/pdf`" 
           target="_blank" 
-          class="px-4 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-1 transition-all"
+          class="px-3 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-1 transition-all"
         >
           📄 View PDF
+        </a>
+
+        <a 
+          :href="`/vat/mushak-6.3/${receipt?.id || 1}`" 
+          target="_blank" 
+          class="px-3 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-1 transition-all"
+        >
+          🇧🇩 Mushak 6.3
         </a>
 
         <button 

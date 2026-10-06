@@ -11,8 +11,8 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 
 ## Tech Stack
 - **Frontend**: Vue 3 (Composition API), Inertia.js 1.x, TailwindCSS 4 (Dual Light/Dark mode & Universal Responsive Breakpoints for Mobile `320px-640px`, Tablet `768px-1024px`, Laptop `1024px-1536px`, and Ultrawide `1536px+`), Lucide Vue Icons, Brand Logo Component (`ApplicationLogo.vue` & `/images/logo.png`)
-- **Backend Framework**: Laravel 11/12 (PHP 8.2+) with Eloquent ORM, Global Query Scopes, Soft Deletes, Permanent Force Delete Purging, and Customer Due Settlement
-- **Database**: MySQL 8.0+ (Shared database, shared schema with `tenant_id` discriminator column)
+- **Backend Framework**: Laravel ^13.17 (PHP 8.3+) with Eloquent ORM, Global Query Scopes, Soft Deletes, Permanent Force Delete Purging, and Customer Due Settlement
+- **Inertia Adapter**: Inertia Laravel ^3.3, Vue 3.5.13, TailwindCSS 4 (Dual Light/Dark mode & Universal Responsive Breakpoints for Mobile `320px-640px`, Tablet `768px-1024px`, Laptop `1024px-1536px`, and Ultrawide `1536px+`), Lucide Vue Icons, Brand Logo Component (`ApplicationLogo.vue` & `/images/logo.png`)
 - **Asset Bundler & Routing**: Vite 5.x, Ziggy Route Engine (with dynamic `APP_URL` auto-healing and `URL::forceRootUrl` guardrails)
 - **Deployment & Hosting**: Linux cPanel Shared/VPS hosting (`xhihab.com`) with web setup tool (`public/cpanel_setup.php`) and ZIP packager (`build_cpanel_subdomain_zip.py`)
 
