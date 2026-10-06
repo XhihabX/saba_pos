@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — ApplicationLogo Image Source Binding & Asset Recompile Fix
+**What:** Fixed `ApplicationLogo.vue` component image binding logic by ensuring `logoSrc` computed property is passed into `v-if` and `:src` attributes, defaulting `src` prop to `/images/logo.png`. Rebuilt Vite production assets (`app-B60f5YTF.js`, `app-BSyU_k7d.css`) and verified automated PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Ensure official **IOT POS** logo graphic (`/images/logo.png`) renders on the landing page header navbar and across authentication screens without broken fallbacks or legacy cached images.
+**How:** Refactored `ApplicationLogo.vue`; executed `npm run build` and `php artisan test`.
+**Where:** `resources/js/Components/ApplicationLogo.vue`, `public/build/assets/*`, `docs/CHANGELOG.md`
+**Impact:** Landing page header and all branding components reliably display the official IOT POS brand logo graphic.
+
+---
+
 ## [2026-10-06] — Enterprise POS 42-Feature Regional Bangladesh Compliance & Offline Sync Engine
 **What:** Implemented 100% statutory NBR Musak-6.3 tax invoice compliance, store BIN number management, dynamic NBR QR codes, non-API Android MFS (bKash/Nagad/Rocket/Upay) notification webhook listener (`/api/v1/mfs-webhook`), TrxID regex verification with duplicate check, Bank Card POS Push-to-terminal bridge simulator, semi-integrated manual card fallback modal, customer credit limits (`credit_limit`), automated SMS payment reminders (`SmsService.php`), FEFO (First-Expired, First-Out) stock batch dispatch (`ProductBatch`), bilingual English & Bengali i18n translation dictionary (`messages.js`), IndexedDB offline sales persistence (`IotPosOfflineDB`), and automated Day-End Z-Reports (`ShiftController::zReport`). Recompiled Vite production assets (`app-BYPhsGCB.js`, `app-BSyU_k7d.css`) and verified automated PHPUnit test suite (4 / 4 passed, 30 green assertions).
 **Why:** Deliver 100% store-ready regional compliance for supermarkets, retail outlets, and godowns across Bangladesh and international markets.

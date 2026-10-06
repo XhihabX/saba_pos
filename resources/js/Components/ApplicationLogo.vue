@@ -7,8 +7,8 @@
       ]"
     >
       <img 
-        v-if="props.src && !imgFailed" 
-        :src="props.src" 
+        v-if="logoSrc && !imgFailed" 
+        :src="logoSrc" 
         alt="IOT POS Logo"
         class="w-full h-full object-cover"
         @error="handleImgError"
@@ -39,7 +39,7 @@ const props = defineProps({
   },
   src: {
     type: String,
-    default: null
+    default: '/images/logo.png'
   },
   showText: {
     type: Boolean,
@@ -55,10 +55,10 @@ const defaultLogo = '/images/logo.png';
 const imgFailed = ref(false);
 
 const logoSrc = computed(() => {
-  if (imgFailed.value || !props.src) {
-    return defaultLogo;
+  if (imgFailed.value) {
+    return null;
   }
-  return props.src;
+  return props.src || defaultLogo;
 });
 
 const handleImgError = () => {
