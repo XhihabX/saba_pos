@@ -997,6 +997,11 @@ const unlockTerminal = async () => {
 
 const quickCashCheckout = () => {
   if (cart.value.length === 0) return;
+  if (!activeShift.value) {
+    showSyncNotification('error', '⚠️ An active register shift is required. Please enter starting cash to open shift.');
+    showShiftModal.value = true;
+    return;
+  }
   processCheckout({
     payment_method: 'cash',
     paid_amount: grandTotal.value,
@@ -1007,6 +1012,11 @@ const quickCashCheckout = () => {
 
 const openCheckoutModal = () => {
   if (cart.value.length === 0) return;
+  if (!activeShift.value) {
+    showSyncNotification('error', '⚠️ An active register shift is required. Please enter starting cash to open shift.');
+    showShiftModal.value = true;
+    return;
+  }
   showCheckoutModal.value = true;
 };
 
@@ -1040,8 +1050,15 @@ const processCheckout = async (paymentDetails) => {
         cart.value = [];
         orderDiscount.value = 0;
       },
-      onError: () => {
+      onError: (errors) => {
         isSubmitting.value = false;
+        const errorMsg = errors ? (Object.values(errors)[0] || 'Checkout failed.') : 'Checkout failed.';
+        syncNotification.value = { type: 'error', message: `⚠️ ${errorMsg}` };
+        setTimeout(() => { syncNotification.value = null; }, 5000);
+        if (errors?.shift) {
+          showCheckoutModal.value = false;
+          showShiftModal.value = true;
+        }
       }
     });
   } else {
