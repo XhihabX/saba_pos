@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Bilingual English & Bangla Language Selector & i18n Integration
+**What:** Refactored language switcher in [`AuthenticatedLayout.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Layouts/AuthenticatedLayout.vue) to exclusively offer functional **🇬🇧 English** (`en`) and **🇧🇩 বাংলা (Bangla)** (`bn`) options. Bound selector to reactive `setLang(lang)` handler and local storage persistence dictionary [`messages.js`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/i18n/messages.js). Rebuilt Vite production assets (`app-BcArSypw.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Eliminate dummy non-functional placeholder languages (Spanish, Arabic, French) and ensure smooth, instant language switching between English and Bengali across all portals.
+**How:** Updated `AuthenticatedLayout.vue` and `resources/js/i18n/messages.js`, ran `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `resources/js/Layouts/AuthenticatedLayout.vue`, `resources/js/i18n/messages.js`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** Platform navbar features clean, working 1-click toggling between English and Bangla with instant local storage persistence.
+
+---
+
 ## [2026-10-06] — Vue Component State Initialization Fix for POS Terminal
 **What:** Added missing `cart = ref([])` and `orderDiscount = ref(0)` reactive state declarations in [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue). Rebuilt Vite production assets (`app-C-RfSZzI.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Fix `Uncaught ReferenceError: cart is not defined` JavaScript error during Vue setup script evaluation, which previously caused component mounting to fail and render a blank white screen on `/pos`.

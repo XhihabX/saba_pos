@@ -558,17 +558,15 @@
             <Moon v-else class="w-4 h-4 text-indigo-600" />
           </button>
 
-          <!-- Posify Language Selector -->
+          <!-- Bilingual Language Selector (English / Bangla) -->
           <div class="relative">
             <select 
               v-model="selectedLanguage"
+              @change="onLanguageChange"
               class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 focus:outline-none cursor-pointer pr-6 appearance-none"
             >
-              <option value="en">🇺🇸 EN</option>
-              <option value="bn">🇧🇩 BN</option>
-              <option value="es">🇪🇸 ES</option>
-              <option value="ar">🇦🇪 AR</option>
-              <option value="fr">🇫🇷 FR</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="bn">🇧🇩 বাংলা</option>
             </select>
             <Globe class="w-3 h-3 text-slate-500 dark:text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
@@ -713,10 +711,16 @@ import {
 } from 'lucide-vue-next';
 
 
+import { currentLang, setLang, t } from '@/i18n/messages';
+
 const page = usePage();
 const sidebarCollapsed = ref(false);
 const mobileSidebarOpen = ref(false);
-const selectedLanguage = ref('en');
+const selectedLanguage = ref(currentLang());
+
+const onLanguageChange = (e) => {
+  setLang(e.target.value);
+};
 const showCalcModal = ref(false);
 const showRoleDropdown = ref(false);
 const calcDisplay = ref('');
