@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Eye-Friendly Balanced Color Palette (Soft Light & Warm Mid-Dark Mode)
+**What:** Updated color tokens across [`app.css`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/css/app.css), [`app.blade.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/views/app.blade.php), [`AuthenticatedLayout.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Layouts/AuthenticatedLayout.vue), and [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue). Replaced stark blinding white (`#ffffff`) background in Light Mode with warm neutral Slate-200 (`#e2e8f0`), paired with off-white Slate-50 (`#f8fafc`) cards and Slate-300 (`#cbd5e1`) borders. Replaced dark background with warm mid-tone Slate-800 (`#1e293b`), soft Slate-700 (`#334155`) cards, and Slate-600 (`#475569`) borders. Rebuilt Vite production bundle (`app-CqcDZ6D_.js`, `app-PXQJPpkZ.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Eliminate stark blinding white glare in Light Mode and overly dark black tones in Dark Mode, creating a perfectly balanced visual experience for POS cashiers working long shifts.
+**How:** Updated base body background colors and component class tokens, ran `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `resources/css/app.css`, `resources/views/app.blade.php`, `resources/js/Layouts/AuthenticatedLayout.vue`, `resources/js/Pages/POS/Terminal.vue`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** Cashiers experience a comfortable, warm, glare-free Light Mode and an eye-friendly mid-tone Dark Mode.
+
+---
+
 ## [2026-10-06] — Zero-Step Build Asset Auto-Sync & POS Dual-Theme Visual Overhaul
 **What:** Implemented zero-step build asset auto-sync middleware in [`HandleInertiaRequests.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Middleware/HandleInertiaRequests.php). Automatically detects updated `manifest.json` on cPanel deployments and copies compiled bundle assets (`public/build` to `public_html/build`) on the fly during initial page requests. Updated customer registration logic in [`MerchantController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/MerchantController.php) with input sanitization and duplicate phone auto-select. Redesigned POS counter workstation styling in [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue) with high-contrast Light Mode product cards, crisp Slate-100 backgrounds, vibrant Emerald-700 prices, shadow elevation (`shadow-xs hover:shadow-xl`), and soft Slate-900 Dark Mode styling. Rebuilt Vite production bundle (`app-1QiesoRA.js`, `app-Izhw9NQZ.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Eliminate manual build copying or sync URLs after git pulls, resolve Customer Registration 422 empty string validation errors, and deliver a world-class Light & Soft Dark Mode design across the POS terminal.
