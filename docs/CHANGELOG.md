@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Zero-Step Build Asset Auto-Sync & POS Dual-Theme Visual Overhaul
+**What:** Implemented zero-step build asset auto-sync middleware in [`HandleInertiaRequests.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Middleware/HandleInertiaRequests.php). Automatically detects updated `manifest.json` on cPanel deployments and copies compiled bundle assets (`public/build` to `public_html/build`) on the fly during initial page requests. Updated customer registration logic in [`MerchantController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/MerchantController.php) with input sanitization and duplicate phone auto-select. Redesigned POS counter workstation styling in [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue) with high-contrast Light Mode product cards, crisp Slate-100 backgrounds, vibrant Emerald-700 prices, shadow elevation (`shadow-xs hover:shadow-xl`), and soft Slate-900 Dark Mode styling. Rebuilt Vite production bundle (`app-1QiesoRA.js`, `app-Izhw9NQZ.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Eliminate manual build copying or sync URLs after git pulls, resolve Customer Registration 422 empty string validation errors, and deliver a world-class Light & Soft Dark Mode design across the POS terminal.
+**How:** Added manifest timestamp check in `HandleInertiaRequests.php`, sanitized customer payload inputs, updated POS grid and card styling tokens, ran `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `app/Http/Middleware/HandleInertiaRequests.php`, `app/Http/Controllers/MerchantController.php`, `resources/js/Pages/POS/Terminal.vue`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** Zero manual steps required after `git pull` on live cPanel server. POS workstation renders a stunning, high-contrast Light Mode and eye-friendly Soft Dark Mode with 100% reliable Customer Registration.
+
+---
+
 ## [2026-10-06] — Resilient POS Register Shift Activation & Error Handling
 **What:** Updated [`ShiftController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/ShiftController.php), [`PosController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/PosController.php), and [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue). Added store lookup fallback in `ShiftController::openShift` to prevent 404 ModelNotFound exceptions when store IDs mismatch. Added `initialActiveShift` prop in `PosController.php` so terminal mounts with active shift status immediately. Enhanced float amount parsing and explicit error messaging in `handleOpenShift` and `handleCloseShift`. Rebuilt Vite production bundle (`app-W77NGpAq.js`, `app-CAstZ0PK.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Fix POS shift opening failing silently or displaying generic error alerts when opening register shifts.

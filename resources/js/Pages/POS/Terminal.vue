@@ -318,12 +318,12 @@
         <!-- RIGHT COLUMN: Product Catalog Grid & Search -->
         <div 
           :class="[
-            'flex-1 flex-col h-full bg-slate-50 dark:bg-slate-950',
+            'flex-1 flex-col h-full bg-slate-100 dark:bg-slate-900',
             mobileActiveTab === 'catalog' ? 'flex' : 'hidden lg:flex'
           ]"
         >
           <!-- Search & Category Filters Bar -->
-          <div class="p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3">
+          <div class="p-4 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 space-y-3 shadow-2xs">
             <div class="flex items-center gap-3">
               <div class="flex-1 relative">
                 <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -351,7 +351,7 @@
             <div class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
               <button 
                 @click="selectedCategoryId = null"
-                :class="['px-4 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all', selectedCategoryId === null ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700']"
+                :class="['px-4 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all', selectedCategoryId === null ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20 font-black' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 shadow-2xs']"
               >
                 All Items
               </button>
@@ -359,7 +359,7 @@
                 v-for="cat in categories" 
                 :key="cat.id" 
                 @click="selectedCategoryId = cat.id"
-                :class="['px-4 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all', selectedCategoryId === cat.id ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700']"
+                :class="['px-4 py-1.5 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all', selectedCategoryId === cat.id ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20 font-black' : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 shadow-2xs']"
               >
                 {{ cat.name }}
               </button>
@@ -379,7 +379,7 @@
                 v-for="product in filteredProducts" 
                 :key="product.id" 
                 @click="addToCart(product)"
-                class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-500/80 transition-all cursor-pointer group flex flex-col justify-between hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/5"
+                class="p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700/80 hover:border-emerald-500/80 transition-all cursor-pointer group flex flex-col justify-between shadow-xs hover:-translate-y-0.5 hover:shadow-xl hover:shadow-emerald-500/10"
               >
                 <div>
                   <div class="flex items-center justify-between text-[10px] mb-2">
@@ -399,11 +399,11 @@
                   </div>
                 </div>
 
-                <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-800">
-                  <span class="font-black text-sm font-heading text-slate-900 dark:text-slate-100">
+                <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-slate-100 dark:border-slate-700/60">
+                  <span class="font-black text-sm font-heading text-emerald-700 dark:text-emerald-400">
                     ৳{{ formatMoney(product.selling_price) }}
                   </span>
-                  <span class="w-7 h-7 rounded-xl bg-slate-100 dark:bg-slate-800 group-hover:bg-emerald-500 text-slate-700 dark:text-slate-300 group-hover:text-slate-950 flex items-center justify-center transition-all font-black text-xs">
+                  <span class="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-slate-700/60 group-hover:bg-emerald-600 text-emerald-700 dark:text-emerald-300 group-hover:text-white flex items-center justify-center transition-all font-black text-xs border border-emerald-200 dark:border-slate-600 group-hover:border-emerald-600">
                     +
                   </span>
                 </div>
@@ -1192,19 +1192,33 @@ const handleCloseShift = async () => {
 };
 
 const submitNewCustomer = async () => {
-  if (!newCustomerForm.value.name || !newCustomerForm.value.phone) return;
+  if (!newCustomerForm.value.name?.trim() || !newCustomerForm.value.phone?.trim()) {
+    alert('Customer name and phone number are required.');
+    return;
+  }
   isAddingCustomer.value = true;
   try {
-    const res = await window.axios.post('/customers', newCustomerForm.value);
+    const payload = {
+      name: newCustomerForm.value.name.trim(),
+      phone: newCustomerForm.value.phone.trim(),
+      email: newCustomerForm.value.email?.trim() || null,
+      address: newCustomerForm.value.address?.trim() || null,
+    };
+    const res = await window.axios.post('/customers', payload);
     if (res.data && res.data.customer) {
-      localCustomers.value.push(res.data.customer);
-      selectedCustomerId.value = res.data.customer.id;
+      const cust = res.data.customer;
+      const existsIndex = localCustomers.value.findIndex(c => c.id === cust.id);
+      if (existsIndex === -1) {
+        localCustomers.value.push(cust);
+      }
+      selectedCustomerId.value = cust.id;
       newCustomerForm.value = { name: '', phone: '', email: '', address: '' };
       showAddCustomerModal.value = false;
-      showSyncNotification('success', `✅ Customer "${res.data.customer.name}" registered and selected!`);
+      showSyncNotification('success', `✅ Customer "${cust.name}" selected!`);
     }
   } catch (e) {
-    alert('Failed to add customer.');
+    const errorMsg = e.response?.data?.message || e.response?.data?.errors?.phone?.[0] || e.response?.data?.errors?.email?.[0] || e.response?.data?.errors?.name?.[0] || 'Failed to add customer.';
+    alert(errorMsg);
   } finally {
     isAddingCustomer.value = false;
   }

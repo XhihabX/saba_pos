@@ -248,6 +248,16 @@ class MerchantController extends Controller
     {
         $tenantId = $this->getTenantId();
 
+        // Sanitize optional empty strings to null
+        $input = $request->all();
+        if (isset($input['email']) && is_string($input['email']) && trim($input['email']) === '') {
+            $input['email'] = null;
+        }
+        if (isset($input['address']) && is_string($input['address']) && trim($input['address']) === '') {
+            $input['address'] = null;
+        }
+        $request->replace($input);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'phone' => 'required|string|max:50',
@@ -255,6 +265,19 @@ class MerchantController extends Controller
             'address' => 'nullable|string',
             'due_balance' => 'nullable|numeric|min:0',
         ]);
+
+        // Auto-select existing customer if phone matches within tenant
+        $existing = Customer::where('tenant_id', $tenantId)->where('phone', $validated['phone'])->first();
+        if ($existing) {
+            if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest' || $request->acceptsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Customer '{$existing->name}' selected.",
+                    'customer' => $existing,
+                ], 200);
+            }
+            return redirect()->back()->with('success', "Customer '{$existing->name}' selected.");
+        }
 
         $customer = Customer::create([
             'tenant_id' => $tenantId,
@@ -265,7 +288,7 @@ class MerchantController extends Controller
             'due_balance' => $validated['due_balance'] ?? 0.00,
         ]);
 
-        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest' || $request->acceptsJson()) {
             return response()->json([
                 'success' => true,
                 'message' => "Customer '{$customer->name}' registered successfully.",
