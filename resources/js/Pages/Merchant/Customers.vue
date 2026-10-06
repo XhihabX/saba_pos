@@ -65,8 +65,18 @@
             <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input v-model="searchQuery" type="text" placeholder="Search customer by name or phone..." class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors" />
           </div>
-          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-            Showing {{ filteredCustomers.length }} customers
+
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+              Showing {{ filteredCustomers.length }} customers
+            </span>
+            <button 
+              @click="handleExport" 
+              class="px-4 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-2 transition-colors whitespace-nowrap"
+            >
+              <Download class="w-4 h-4" />
+              <span>Export CSV</span>
+            </button>
           </div>
         </div>
 
@@ -219,7 +229,8 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Users, Plus, DollarSign, Award, Search, Edit3, Trash2 } from 'lucide-vue-next';
+import { Users, Plus, DollarSign, Award, Search, Edit3, Trash2, Download } from 'lucide-vue-next';
+import { exportToCSV } from '@/Utils/csvExport';
 
 const props = defineProps({
   customers: { type: Array, default: () => [] },
@@ -309,5 +320,18 @@ const deleteCustomer = (cust) => {
     const url = window.safeRoute ? window.safeRoute('merchant.customers.delete', cust.id) : `/merchant/customers/${cust.id}`;
     router.delete(url);
   }
+};
+
+const handleExport = () => {
+  const columns = [
+    { label: 'Customer ID', key: 'id' },
+    { label: 'Customer Name', key: 'name' },
+    { label: 'Phone', key: 'phone' },
+    { label: 'Email', key: 'email' },
+    { label: 'Credit Due (৳)', key: 'due_balance' },
+    { label: 'Loyalty Points', key: 'points' },
+    { label: 'Address', key: 'address' },
+  ];
+  exportToCSV('customers_credit_loyalty_ledger', columns, filteredCustomers.value);
 };
 </script>

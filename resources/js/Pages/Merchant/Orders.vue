@@ -79,8 +79,19 @@
             </select>
           </div>
 
-          <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-            Showing {{ filteredOrders.length }} orders
+          <div class="flex items-center gap-3">
+            <button 
+              @click="downloadCSV" 
+              class="px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all active:scale-95"
+              title="Download Orders Ledger as CSV"
+            >
+              <Download class="w-4 h-4" />
+              <span>Export CSV</span>
+            </button>
+
+            <div class="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+              Showing {{ filteredOrders.length }} orders
+            </div>
           </div>
         </div>
 
@@ -212,7 +223,8 @@
 <script setup>
 import { ref, computed } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { ShoppingBag, DollarSign, Receipt, CheckCircle2, Clock, Search, Printer } from 'lucide-vue-next';
+import { ShoppingBag, DollarSign, Receipt, CheckCircle2, Clock, Search, Printer, Download } from 'lucide-vue-next';
+import { exportToCSV } from '@/Utils/csvExport';
 
 const props = defineProps({
   orders: { type: Array, default: () => [] },
@@ -241,5 +253,18 @@ const filteredOrders = computed(() => {
 
 const openReceiptModal = (order) => {
   selectedOrder.value = order;
+};
+
+const downloadCSV = () => {
+  const columns = [
+    { key: 'invoice_no', label: 'Invoice No' },
+    { key: 'created_at', label: 'Date' },
+    { key: 'store.name', label: 'Store Outlet' },
+    { key: 'customer.name', label: 'Customer' },
+    { key: 'payment_method', label: 'Payment Method' },
+    { key: 'payment_status', label: 'Payment Status' },
+    { key: 'grand_total', label: 'Grand Total (৳)' },
+  ];
+  exportToCSV('sales_orders_ledger', columns, filteredOrders.value);
 };
 </script>

@@ -97,6 +97,16 @@
                 class="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-500"
               />
             </div>
+
+            <!-- Export CSV Button -->
+            <button 
+              @click="downloadCSV" 
+              class="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-extrabold text-xs flex items-center gap-2 transition-all active:scale-95"
+              title="Export Audit Logs as CSV"
+            >
+              <Download class="w-4 h-4" />
+              <span>Export CSV</span>
+            </button>
           </div>
         </div>
 
@@ -152,7 +162,8 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { ShieldCheck, Search, ShoppingCart, Clock, AlertTriangle } from 'lucide-vue-next';
+import { ShieldCheck, Search, ShoppingCart, Clock, AlertTriangle, Download } from 'lucide-vue-next';
+import { exportToCSV } from '@/Utils/csvExport';
 
 const props = defineProps({
   logs: [Object, Array],
@@ -184,5 +195,17 @@ const formatDate = (dateStr) => {
     hour: '2-digit',
     minute: '2-digit',
   });
+};
+
+const downloadCSV = () => {
+  const columns = [
+    { key: 'created_at', label: 'Timestamp' },
+    { key: 'user_name', label: 'User Name', formatter: (val, item) => val || item.user?.name || 'System' },
+    { key: 'store.name', label: 'Store Outlet', formatter: (val) => val || 'Chain HQ' },
+    { key: 'action', label: 'Action Type' },
+    { key: 'description', label: 'Description' },
+    { key: 'ip_address', label: 'IP Address' },
+  ];
+  exportToCSV('merchant_audit_security_logs', columns, allLogs.value);
 };
 </script>

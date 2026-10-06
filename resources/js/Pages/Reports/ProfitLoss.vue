@@ -2,13 +2,23 @@
   <AuthenticatedLayout>
     <div class="p-4 sm:p-6 lg:p-8 w-full space-y-6">
       <!-- Title Bar -->
-      <div>
-        <h1 class="text-2xl sm:text-3xl font-black font-heading text-slate-900">
-          Profit & Loss Statement
-        </h1>
-        <p class="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-          Automated Accounting with COGS, Gross Profit, and Net Profit
-        </p>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-black font-heading text-slate-900 dark:text-white">
+            Profit & Loss Statement
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
+            Automated Accounting with COGS, Gross Profit, and Net Profit
+          </p>
+        </div>
+
+        <button 
+          @click="handleExport" 
+          class="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-md shadow-indigo-500/20 transition-all self-start sm:self-auto"
+        >
+          <Download class="w-4 h-4" />
+          <span>Export Financial CSV</span>
+        </button>
       </div>
 
       <!-- Financial Formula Cards -->
@@ -159,6 +169,8 @@
 
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Download } from 'lucide-vue-next';
+import { exportToCSV } from '@/Utils/csvExport';
 
 const props = defineProps({
   startDate: String,
@@ -180,5 +192,20 @@ const formatMoney = (val) => {
 const getGrossMargin = () => {
   if (!props.totalSales || props.totalSales === 0) return '0.00';
   return ((props.grossProfit / props.totalSales) * 100).toFixed(2);
+};
+
+const handleExport = () => {
+  const financialSummary = [
+    { metric: 'Total Gross Revenue', amount: props.totalSales || 0 },
+    { metric: 'Cost of Goods Sold (COGS)', amount: props.cogs || 0 },
+    { metric: 'Gross Profit', amount: props.grossProfit || 0 },
+    { metric: 'Total Store Expenses', amount: props.totalExpenses || 0 },
+    { metric: 'Net Operating Profit', amount: props.netProfit || 0 },
+  ];
+  const columns = [
+    { label: 'Financial Metric', key: 'metric' },
+    { label: 'Amount (৳)', key: 'amount' },
+  ];
+  exportToCSV('profit_loss_financial_statement', columns, financialSummary);
 };
 </script>

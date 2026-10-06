@@ -64,15 +64,25 @@
             <p class="text-xs text-slate-500 dark:text-slate-400">Audit records for cashiers and store supervisors</p>
           </div>
 
-          <div class="w-full sm:w-80 relative">
-            <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              v-model="searchQuery" 
-              @keyup.enter="applyFilters"
-              placeholder="Search description, user..." 
-              class="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500"
-            />
+          <div class="flex items-center gap-3">
+            <div class="w-full sm:w-72 relative">
+              <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input 
+                type="text" 
+                v-model="searchQuery" 
+                @keyup.enter="applyFilters"
+                placeholder="Search description, user..." 
+                class="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+
+            <button 
+              @click="handleExport" 
+              class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center gap-2 transition-colors whitespace-nowrap"
+            >
+              <Download class="w-4 h-4" />
+              <span>Export CSV</span>
+            </button>
           </div>
         </div>
 
@@ -123,7 +133,8 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { ShieldCheck, Search, ShoppingCart, Clock } from 'lucide-vue-next';
+import { ShieldCheck, Search, ShoppingCart, Clock, Download } from 'lucide-vue-next';
+import { exportToCSV } from '@/Utils/csvExport';
 
 const props = defineProps({
   logs: [Object, Array],
@@ -152,5 +163,16 @@ const formatDate = (dateStr) => {
     hour: '2-digit',
     minute: '2-digit',
   });
+};
+
+const handleExport = () => {
+  const columns = [
+    { label: 'ID', key: 'id' },
+    { label: 'Date', key: 'created_at' },
+    { label: 'User', key: 'user_name' },
+    { label: 'Action', key: 'action' },
+    { label: 'Description', key: 'description' },
+  ];
+  exportToCSV('manager_branch_audit_logs', columns, allLogs.value);
 };
 </script>

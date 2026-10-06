@@ -165,6 +165,13 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Depends on:** `AuditLog`, `Tenant`, `Store`, `User`, `Auth`.
 - **Last updated:** 2026-10-06
 
+### 21. Universal Client-Side CSV Data Export Engine
+- **What it does:** Instant client-side CSV download engine with custom column mappers, automatic RFC-4180 CSV escaping, UTF-8 BOM encoding for Excel/Google Sheets compatibility, and zero server roundtrip latency.
+- **Where it lives:** `resources/js/Utils/csvExport.js`, integrated into `Products/Index.vue`, `Merchant/Orders.vue`, `Merchant/Customers.vue`, `Merchant/AuditLogs.vue`, `Manager/AuditLogs.vue`, `SuperAdmin/AuditLogs.vue`, and `Reports/ProfitLoss.vue`.
+- **Key design decisions:** Pure browser Blob-based download avoiding heavy PHP server payload rendering and latency.
+- **Depends on:** `resources/js/Utils/csvExport.js`.
+- **Last updated:** 2026-10-06
+
 ## Data Model
 
 ```

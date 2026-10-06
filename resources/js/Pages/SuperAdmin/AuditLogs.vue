@@ -74,14 +74,24 @@
             <p class="text-xs text-slate-500">Full history of actions taken by Super Admins and System Cron Workers</p>
           </div>
 
-          <div class="w-full sm:w-80 relative">
-            <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input 
-              type="text" 
-              v-model="searchQuery" 
-              placeholder="Search by action, admin name, description..." 
-              class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-rose-500"
-            />
+          <div class="flex items-center gap-3">
+            <div class="w-full sm:w-72 relative">
+              <Search class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input 
+                type="text" 
+                v-model="searchQuery" 
+                placeholder="Search by action, admin name, description..." 
+                class="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:outline-none focus:border-rose-500"
+              />
+            </div>
+
+            <button 
+              @click="handleExport" 
+              class="px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center gap-2 transition-colors whitespace-nowrap"
+            >
+              <Download class="w-4 h-4" />
+              <span>Export CSV</span>
+            </button>
           </div>
         </div>
 
@@ -135,7 +145,8 @@
 <script setup>
 import { ref, computed } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { ShieldCheck, Search, CheckCircle2, AlertTriangle, Lock, Globe } from 'lucide-vue-next';
+import { ShieldCheck, Search, CheckCircle2, AlertTriangle, Lock, Globe, Download } from 'lucide-vue-next';
+import { exportToCSV } from '@/Utils/csvExport';
 
 const props = defineProps({
   logs: [Object, Array],
@@ -174,6 +185,18 @@ const formatDate = (dateStr) => {
     minute: '2-digit',
     second: '2-digit',
   });
+};
+
+const handleExport = () => {
+  const columns = [
+    { label: 'ID', key: 'id' },
+    { label: 'Date', key: 'created_at' },
+    { label: 'Admin User', key: 'user_name' },
+    { label: 'IP Address', key: 'ip_address' },
+    { label: 'Action', key: 'action' },
+    { label: 'Description', key: 'description' },
+  ];
+  exportToCSV('superadmin_system_audit_logs', columns, filteredLogs.value);
 };
 </script>
 

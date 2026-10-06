@@ -14,8 +14,16 @@
 
         <div class="flex items-center gap-2">
           <button 
+            @click="downloadCSV" 
+            class="px-4 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-extrabold text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
+            title="Download Inventory Catalog as CSV"
+          >
+            <Download class="w-4 h-4" />
+            <span>Export CSV</span>
+          </button>
+          <button 
             @click="showCategoryModal = true" 
-            class="px-4 py-3 rounded-2xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-extrabold text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
+            class="px-4 py-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 font-extrabold text-sm flex items-center justify-center gap-2 transition-all active:scale-95"
           >
             <FolderPlus class="w-4 h-4" />
             <span>Add Category</span>
@@ -197,7 +205,8 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Plus, Search, X, Edit3, Trash2, FolderPlus, Tag, Scale } from 'lucide-vue-next';
+import { Plus, Search, X, Edit3, Trash2, FolderPlus, Tag, Scale, Download, AlertTriangle } from 'lucide-vue-next';
+import { exportToCSV } from '@/Utils/csvExport';
 
 const props = defineProps({
   products: Object,
@@ -278,6 +287,19 @@ const getStockQty = (product) => {
 
 const formatMoney = (val) => {
   return (parseFloat(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const downloadCSV = () => {
+  const columns = [
+    { key: 'name', label: 'Product Name' },
+    { key: 'sku', label: 'SKU' },
+    { key: 'barcode', label: 'Barcode' },
+    { key: 'category.name', label: 'Category' },
+    { key: 'purchase_cost', label: 'Cost Price (৳)' },
+    { key: 'selling_price', label: 'Selling Price (৳)' },
+    { key: 'stock_quantity', label: 'Stock Level', formatter: (_, item) => getStockQty(item) },
+  ];
+  exportToCSV('products_inventory_catalog', columns, filteredProducts.value);
 };
 
 const saveProduct = () => {
