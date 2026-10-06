@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Database Seeder Idempotency & Soft-Delete Guard Refactoring
+**What:** Refactored `database/seeders/SabaPosSeeder.php` to use `withTrashed()` for all soft-deletable models (`Tenant`, `Store`, `Product`, `Customer`) with explicit restoration logic (`if ($model->trashed()) $model->restore()`). Removed invalid `tenant_id` assignment from `Customer::firstOrCreate`. Re-verified PHPUnit test suite (5 / 5 passed, 51 green assertions) and confirmed `php artisan db:seed --force` is 100% idempotent and bug-free.
+**Why:** Eliminate `UniqueConstraintViolationException: 19 UNIQUE constraint failed: tenants.code` and `QueryException: table customers has no column named tenant_id` when seeding existing databases on cPanel hosting.
+**How:** Updated `database/seeders/SabaPosSeeder.php`; ran `php artisan db:seed --force` multiple times and `php artisan test`; committed changes.
+**Where:** `database/seeders/SabaPosSeeder.php`, `docs/CHANGELOG.md`
+**Impact:** `php artisan db:seed --force` now runs cleanly and idempotently on both fresh and existing SQLite/MySQL/PostgreSQL databases without throwing unique constraint exceptions.
+
+---
+
 ## [2026-10-06] — Database Migration & Seeding Helper Route Implementation
 **What:** Added automated database setup route `/setup-database-seed` in [`routes/web.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/routes/web.php). Fixed `super_admin` role map fallback in [`AuthController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/AuthController.php) (`admin@iotpos.com`). Rebuilt Vite production assets (`app-0Gppcz9E.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Provide instant 1-click database migration and seeding for production deployments, ensuring `admin@iotpos.com`, `merchant@iotpos.com`, `manager@iotpos.com`, and `cashier@iotpos.com` accounts exist in the live database.
