@@ -172,6 +172,13 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Depends on:** `resources/js/Utils/csvExport.js`.
 - **Last updated:** 2026-10-06
 
+### 22. Bangladesh Statutory NBR Compliance & Enterprise Regional Module
+- **What it does:** Provides 100% statutory NBR Musak-6.3 tax invoice compliance, store BIN number management, dynamic NBR QR codes, non-API Android MFS (bKash/Nagad/Rocket/Upay) notification webhook listener (`/api/v1/mfs-webhook`), TrxID regex verification with duplicate check, Bank Card POS Push-to-terminal bridge simulator, semi-integrated manual card fallback modal, customer credit limits (`credit_limit`), automated SMS payment reminders (`SmsService.php`), FEFO (First-Expired, First-Out) stock batch dispatch (`ProductBatch`), bilingual English & Bengali i18n translation dictionary (`messages.js`), IndexedDB offline sales persistence (`IotPosOfflineDB`), and automated Day-End Z-Reports (`ShiftController::zReport`).
+- **Where it lives:** `database/migrations/2026_10_06_000015_create_enterprise_compliance_tables.php`, `app/Services/SmsService.php`, `app/Services/EfdBridgeService.php`, `app/Http/Controllers/Api/MfsWebhookController.php`, `app/Models/MfsTransaction.php`, `app/Models/ProductBatch.php`, `resources/js/i18n/messages.js`, `resources/js/Utils/offlineStorage.js`, `resources/js/Pages/Reports/Vat.vue`, `resources/js/Pages/Reports/Stock.vue`, `resources/js/Pages/Manager/ZReport.vue`, `CheckoutModal.vue`, `ReceiptModal.vue`.
+- **Key design decisions:** Atomically deducts FEFO stock batches by earliest `expiry_date` during checkout; enforces customer `credit_limit` guards; provides client-side UUID `idempotency_key` for offline queue sync duplicate prevention.
+- **Depends on:** `MfsTransaction`, `ProductBatch`, `Store`, `Customer`, `Order`, `SmsService`, `EfdBridgeService`.
+- **Last updated:** 2026-10-06
+
 ## Data Model
 
 ```

@@ -174,4 +174,38 @@ class ShiftController extends Controller
             'shiftSummary' => $shift,
         ]);
     }
+
+    /**
+     * Render Day-End (Z) Report for Register Shift / Store Outlet
+     */
+    public function zReport($shiftId)
+    {
+        $shift = RegisterShift::with(['store', 'user'])->findOrFail($shiftId);
+
+        $orders = \App\Models\Order::where('store_id', $shift->store_id)
+            ->where('user_id', $shift->user_id)
+            ->whereBetween('created_at', [$shift->opened_at, $shift->closed_at ?? now()])
+            ->get();
+
+        $zData = [
+            'shift' => $shift,
+            'totalOrders' => $orders->count(),
+            'subtotal' => (float) $orders->sum('subtotal'),
+            'discountTotal' => (float) $orders->sum('discount_amount'),
+            'taxTotal' => (float) $orders->sum('tax_amount'),
+            'grandTotal' => (float) $orders->sum('grand_total'),
+            'cashSales' => (float) $shift->total_cash_sales,
+            'cardSales' => (float) $shift->total_card_sales,
+            'mobileSales' => (float) $shift->total_mobile_sales,
+            'expectedCash' => (float) $shift->expected_cash,
+            'actualCash' => (float) $shift->closing_cash_counted,
+            'variance' => (float) $shift->cash_difference,
+            'openedAt' => $shift->opened_at,
+            'closedAt' => $shift->closed_at,
+        ];
+
+        return Inertia::render('Manager/ZReport', [
+            'zData' => $zData,
+        ]);
+    }
 }

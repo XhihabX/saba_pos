@@ -316,6 +316,26 @@
               <span v-if="!sidebarCollapsed">Profit & Loss Accounting</span>
             </Link>
             <Link 
+              href="/reports/vat"
+              :class="[
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
+                $page.component === 'Reports/Vat' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
+              ]"
+            >
+              <Receipt class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span v-if="!sidebarCollapsed">NBR VAT (Mushak 6.3)</span>
+            </Link>
+            <Link 
+              href="/reports/stock"
+              :class="[
+                'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',
+                $page.component === 'Reports/Stock' ? 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-800 font-extrabold shadow-2xs' : 'border-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-slate-100'
+              ]"
+            >
+              <Boxes class="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span v-if="!sidebarCollapsed">Stock Valuation & FEFO</span>
+            </Link>
+            <Link 
               href="/merchant/settings"
               :class="[
                 'flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-xs transition-all border',

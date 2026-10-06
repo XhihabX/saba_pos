@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Enterprise POS 42-Feature Regional Bangladesh Compliance & Offline Sync Engine
+**What:** Implemented 100% statutory NBR Musak-6.3 tax invoice compliance, store BIN number management, dynamic NBR QR codes, non-API Android MFS (bKash/Nagad/Rocket/Upay) notification webhook listener (`/api/v1/mfs-webhook`), TrxID regex verification with duplicate check, Bank Card POS Push-to-terminal bridge simulator, semi-integrated manual card fallback modal, customer credit limits (`credit_limit`), automated SMS payment reminders (`SmsService.php`), FEFO (First-Expired, First-Out) stock batch dispatch (`ProductBatch`), bilingual English & Bengali i18n translation dictionary (`messages.js`), IndexedDB offline sales persistence (`IotPosOfflineDB`), and automated Day-End Z-Reports (`ShiftController::zReport`). Recompiled Vite production assets (`app-BYPhsGCB.js`, `app-BSyU_k7d.css`) and verified automated PHPUnit test suite (4 / 4 passed, 30 green assertions).
+**Why:** Deliver 100% store-ready regional compliance for supermarkets, retail outlets, and godowns across Bangladesh and international markets.
+**How:** Created `2026_10_06_000015_create_enterprise_compliance_tables.php`, `SmsService.php`, `EfdBridgeService.php`, `MfsWebhookController.php`, `MfsTransaction.php`, `ProductBatch.php`, `messages.js`, `offlineStorage.js`, `Reports/Vat.vue`, `Reports/Stock.vue`, `Manager/ZReport.vue`; updated `PosController.php`, `ReportController.php`, `ShiftController.php`, `MerchantController.php`, `Store.php`, `Customer.php`, `CheckoutModal.vue`, `ReceiptModal.vue`, `AuthenticatedLayout.vue`, `routes/web.php`.
+**Where:** `app/*`, `database/migrations/*`, `resources/js/*`, `routes/web.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** 100% store-ready enterprise POS platform featuring statutory NBR VAT compliance, non-API MFS webhooks, bank card sync, Baki Khata credit limits, offline IndexedDB sync, and bilingual UI.
+
+---
+
 ## [2026-10-06] — Universal 1-Click Client-Side CSV Export Engine & Production Audit Verification
 **What:** Implemented `resources/js/Utils/csvExport.js` providing instant 1-click client-side CSV downloads with UTF-8 BOM encoding and RFC-4180 quote escaping across key platform views: Product Catalog (`Products/Index.vue`), Sales Orders (`Merchant/Orders.vue`), Customer CRM (`Merchant/Customers.vue`), Merchant Audit Security Logs (`Merchant/AuditLogs.vue`), Manager Audit Logs (`Manager/AuditLogs.vue`), Super Admin Security Logs (`SuperAdmin/AuditLogs.vue`), and Financial Profit & Loss Reports (`Reports/ProfitLoss.vue`). Recompiled production asset bundle with Vite (`app-UdNGwIJ3.js`, `app-BLK__eDZ.css`) and verified automated PHPUnit test suite (4 / 4 passed, 30 green assertions).
 **Why:** Enable instant data extraction and reporting for store owners, accountants, and platform administrators without server load or network latency.

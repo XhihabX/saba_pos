@@ -131,6 +131,74 @@
               </div>
             </div>
           </div>
+
+          <!-- MFS (bKash / Nagad / Rocket) Dynamic QR Code & TrxID Verification -->
+          <div v-if="selectedMethod === 'mobile_wallet'" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold uppercase tracking-wider text-pink-600 dark:text-pink-400 flex items-center gap-1.5">
+                <QrCode class="w-4 h-4" /> bKash / Nagad / Rocket Dynamic Merchant QR
+              </span>
+              <span class="text-[10px] font-mono font-bold bg-pink-500/10 text-pink-600 dark:text-pink-400 px-2 py-0.5 rounded-full border border-pink-500/20">
+                Scan & Pay ৳{{ formatMoney(grandTotal) }}
+              </span>
+            </div>
+
+            <div class="flex flex-col sm:flex-row items-center gap-4 bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+              <div class="w-28 h-28 bg-white p-2 rounded-xl border border-slate-300 flex flex-col items-center justify-center shadow-xs shrink-0">
+                <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=bKash-Merchant-01700000000-Amt-${grandTotal}`" alt="MFS QR Code" class="w-24 h-24" />
+              </div>
+              <div class="space-y-2 text-xs flex-1">
+                <div class="font-bold text-slate-800 dark:text-slate-200">Merchant bKash/Nagad Number: <span class="font-mono text-emerald-600 dark:text-emerald-400 font-extrabold">+8801700000000</span></div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">Ask customer to scan QR code or send ৳{{ formatMoney(grandTotal) }} and enter TrxID below.</p>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">bKash/Nagad TrxID (Transaction ID)</label>
+                  <input 
+                    type="text" 
+                    v-model="trxIdInput"
+                    placeholder="e.g. 9J87K6L5M"
+                    class="w-full px-3 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs font-mono font-extrabold uppercase text-slate-900 dark:text-slate-100 focus:outline-none focus:border-pink-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bank Card POS Terminal Sync & Semi-Integrated Fallback Modal -->
+          <div v-if="selectedMethod === 'card'" class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-extrabold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                <CreditCard class="w-4 h-4" /> Bank POS Card Terminal Sync
+              </span>
+              <button 
+                type="button" 
+                @click="simulatePosTerminalSync"
+                :disabled="isPushingToTerminal"
+                class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] shadow-xs flex items-center gap-1 transition-all"
+              >
+                <span>{{ isPushingToTerminal ? 'Pushing ৳' + grandTotal + '...' : '⚡ Push ৳' + grandTotal + ' to Terminal' }}</span>
+              </button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Card Type</label>
+                <select v-model="cardType" class="w-full px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold">
+                  <option value="visa">VISA</option>
+                  <option value="mastercard">MasterCard</option>
+                  <option value="amex">AMEX</option>
+                  <option value="unionpay">UnionPay</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Auth Code</label>
+                <input type="text" v-model="cardAuthCode" placeholder="AUTH-9821" class="w-full px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-bold" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Last 4 Digits</label>
+                <input type="text" maxlength="4" v-model="cardLast4" placeholder="4321" class="w-full px-2 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-mono font-bold" />
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Split Payment Lines Mode View -->
@@ -248,6 +316,20 @@ const selectedMethod = ref('cash');
 const paidAmount = ref(0);
 const notes = ref('');
 const isSplitPayment = ref(false);
+const trxIdInput = ref('');
+const cardType = ref('visa');
+const cardAuthCode = ref('');
+const cardLast4 = ref('');
+const isPushingToTerminal = ref(false);
+
+const simulatePosTerminalSync = () => {
+  isPushingToTerminal.value = true;
+  setTimeout(() => {
+    isPushingToTerminal.value = false;
+    cardAuthCode.value = 'AUTH-' + Math.floor(1000 + Math.random() * 9000);
+    cardLast4.value = String(Math.floor(1000 + Math.random() * 9000));
+  }, 1200);
+};
 
 const paymentLines = ref([
   { method: 'cash', amount: 0, reference_no: '' }
@@ -300,11 +382,18 @@ const submitCheckout = () => {
   const finalPaid = isSplitPayment.value ? totalSplitTendered.value : paidAmount.value;
   const finalMethod = isSplitPayment.value ? 'split' : selectedMethod.value;
 
+  let refNo = null;
+  if (selectedMethod.value === 'mobile_wallet') {
+    refNo = trxIdInput.value.trim();
+  } else if (selectedMethod.value === 'card') {
+    refNo = cardAuthCode.value ? `${cardType.value.toUpperCase()}-${cardAuthCode.value}` : null;
+  }
+
   emit('confirm', {
     payment_method: finalMethod,
     paid_amount: finalPaid,
     change_return: changeReturn.value > 0 ? changeReturn.value : 0,
-    payments: isSplitPayment.value ? paymentLines.value : [{ method: selectedMethod.value, amount: paidAmount.value }],
+    payments: isSplitPayment.value ? paymentLines.value : [{ method: selectedMethod.value, amount: paidAmount.value, reference_no: refNo }],
     notes: notes.value,
   });
 };

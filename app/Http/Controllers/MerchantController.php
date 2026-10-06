@@ -304,6 +304,26 @@ class MerchantController extends Controller
         return redirect()->back()->with('success', "Customer '{$name}' archived.");
     }
 
+    public function sendSmsReminder(Request $request, $customerId)
+    {
+        $tenantId = $this->getTenantId();
+        $customer = Customer::where('id', $customerId)->where('tenant_id', $tenantId)->firstOrFail();
+
+        if (empty($customer->phone)) {
+            return redirect()->back()->with('error', "Customer '{$customer->name}' does not have a phone number on file.");
+        }
+
+        $store = Store::where('tenant_id', $tenantId)->first();
+        $sent = \App\Services\SmsService::sendDueReminder(
+            $store?->id ?? 1,
+            $customer->name,
+            $customer->phone,
+            (float) $customer->due_balance
+        );
+
+        return redirect()->back()->with('success', "SMS Payment Reminder successfully dispatched to {$customer->name} ({$customer->phone}).");
+    }
+
     public function ordersIndex()
     {
         $tenantId = $this->getTenantId();

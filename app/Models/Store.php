@@ -19,12 +19,17 @@ class Store extends Model
         'email',
         'address',
         'vat_number',
+        'bin_number',
         'currency_symbol',
         'default_tax_rate',
         'receipt_header',
         'receipt_footer',
         'is_active',
+        'is_godown',
         'allow_negative_stock',
+        'mfs_number',
+        'sms_gateway_url',
+        'sms_api_key',
     ];
 
     public function tenant()

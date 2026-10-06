@@ -224,9 +224,24 @@ class PosController extends Controller
                     'product_id' => $item['product']->id,
                 ]);
                 $stock->decrement('quantity', $item['quantity']);
+
+                // FEFO Batch Stock Deduction (First-Expired, First-Out)
+                $batches = \App\Models\ProductBatch::where('store_id', $store->id)
+                    ->where('product_id', $item['product']->id)
+                    ->where('quantity', '>', 0)
+                    ->orderBy('expiry_date', 'asc')
+                    ->get();
+
+                $neededQty = (float) $item['quantity'];
+                foreach ($batches as $batch) {
+                    if ($neededQty <= 0) break;
+                    $deduct = min((float) $batch->quantity, $neededQty);
+                    $batch->decrement('quantity', $deduct);
+                    $neededQty -= $deduct;
+                }
             }
 
-            // Multiple payments recording
+            // Multiple payments recording & MFS Claiming
             if (!empty($validated['payments'])) {
                 foreach ($validated['payments'] as $payment) {
                     OrderPayment::create([
@@ -235,6 +250,11 @@ class PosController extends Controller
                         'amount' => (float) $payment['amount'],
                         'reference_no' => $payment['reference_no'] ?? null,
                     ]);
+
+                    if (!empty($payment['reference_no'])) {
+                        \App\Models\MfsTransaction::where('trx_id', strtoupper(trim($payment['reference_no'])))
+                            ->update(['status' => 'claimed', 'order_id' => $order->id]);
+                    }
                 }
             } else {
                 OrderPayment::create([
@@ -244,13 +264,19 @@ class PosController extends Controller
                 ]);
             }
 
-            // Update Customer Ledger & Loyalty Points
+            // Update Customer Ledger & Loyalty Points with Credit Limit Guard
             if ($order->customer_id) {
                 $customer = Customer::find($order->customer_id);
                 if ($customer) {
                     if ($paymentStatus !== 'paid') {
                         $dueAmount = max(0, $grandTotal - $paidAmount);
                         if ($dueAmount > 0) {
+                            $creditLimit = (float) ($customer->credit_limit ?? 50000.00);
+                            if ($creditLimit > 0 && ((float) $customer->due_balance + $dueAmount) > $creditLimit) {
+                                throw ValidationException::withMessages([
+                                    'credit' => ["Customer credit limit of ৳" . number_format($creditLimit, 2) . " exceeded! Current Due: ৳" . number_format((float) $customer->due_balance, 2) . ", New Due: ৳" . number_format($dueAmount, 2) . "."]
+                                ]);
+                            }
                             $customer->increment('due_balance', $dueAmount);
                         }
                     }

@@ -108,6 +108,9 @@
                   <button v-if="(cust.due_balance || cust.due) > 0" @click="openPayDueModal(cust)" class="px-2.5 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-extrabold transition-colors">
                     Collect Due
                   </button>
+                  <button v-if="(cust.due_balance || cust.due) > 0" @click="sendSms(cust)" class="px-2.5 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-extrabold transition-colors" title="Send SMS Payment Reminder">
+                    📱 SMS Due
+                  </button>
                   <button @click="openEditModal(cust)" class="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 text-slate-600 dark:text-slate-300 transition-colors">
                     <Edit3 class="w-4 h-4" />
                   </button>
@@ -319,6 +322,14 @@ const deleteCustomer = (cust) => {
   if (confirm(`Are you sure you want to delete customer ${cust.name}?`)) {
     const url = window.safeRoute ? window.safeRoute('merchant.customers.delete', cust.id) : `/merchant/customers/${cust.id}`;
     router.delete(url);
+  }
+};
+
+const sendSms = (cust) => {
+  if (confirm(`Send SMS Due Payment Reminder to ${cust.name} (${cust.phone || 'No Phone'})?`)) {
+    router.post(`/customers/${cust.id}/send-sms`, {}, {
+      onSuccess: () => alert(`SMS Due Reminder dispatched for ${cust.name}!`),
+    });
   }
 };
 

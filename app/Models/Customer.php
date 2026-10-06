@@ -11,7 +11,7 @@ class Customer extends Model
 {
     use HasFactory, Tenantable, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'name', 'phone', 'email', 'address', 'due_balance', 'points'];
+    protected $fillable = ['tenant_id', 'name', 'phone', 'email', 'address', 'due_balance', 'credit_limit', 'points'];
 
     public function orders()
     {

@@ -21,8 +21,9 @@
           <img v-if="receipt.store?.logo_url" :src="receipt.store.logo_url" alt="Store Logo" class="h-10 mx-auto mb-2 object-contain" />
           <h2 class="text-base font-extrabold uppercase tracking-wide">{{ receipt.store?.name || receipt.store_name || 'IOT POS Store' }}</h2>
           <p class="text-[11px] text-slate-600">{{ receipt.store?.address || 'Main Branch' }}</p>
-          <p class="text-[11px] text-slate-600">Tel: {{ receipt.store?.phone || '+880 1700 000000' }} | VAT: {{ receipt.store?.vat_number || 'REG-9910' }}</p>
-          <p class="text-[10px] text-slate-500 mt-1 font-bold">{{ receipt.store?.receipt_header || 'Customer Receipt' }}</p>
+          <p class="text-[11px] text-slate-600 font-bold">BIN: {{ receipt.store?.bin_number || receipt.store?.vat_number || '123456789-0000' }} | MUSAK-6.3</p>
+          <p class="text-[11px] text-slate-600">Tel: {{ receipt.store?.phone || '+880 1700 000000' }}</p>
+          <p class="text-[10px] text-slate-500 mt-1 font-bold">{{ receipt.store?.receipt_header || 'NBR Statutory Tax Invoice / Receipt' }}</p>
         </div>
 
         <div class="mb-3 text-[11px] space-y-0.5 border-b border-dashed border-slate-400 pb-2">
@@ -95,10 +96,13 @@
           </div>
         </div>
 
-        <!-- Receipt Footer Note -->
-        <div class="text-center mt-4 space-y-1">
+        <!-- Dynamic NBR QR Code & Receipt Footer Note -->
+        <div class="text-center mt-4 space-y-2">
+          <div class="flex justify-center">
+            <img :src="`https://api.qrserver.com/v1/create-qr-code/?size=90x90&data=BIN-${receipt.store?.bin_number || '123456789'}-INV-${receipt.invoice_no}-Amt-${receipt.grand_total}`" alt="NBR Statutory QR Code" class="w-20 h-20 border p-1 rounded bg-white" />
+          </div>
           <p class="text-[10px] font-semibold">{{ receipt.store?.receipt_footer || 'Thank you for your visit!' }}</p>
-          <div class="font-mono text-[9px] text-slate-400">Powered by International Office Technology (IOT POS)</div>
+          <div class="font-mono text-[9px] text-slate-400">NBR Musak 6.3 Compliant | Powered by IOT POS</div>
         </div>
       </div>
 

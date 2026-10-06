@@ -166,7 +166,11 @@ Route::middleware(['auth', EnsureStoreManager::class, EnsureActiveSubscription::
     Route::get('/products/barcodes', [BarcodeController::class, 'index'])->name('products.barcodes');
     Route::get('/inventory/adjustments', [StockAdjustmentController::class, 'index'])->name('inventory.adjustments');
     Route::post('/inventory/adjustments', [StockAdjustmentController::class, 'store'])->name('inventory.adjustments.store');
+    Route::post('/customers/{id}/send-sms', [MerchantController::class, 'sendSmsReminder'])->name('merchant.customers.send-sms');
     Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
+    Route::get('/reports/vat', [ReportController::class, 'vatReport'])->name('reports.vat');
+    Route::get('/reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock');
+    Route::get('/manager/shifts/{id}/z-report', [ShiftController::class, 'zReport'])->name('manager.shifts.z-report');
 
     // Store Expenses Management
     Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');
@@ -180,4 +184,7 @@ Route::middleware(['auth', EnsureStoreManager::class, EnsureActiveSubscription::
     Route::post('/sales/quotations/{id}/convert', [QuotationController::class, 'convertToOrder'])->name('sales.quotations.convert');
     Route::delete('/sales/quotations/{id}', [QuotationController::class, 'deleteQuotation'])->name('sales.quotations.delete');
 });
+
+// 8. Public API Webhook Endpoints
+Route::post('/api/v1/mfs-webhook', [\App\Http\Controllers\Api\MfsWebhookController::class, 'handle'])->name('api.mfs-webhook');
 

@@ -108,4 +108,79 @@ class ReportController extends Controller
             'salesByCashier' => $salesByCashier,
         ]);
     }
+
+    public function vatReport(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+        $startDate = $request->input('start_date', date('Y-m-01'));
+        $endDate = $request->input('end_date', date('Y-m-d'));
+
+        $orders = Order::where('tenant_id', $tenantId)
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->with(['store', 'customer'])
+            ->latest()
+            ->get();
+
+        $totalSales = $orders->sum('grand_total');
+        $totalVat = $orders->sum('tax_amount');
+        $totalSubtotal = $orders->sum('subtotal');
+
+        $vatByStore = $orders->groupBy(fn($o) => $o->store?->name ?? 'Default Outlet')
+            ->map(fn($storeOrders, $storeName) => [
+                'store_name' => $storeName,
+                'bin_number' => $storeOrders->first()?->store?->bin_number ?? '123456789-0000',
+                'order_count' => $storeOrders->count(),
+                'net_amount' => (float) $storeOrders->sum('subtotal'),
+                'vat_collected' => (float) $storeOrders->sum('tax_amount'),
+                'gross_total' => (float) $storeOrders->sum('grand_total'),
+            ])->values();
+
+        return Inertia::render('Reports/Vat', [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'totalSales' => (float) $totalSales,
+            'totalSubtotal' => (float) $totalSubtotal,
+            'totalVat' => (float) $totalVat,
+            'vatByStore' => $vatByStore,
+            'orders' => $orders,
+        ]);
+    }
+
+    public function stockReport(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+
+        $products = \App\Models\Product::where('tenant_id', $tenantId)
+            ->with(['category', 'stocks.store'])
+            ->get();
+
+        $batches = \App\Models\ProductBatch::where('tenant_id', $tenantId)
+            ->with(['product', 'store'])
+            ->where('quantity', '>', 0)
+            ->orderBy('expiry_date', 'asc')
+            ->get();
+
+        $totalStockValue = $products->sum(function ($p) {
+            $totalQty = $p->stocks->sum('quantity');
+            return $totalQty * (float) $p->purchase_cost;
+        });
+
+        $totalPotentialRetailValue = $products->sum(function ($p) {
+            $totalQty = $p->stocks->sum('quantity');
+            return $totalQty * (float) $p->selling_price;
+        });
+
+        $expiringSoon = $batches->filter(function ($b) {
+            return $b->expiry_date && $b->expiry_date->diffInDays(now(), false) >= -30;
+        })->values();
+
+        return Inertia::render('Reports/Stock', [
+            'totalStockValue' => (float) $totalStockValue,
+            'totalPotentialRetailValue' => (float) $totalPotentialRetailValue,
+            'totalProducts' => $products->count(),
+            'products' => $products,
+            'batches' => $batches,
+            'expiringSoon' => $expiringSoon,
+        ]);
+    }
 }
