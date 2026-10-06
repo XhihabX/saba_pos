@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Vue Component State Initialization Fix for POS Terminal
+**What:** Added missing `cart = ref([])` and `orderDiscount = ref(0)` reactive state declarations in [`Terminal.vue`](file:///Users/macbookairm1/Downloads/Saba%20POS/resources/js/Pages/POS/Terminal.vue). Rebuilt Vite production assets (`app-C-RfSZzI.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Fix `Uncaught ReferenceError: cart is not defined` JavaScript error during Vue setup script evaluation, which previously caused component mounting to fail and render a blank white screen on `/pos`.
+**How:** Added missing `ref` declarations in `Terminal.vue`, ran `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `resources/js/Pages/POS/Terminal.vue`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** POS Counter Workstation (`/pos`) initializes smoothly without JavaScript reference errors or blank screen crashes.
+
+---
+
 ## [2026-10-06] — Automated Production Build Asset Sync & Cache Clearing Route
 **What:** Added automated asset directory recursive copying in [`routes/web.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/routes/web.php) under `/setup-database-seed` and `/sync-assets` endpoints to sync compiled `base_path('public/build')` bundle assets directly into `public_html/build` on cPanel environments. Rebuilt Vite production bundle (`app-0Gppcz9E.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Resolve cPanel public document root mismatch where `public_html/build` served outdated JS manifest files while `sabapos/public/build` contained the updated chunk files, causing blank screen rendering on `/pos`.

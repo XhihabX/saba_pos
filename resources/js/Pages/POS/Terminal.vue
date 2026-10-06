@@ -739,6 +739,8 @@ const selectedCustomerId = ref(props.customers?.[0]?.id || null);
 const selectedCategoryId = ref(null);
 const searchQuery = ref('');
 const presetTender = ref(0);
+const cart = ref([]);
+const orderDiscount = ref(0);
 
 const isGuestCustomer = computed(() => {
   return !selectedCustomerId.value || selectedCustomerId.value === 1 || selectedCustomerId.value === '1';
