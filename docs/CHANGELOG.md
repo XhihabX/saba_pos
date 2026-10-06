@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Automated Production Build Asset Sync & Cache Clearing Route
+**What:** Added automated asset directory recursive copying in [`routes/web.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/routes/web.php) under `/setup-database-seed` and `/sync-assets` endpoints to sync compiled `base_path('public/build')` bundle assets directly into `public_html/build` on cPanel environments. Rebuilt Vite production bundle (`app-0Gppcz9E.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Resolve cPanel public document root mismatch where `public_html/build` served outdated JS manifest files while `sabapos/public/build` contained the updated chunk files, causing blank screen rendering on `/pos`.
+**How:** Added recursive copy logic in `routes/web.php`, ran `npm run build` and `php artisan test`; committed and pushed to `origin/main`.
+**Where:** `routes/web.php`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** Visiting `https://xhihab.com/setup-database-seed` or `https://xhihab.com/sync-assets` automatically synchronizes JS/CSS build assets to `public_html/build` and purges blade/config caches.
+
+---
+
 ## [2026-10-06] — POS Controller Fail-Safe Refactoring & Customer Schema Resilience
 **What:** Refactored `PosController::index` and `PosController::getTenantId` in [`PosController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/PosController.php) with defensive `try-catch` blocks and fallback collections for stores, categories, products, and customers. Created migration `2026_10_06_000016_ensure_customers_tenant_id_column.php` to guarantee `tenant_id` exists on `customers` table. Rebuilt Vite production assets (`app-0Gppcz9E.js`, `app-BLmls9vp.css`) and verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Fix POS workstation (`/pos`) blank screen rendering when logging in as a cashier on live hosting environments where `customers` queries or uninitialized tenant context previously triggered uncaught 500 server errors.
