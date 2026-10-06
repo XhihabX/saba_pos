@@ -2,6 +2,15 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-06] — Production Build Asset Git Tracking & Deployment Synchronization Fix
+**What:** Removed `/public/build` from `.gitignore` and committed fresh compiled Vite production bundles (`public/build/manifest.json`, `app-B60f5YTF.js`, `app-BSyU_k7d.css`) directly to `origin/main`. Verified PHPUnit test suite (5 / 5 passed, 51 green assertions).
+**Why:** Fix root cause of cPanel deployment cache mismatch. Previous `.gitignore` prevented compiled frontend JS assets from being pushed to GitHub, causing server deployments (`git pull`) to retain legacy pre-rebrand JavaScript bundles containing old `Saba POS` header references and `#demo` links.
+**How:** Edited `.gitignore`; executed `rm -rf public/build && npm run build`; committed `public/build/` to git; verified tests.
+**Where:** `.gitignore`, `public/build/*`, `docs/CHANGELOG.md`
+**Impact:** `git pull` on cPanel now immediately receives the 100% updated **IOT POS** compiled frontend assets.
+
+---
+
 ## [2026-10-06] — ApplicationLogo Image Source Binding & Asset Recompile Fix
 **What:** Fixed `ApplicationLogo.vue` component image binding logic by ensuring `logoSrc` computed property is passed into `v-if` and `:src` attributes, defaulting `src` prop to `/images/logo.png`. Rebuilt Vite production assets (`app-B60f5YTF.js`, `app-BSyU_k7d.css`) and verified automated PHPUnit test suite (5 / 5 passed, 51 green assertions).
 **Why:** Ensure official **IOT POS** logo graphic (`/images/logo.png`) renders on the landing page header navbar and across authentication screens without broken fallbacks or legacy cached images.
