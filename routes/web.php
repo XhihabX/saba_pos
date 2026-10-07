@@ -140,7 +140,7 @@ Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () 
     Route::get('/pos/parked-orders', [PosController::class, 'getParkedOrders'])->name('pos.parked');
     Route::delete('/pos/parked-orders/{id}', [PosController::class, 'deleteParkedOrder'])->name('pos.parked.delete');
     Route::delete('/pos/parked/{id}', [PosController::class, 'deleteParkedOrder']);
-    Route::post('/pos/verify-pin', [PosController::class, 'verifyPin'])->middleware('throttle:5,1')->name('pos.verify-pin');
+    Route::post('/pos/verify-pin', [PosController::class, 'verifyPin'])->middleware('throttle.pin')->name('pos.verify-pin');
     Route::get('/pos/invoice/{id}/pdf', [PosController::class, 'downloadInvoicePdf'])->name('pos.invoice.pdf');
     Route::get('/vat/mushak-6.3/{id}', [PosController::class, 'downloadMushak63'])->name('vat.mushak63');
     Route::get('/reports/sales/export-csv', [PosController::class, 'exportSalesCsv'])->name('reports.sales.export-csv');
