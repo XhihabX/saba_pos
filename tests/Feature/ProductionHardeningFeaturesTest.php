@@ -89,6 +89,7 @@ class ProductionHardeningFeaturesTest extends TestCase
             'amount' => '250.00',
             'sender' => '01800000000',
             'gateway' => 'nagad',
+            'timestamp' => time(),
             'secret_key' => 'test_hmac_secret_key_12345',
         ]);
 

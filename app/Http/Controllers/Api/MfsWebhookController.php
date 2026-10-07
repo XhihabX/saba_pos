@@ -15,46 +15,60 @@ class MfsWebhookController extends Controller
      */
     public function handle(Request $request)
     {
-        $timestamp = (int) ($request->header('X-MFS-Timestamp') ?? $request->input('timestamp') ?? time());
-        $providedSignature = $request->header('X-MFS-Signature') ?? $request->input('signature');
-        $providedSecret = $request->header('X-MFS-Secret') ?? $request->input('secret_key') ?? $request->input('secret');
-
         $tenantIdHeader = $request->header('X-MFS-Tenant-ID') ?? $request->header('X-MFS-Tenant') ?? $request->input('tenant_id') ?? $request->input('tenant_code');
         $tenant = null;
         if (!empty($tenantIdHeader)) {
             $tenant = Tenant::where('id', $tenantIdHeader)->orWhere('code', $tenantIdHeader)->first();
+            if (!$tenant) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid tenant specified for MFS webhook.',
+                ], 422);
+            }
         }
 
-        $expectedSecret = (string) ($tenant?->mfs_webhook_secret ?? config('services.mfs.secret_key') ?? env('MFS_WEBHOOK_SECRET', ''));
+        $expectedSecret = (string) ($tenant?->mfs_webhook_secret ?? config('services.mfs.secret_key') ?? '');
 
-        // 1. Timestamp Drift Replay Protection (5-minute / 300s window)
-        if (!app()->environment('testing') && abs(time() - $timestamp) > 300) {
-            Log::warning("MFS Webhook Replay Blocked: Expired timestamp {$timestamp} from IP: " . $request->ip());
+        // Reject with 503 if no secret is configured (per-tenant or env)
+        if (empty($expectedSecret)) {
+            Log::warning("MFS Webhook unconfigured attempt from IP: " . $request->ip());
+            return response()->json([
+                'success' => false,
+                'message' => 'MFS Webhook service is unconfigured. Secret key required.',
+            ], 503);
+        }
+
+        // 1. Mandatory Timestamp Drift Replay Protection (5-minute / 300s window) - Never skipped
+        $rawTimestamp = $request->header('X-MFS-Timestamp') ?? $request->input('timestamp');
+        if ($rawTimestamp === null || !is_numeric($rawTimestamp) || abs(time() - (int) $rawTimestamp) > 300) {
+            Log::warning("MFS Webhook Replay Blocked: Expired or missing timestamp {$rawTimestamp} from IP: " . $request->ip());
             return response()->json([
                 'success' => false,
                 'message' => 'MFS Webhook request expired or replay attempt detected.',
             ], 403);
         }
+        $timestamp = (int) $rawTimestamp;
 
-        // 2. HMAC-SHA256 Signature or Per-Tenant Secret Verification
+        // 2. Signature / Secret Authentication
+        $providedSignature = $request->header('X-MFS-Signature') ?? $request->input('signature');
+        $providedSecret = $request->header('X-MFS-Secret') ?? $request->input('secret_key') ?? $request->input('secret');
+
         $isValidAuth = false;
 
-        if (!empty($expectedSecret)) {
-            if (!empty($providedSecret) && hash_equals($expectedSecret, (string) $providedSecret)) {
+        if (!empty($providedSecret) && hash_equals($expectedSecret, (string) $providedSecret)) {
+            $isValidAuth = true;
+        }
+
+        if (!empty($providedSignature)) {
+            $rawBody = $request->getContent();
+            $expectedBodySignature = hash_hmac('sha256', $rawBody, $expectedSecret);
+
+            $trxIdForSig = strtoupper(trim((string) $request->input('trx_id', '')));
+            $amountForSig = (string) $request->input('amount', '');
+            $expectedParamSignature = hash_hmac('sha256', "{$timestamp}.{$trxIdForSig}.{$amountForSig}", $expectedSecret);
+
+            if (hash_equals($expectedBodySignature, (string) $providedSignature) || hash_equals($expectedParamSignature, (string) $providedSignature)) {
                 $isValidAuth = true;
-            }
-
-            if (!empty($providedSignature)) {
-                $rawBody = $request->getContent();
-                $expectedBodySignature = hash_hmac('sha256', $rawBody, $expectedSecret);
-
-                $trxIdForSig = strtoupper(trim((string) $request->input('trx_id', '')));
-                $amountForSig = (string) $request->input('amount', '');
-                $expectedParamSignature = hash_hmac('sha256', "{$timestamp}.{$trxIdForSig}.{$amountForSig}", $expectedSecret);
-
-                if (hash_equals($expectedBodySignature, (string) $providedSignature) || hash_equals($expectedParamSignature, (string) $providedSignature)) {
-                    $isValidAuth = true;
-                }
             }
         }
 
@@ -73,11 +87,26 @@ class MfsWebhookController extends Controller
             'gateway' => 'nullable|string|in:bkash,nagad,rocket,upay,other',
         ]);
 
+        $targetTenantId = $tenant?->id ?? $request->user()?->tenant_id;
+        if (!$targetTenantId) {
+            $firstTenant = Tenant::first();
+            $targetTenantId = $firstTenant?->id;
+        }
+
+        if (!$targetTenantId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tenant identification required for MFS webhook.',
+            ], 422);
+        }
+
         $trxId = strtoupper(trim($validated['trx_id']));
-        $targetTenantId = $tenant?->id ?? ($request->user()?->tenant_id ?? 1);
 
         // Check duplicate TrxID
-        $existing = MfsTransaction::where('trx_id', $trxId)->first();
+        $existing = MfsTransaction::where('tenant_id', $targetTenantId)
+            ->where('trx_id', $trxId)
+            ->first();
+
         if ($existing) {
             return response()->json([
                 'success' => true,

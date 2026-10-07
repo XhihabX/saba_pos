@@ -379,6 +379,7 @@ class ProductionHardeningVerificationTest extends TestCase
             'trx_id' => 'TRX_UNAUTH_001',
             'amount' => '250.00',
             'gateway' => 'bkash',
+            'timestamp' => time(),
         ]);
         $response1->assertStatus(401);
 
