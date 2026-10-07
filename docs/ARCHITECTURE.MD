@@ -222,17 +222,17 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Last updated:** 2026-10-07
 
 ### 26. High-Scale SQL Aggregation, Stored COGS, Indexing & Telemetry Engine
-- **What it does:** Enterprise scale optimization supporting 500,000+ orders and 20,000+ products:
+- **What it does:** Enterprise scale optimization supporting 500,000+ orders, 1,500,000 order items, and 20,000+ products across 50 store branches over 1 year of sales history:
   1. Stored `cost_price` on `order_items` at sale time in `PosController::checkout`. Profit & Loss COGS uses SQL aggregation (`SUM(quantity * cost_price)`), eliminating loading all order items into PHP memory.
   2. All BI financial reports (`ReportController` for profit-loss, VAT, stock) replace unpaginated `->get()` calls with SQL aggregations (`SUM`, `COUNT`, `GROUP BY`) and paginate detail tables with `paginate(50)`.
   3. POS workstation payload capped to 50 initial products and 50 initial customers in `PosController::index`. Search API endpoints (`/pos/products/search`, `/pos/customers/search`) search with 300ms client debounce and limit results to 30.
   4. Composite performance database indexes applied across `orders`, `order_items`, `order_payments`, `stocks`, `customers`, `products`, `audit_logs`, and `mfs_transactions`.
   5. Scoped unique SKU constraint to per-tenant (`tenant_id`, `sku`), removing global SKU collision blocks.
   6. Universal server-side pagination across list pages and streaming CSV exports using `response()->stream()` with `chunk(1000)`.
-  7. Benchmark command (`BenchmarkPerformanceCommand.php`, `php artisan pos:benchmark`) reports DB driver (`sqlite`, `mysql`), PDO version, and live table row counts (`Products`, `Customers`, `Orders`, `OrderItems`, `Stocks`) with every performance telemetry metric.
-- **Where it lives:** `database/migrations/2026_10_07_000023_add_cost_price_to_order_items_and_indexes.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReportController.php`, `app/Console/Commands/BenchmarkPerformanceCommand.php`, `tests/Feature/ProductionHardeningVerificationTest.php`.
-- **Key design decisions:** Pure database-level aggregation, chunk streaming, and DB telemetry reporting eliminates memory leaks and caps response latency to sub-second speeds.
-- **Depends on:** `Order`, `OrderItem`, `Product`, `Customer`, `Stock`, `AuditLog`, `MfsTransaction`.
+  7. Benchmark command (`BenchmarkPerformanceCommand.php`, `php artisan pos:benchmark {--seed}`) features database safety guards (refuses to run unless MySQL driver is active and database is named like `*_benchmark` or `*_test`), chunked dataset seeding (1 tenant, 50 stores, 20,000 products, 5,000 customers, 500,000 orders, 1,500,000 items, and 500,000 payments spread over 12 months), 5-run statistical measurements (min/median/max duration, peak memory under 256 MB cap), EXPLAIN query profiling on the 5 slowest queries (flagging full table scans `type: ALL` and missing indexes), and dynamic PASS/FAIL verdict evaluation.
+- **Where it lives:** `database/migrations/2026_10_07_000023_add_cost_price_to_order_items_and_indexes.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReportController.php`, `app/Console/Commands/BenchmarkPerformanceCommand.php`, `tests/Feature/BenchmarkCommandTest.php`, `tests/Feature/ProductionHardeningVerificationTest.php`.
+- **Key design decisions:** Database safety guards prevent touching production DBs; bulk chunked transactions populates 50-store 1-year scale data; 5-run statistical telemetry and EXPLAIN analysis pinpoint exact query bottlenecks.
+- **Depends on:** `Order`, `OrderItem`, `Product`, `Customer`, `Stock`, `AuditLog`, `MfsTransaction`, `BenchmarkPerformanceCommand`.
 - **Last updated:** 2026-10-07
 
 ### 27. Multi-Tenant Data Isolation, 2FA TOTP, Authorization Policies & Security Hardening Engine

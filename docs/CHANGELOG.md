@@ -2,6 +2,21 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-07] — High-Scale 50-Store Benchmark Command Overhaul & Query EXPLAIN Engine (68 / 68 PHPUnit Green)
+**What:** Upgraded `BenchmarkPerformanceCommand.php` (`php artisan pos:benchmark {--seed}`) to support high-scale 50-store multi-outlet retail telemetry:
+1. **Database Safety Guard:** Refuses execution unless the active database connection driver is `mysql` and the database name matches regex `/(_benchmark|_test)$/i`. Never touches production or non-test databases.
+2. **Chunked 50-Store 1-Year Dataset Seeder (`--seed`):** Bulk-inserts 1 tenant, 50 store branches (`BM-ST-01` to `BM-ST-50`), 20,000 products (with stocks across 50 stores), 5,000 customers, and 500,000 orders with 1,500,000 order items and matching order payments spread randomly over 365 days (1 year) across the 50 store locations using high-speed chunked transactions.
+3. **5-Run Statistical Telemetry:** Measures 10 major endpoints 5 times each, outputting `min`, `median`, `max` durations, and `peak memory` under a 256 MB memory cap.
+4. **EXPLAIN Query Profiling:** Enables SQL query logging, captures the top 5 slowest queries across test runs, executes `EXPLAIN` on MySQL, and explicitly flags **Full Table Scans (`type: ALL`)** or **Missing Indexes**.
+5. **Dynamic PASS / FAIL Verdict:** Evaluates verdict dynamically (`PASS` if max <= 2.0s and memory <= 256MB across all endpoints; `FAIL` otherwise).
+6. **Automated Verification:** Added `BenchmarkCommandTest.php` verifying safety guard refusal behavior on non-MySQL/non-test databases. Executed full test suite: **68 / 68 passed (339 green assertions)**.
+**Why:** Provide verifiable, high-scale database telemetry on MySQL for a 50-store multi-outlet retail chain over 1 year of sales history, protecting production data and highlighting query bottlenecks via EXPLAIN.
+**How:** Refactored `BenchmarkPerformanceCommand.php`, added `BenchmarkCommandTest.php`, updated documentation, and verified 100% test execution.
+**Where:** `app/Console/Commands/BenchmarkPerformanceCommand.php`, `tests/Feature/BenchmarkCommandTest.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** `pos:benchmark` evaluates 50-store 1-year scale database performance safely on MySQL, outputting unedited 5-run statistics and EXPLAIN query analysis.
+
+---
+
 ## [2026-10-07] — Hardening, PHP 8.3 Platform Lock, Client UUID Enforcement, Git Filter Purge & Telemetry (67 / 67 PHPUnit Green)
 **What:** Executed 6-point enterprise hardening, dependency platform alignment, checkout idempotency enforcement, history purge, and telemetry:
 1. **Return VAT Cap (`ReturnController`):** Fixed refund cap math to compute proportional VAT (`lineGrossPaid / quantity * returnQty`). Allowed full refund of customer paid amount ($115 for 15% exclusive tax item) and blocked over-refund ($125). Added `ProductReturnVatTest.php`. Committed in `b87f4fc`.
