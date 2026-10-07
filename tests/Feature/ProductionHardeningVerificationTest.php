@@ -129,6 +129,7 @@ class ProductionHardeningVerificationTest extends TestCase
         ]);
 
         $invalidCheckout = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'paid_amount' => 575.00,
@@ -169,6 +170,7 @@ class ProductionHardeningVerificationTest extends TestCase
 
         // Negative stock rejected when allow_negative_stock = false
         $response1 = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 2]],
             'paid_amount' => 230.00,
@@ -181,6 +183,7 @@ class ProductionHardeningVerificationTest extends TestCase
 
         // Discount without supervisor PIN rejected
         $response2 = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'discount_amount' => 10.00,
@@ -192,6 +195,7 @@ class ProductionHardeningVerificationTest extends TestCase
 
         // Successful checkout with supervisor PIN & idempotency_key
         $response3 = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => 'IDEM-TEST-1001',
             'store_id' => $this->store->id,
             'idempotency_key' => 'IDEM-TEST-1001',
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
@@ -417,6 +421,7 @@ class ProductionHardeningVerificationTest extends TestCase
 
         // Oversell blocked when stock is 0 (no phantom 100 stock created)
         $res = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'paid_amount' => 115.00,
@@ -458,6 +463,7 @@ class ProductionHardeningVerificationTest extends TestCase
         ]);
 
         $payload = [
+            'client_uuid' => 'UNIQUE-UUID-KEY-999',
             'store_id' => $this->store->id,
             'idempotency_key' => 'UNIQUE-UUID-KEY-999',
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
@@ -506,6 +512,7 @@ class ProductionHardeningVerificationTest extends TestCase
 
         // Split payment sum mismatch rejected
         $res1 = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'paid_amount' => 115.00,
@@ -519,6 +526,7 @@ class ProductionHardeningVerificationTest extends TestCase
 
         // Fake MFS TrxID rejected
         $res2 = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'paid_amount' => 115.00,
@@ -586,6 +594,7 @@ class ProductionHardeningVerificationTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => 'UUID-INC-16',
             'store_id' => $this->store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'paid_amount' => 115.00,
@@ -633,6 +642,7 @@ class ProductionHardeningVerificationTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => 'UUID-EXC-17',
             'store_id' => $this->store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'paid_amount' => 115.00,
@@ -682,6 +692,7 @@ class ProductionHardeningVerificationTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => 'UUID-OVR-18',
             'store_id' => $this->store->id,
             'items' => [['product_id' => $productOverride->id, 'quantity' => 1]],
             'paid_amount' => 100.00,
@@ -733,6 +744,7 @@ class ProductionHardeningVerificationTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => 'UUID-BIN-19',
             'store_id' => $this->store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'paid_amount' => 115.00,
@@ -828,6 +840,7 @@ class ProductionHardeningVerificationTest extends TestCase
         ]);
 
         $res = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 2]],
             'paid_amount' => 230.00,

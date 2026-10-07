@@ -379,6 +379,7 @@ const formatMoney = (val) => {
 };
 
 const submitCheckout = () => {
+  if (props.isSubmitting) return;
   const finalPaid = isSplitPayment.value ? totalSplitTendered.value : paidAmount.value;
   const finalMethod = isSplitPayment.value ? 'split' : selectedMethod.value;
 

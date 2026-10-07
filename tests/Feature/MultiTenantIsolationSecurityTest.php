@@ -228,6 +228,7 @@ class MultiTenantIsolationSecurityTest extends TestCase
 
         // Attempt checkout with Store A (cross-tenant store ID)
         $resStoreA = $this->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->storeA->id,
             'items' => [['product_id' => $this->productB->id, 'quantity' => 1]],
             'paid_amount' => 575.00,
@@ -237,6 +238,7 @@ class MultiTenantIsolationSecurityTest extends TestCase
 
         // Attempt checkout with Product A (cross-tenant product ID) returns 404 Not Found
         $resProductA = $this->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->storeB->id,
             'items' => [['product_id' => $this->productA->id, 'quantity' => 1]],
             'paid_amount' => 230.00,

@@ -156,6 +156,7 @@ class MerchantToPosWorkflowTest extends TestCase
         // STEP 5: POS Counter Workstation Sales Checkout
         // =================================================================
         $checkoutPayload = [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $store->id,
             'customer_id' => $customer->id,
             'items' => [
@@ -255,6 +256,7 @@ class MerchantToPosWorkflowTest extends TestCase
 
         // Checkout without open shift should fail validation
         $response = $this->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1, 'unit_price' => 100]],
             'paid_amount' => 100,

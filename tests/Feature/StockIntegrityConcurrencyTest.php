@@ -66,6 +66,7 @@ class StockIntegrityConcurrencyTest extends TestCase
 
         // Checkout attempt for product with zero stock
         $response = $this->postJson('/pos/checkout', [
+            'client_uuid' => 'UUID-STOCK-ZERO-001',
             'store_id' => $store->id,
             'items' => [
                 ['product_id' => $product->id, 'quantity' => 2],
@@ -141,6 +142,7 @@ class StockIntegrityConcurrencyTest extends TestCase
 
         // 1st request
         $res1 = $this->postJson('/pos/checkout', [
+            'client_uuid' => $idempotencyKey,
             'store_id' => $store->id,
             'idempotency_key' => $idempotencyKey,
             'items' => [
@@ -159,6 +161,7 @@ class StockIntegrityConcurrencyTest extends TestCase
 
         // 2nd identical request with same idempotency_key
         $res2 = $this->postJson('/pos/checkout', [
+            'client_uuid' => $idempotencyKey,
             'store_id' => $store->id,
             'idempotency_key' => $idempotencyKey,
             'items' => [

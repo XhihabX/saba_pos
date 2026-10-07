@@ -1019,9 +1019,14 @@ const openCheckoutModal = () => {
 };
 
 const processCheckout = async (paymentDetails) => {
+  if (isSubmitting.value) return;
   isSubmitting.value = true;
 
+  const clientUuid = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'uuid-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
+
   const payload = {
+    client_uuid: clientUuid,
+    idempotency_key: clientUuid,
     store_id: selectedStoreId.value,
     customer_id: selectedCustomerId.value,
     items: cart.value,
@@ -1033,6 +1038,7 @@ const processCheckout = async (paymentDetails) => {
     change_return: paymentDetails.change_return || 0,
     payment_method: paymentDetails.payment_method,
     payments: paymentDetails.payments || [],
+    notes: paymentDetails.notes || null,
   };
 
   if (isOnline.value) {

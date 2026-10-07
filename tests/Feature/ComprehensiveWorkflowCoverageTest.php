@@ -117,6 +117,7 @@ class ComprehensiveWorkflowCoverageTest extends TestCase
 
         // Case A: Cart discount without supervisor PIN fails validation
         $badPayload = [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->storeA->id,
             'items' => [['product_id' => $this->product->id, 'quantity' => 2]],
             'discount_amount' => 50.00,

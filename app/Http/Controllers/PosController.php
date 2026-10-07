@@ -149,7 +149,7 @@ class PosController extends Controller
             'payment_method' => 'required|string',
             'payments' => 'nullable|array',
             'notes' => 'nullable|string',
-            'client_uuid' => 'nullable|string',
+            'client_uuid' => 'required|string',
             'idempotency_key' => 'nullable|string',
             'supervisor_pin' => 'nullable|string',
         ]);

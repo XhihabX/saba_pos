@@ -91,6 +91,7 @@ class StoreVatConfigurationTest extends TestCase
 
         // Exclusive VAT @ 7.5%: 100 subtotal + 7.50 VAT = 107.50 total
         $response = $this->postJson('/pos/checkout', [
+            'client_uuid' => 'UUID-STORE-VAT-001',
             'store_id' => $store->id,
             'items' => [
                 ['product_id' => $product->id, 'quantity' => 1],

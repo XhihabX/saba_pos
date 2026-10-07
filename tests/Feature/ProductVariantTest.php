@@ -118,6 +118,7 @@ class ProductVariantTest extends TestCase
     public function test_variant_creation_and_pos_checkout_stock_deduction()
     {
         $payload = [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->store->id,
             'items' => [
                 [
