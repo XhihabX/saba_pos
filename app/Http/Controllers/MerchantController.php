@@ -19,11 +19,8 @@ class MerchantController extends Controller
         if (!$user) {
             abort(401, 'Unauthenticated');
         }
-        if ($user->role === 'super_admin') {
-            return Store::first()->tenant_id ?? 1;
-        }
         if (!$user->tenant_id) {
-            abort(403, 'Merchant tenant context required');
+            abort(403, 'User does not belong to any tenant');
         }
         return $user->tenant_id;
     }
@@ -87,15 +84,16 @@ class MerchantController extends Controller
             return redirect()->back()->with('error', "Subscription plan limit of {$maxUsers} staff accounts reached for '{$tenant->plan_name}'. Please upgrade your SaaS tier to add more staff users.");
         }
 
-        User::create([
-            'tenant_id' => $tenantId,
+        $user = new User([
             'store_id' => $validated['store_id'],
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'role' => $validated['role'],
-            'permissions' => $validated['permissions'] ?? [],
         ]);
+        $user->tenant_id = $tenantId;
+        $user->role = $validated['role'];
+        $user->permissions = $validated['permissions'] ?? [];
+        $user->save();
 
         return redirect()->back()->with('success', 'Staff account created successfully!');
     }
@@ -116,19 +114,17 @@ class MerchantController extends Controller
 
         Store::where('id', $validated['store_id'])->where('tenant_id', $tenantId)->firstOrFail();
 
-        $updateData = [
+        $user->fill([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'role' => $validated['role'],
             'store_id' => $validated['store_id'],
-            'permissions' => $validated['permissions'] ?? $user->permissions,
-        ];
-
+        ]);
+        $user->role = $validated['role'];
+        $user->permissions = $validated['permissions'] ?? $user->permissions;
         if (!empty($validated['password'])) {
-            $updateData['password'] = Hash::make($validated['password']);
+            $user->password = Hash::make($validated['password']);
         }
-
-        $user->update($updateData);
+        $user->save();
 
         return redirect()->back()->with('success', "Staff account '{$user->name}' updated!");
     }

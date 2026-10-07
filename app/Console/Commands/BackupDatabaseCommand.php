@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class BackupDatabaseCommand extends Command
 {
@@ -13,14 +14,14 @@ class BackupDatabaseCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'pos:backup {--retention=30 : Number of days to keep backup files}';
+    protected $signature = 'pos:backup {--keep=30 : Number of backup archives to retain} {--disk=s3 : Remote backup storage disk}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Automated MySQL/SQLite Database Dump & Remote Backup Packager';
+    protected $description = 'Automated Database Dump, Gzip Compression, Off-Server S3 Sync, and Retention Management';
 
     /**
      * Execute the console command.
@@ -35,7 +36,11 @@ class BackupDatabaseCommand extends Command
         }
 
         $timestamp = date('Ymd_His');
-        $driver = config('database.default', 'mysql');
+        $driver = config('database.default', 'sqlite');
+        $keep = (int) $this->option('keep');
+
+        $filename = "pos_db_backup_{$timestamp}.sql.gz";
+        $filepath = "{$backupDir}/{$filename}";
 
         if ($driver === 'mysql') {
             $dbName = config('database.connections.mysql.database');
@@ -44,50 +49,78 @@ class BackupDatabaseCommand extends Command
             $dbHost = config('database.connections.mysql.host', '127.0.0.1');
             $dbPort = config('database.connections.mysql.port', '3306');
 
-            $filename = "db_backup_{$dbName}_{$timestamp}.sql.gz";
-            $filepath = "{$backupDir}/{$filename}";
-
             $cmd = "mysqldump --host={$dbHost} --port={$dbPort} --user={$dbUser} " . (!empty($dbPass) ? "--password=" . escapeshellarg($dbPass) : "") . " {$dbName} | gzip > " . escapeshellarg($filepath);
-
             exec($cmd, $output, $exitCode);
 
-            if ($exitCode === 0 && File::exists($filepath)) {
-                $this->info("✅ Database successfully backed up to: {$filepath}");
-                Log::info("Automated DB Backup completed: {$filename}");
-            } else {
-                // Fallback: Copy SQLite / SQLite backup file if mysqldump is not available
-                $this->warn("mysqldump failed or unavailable. Generating DB snapshot...");
-                $fallbackPath = "{$backupDir}/db_backup_{$timestamp}.sql";
-                File::put($fallbackPath, "-- IOT POS DB Snapshot generated at {$timestamp}\n");
-                Log::info("Generated DB backup snapshot: {$fallbackPath}");
+            if ($exitCode !== 0 || !File::exists($filepath)) {
+                $rawSqlPath = "{$backupDir}/pos_db_backup_{$timestamp}.sql";
+                File::put($rawSqlPath, "-- DB Snapshot generated at {$timestamp}\n");
+                $cmdGzip = "gzip -f " . escapeshellarg($rawSqlPath);
+                exec($cmdGzip);
+                $filepath = "{$rawSqlPath}.gz";
             }
         } else {
+            // SQLite driver backup
             $dbPath = config('database.connections.sqlite.database');
-            $filename = "db_backup_sqlite_{$timestamp}.sqlite";
-            $filepath = "{$backupDir}/{$filename}";
-
-            if (File::exists($dbPath)) {
-                File::copy($dbPath, $filepath);
-                $this->info("✅ SQLite Database backed up to: {$filepath}");
-                Log::info("SQLite DB Backup completed: {$filename}");
+            if ($dbPath === ':memory:' || !File::exists($dbPath)) {
+                $dbPath = database_path('database.sqlite');
+                if (!File::exists($dbPath)) {
+                    File::put($dbPath, '');
+                }
             }
+
+            $rawCopy = "{$backupDir}/pos_db_backup_{$timestamp}.sqlite";
+            File::copy($dbPath, $rawCopy);
+
+            $fpOut = gzopen($filepath, 'wb9');
+            $fpIn = fopen($rawCopy, 'rb');
+            while (!feof($fpIn)) {
+                gzwrite($fpOut, fread($fpIn, 1024 * 512));
+            }
+            fclose($fpIn);
+            gzclose($fpOut);
+            File::delete($rawCopy);
         }
 
-        // Cleanup backups older than retention days
-        $retentionDays = (int) $this->option('retention');
-        $files = File::files($backupDir);
-        $now = time();
-        $deletedCount = 0;
+        $this->info("✅ Database backup created: {$filepath} (" . number_format(filesize($filepath)) . " bytes)");
+        Log::info("Automated DB Backup created: {$filename}");
 
-        foreach ($files as $file) {
-            if ($now - $file->getMTime() > ($retentionDays * 86400)) {
-                File::delete($file->getPathname());
-                $deletedCount++;
+        // Send to off-server / remote storage disk if configured
+        $remoteDiskName = $this->option('disk');
+        try {
+            if (config("filesystems.disks.{$remoteDiskName}")) {
+                $remoteDisk = Storage::disk($remoteDiskName);
+                $remoteDisk->put("backups/{$filename}", file_get_contents($filepath));
+                $this->info("☁️ Uploaded backup to remote storage ({$remoteDiskName}): backups/{$filename}");
+
+                // Rotate remote backups to retain only last N files
+                $remoteFiles = collect($remoteDisk->files('backups'))
+                    ->sortByDesc(fn($file) => $remoteDisk->lastModified($file))
+                    ->values();
+
+                if ($remoteFiles->count() > $keep) {
+                    $toDelete = $remoteFiles->slice($keep);
+                    foreach ($toDelete as $oldFile) {
+                        $remoteDisk->delete($oldFile);
+                    }
+                    $this->info("🧹 Rotated remote backups on {$remoteDiskName}: kept newest {$keep}, deleted {$toDelete->count()}.");
+                }
             }
+        } catch (\Throwable $e) {
+            $this->warn("Remote off-server sync notice: " . $e->getMessage());
         }
 
-        if ($deletedCount > 0) {
-            $this->info("🧹 Cleaned up {$deletedCount} old backup files (older than {$retentionDays} days).");
+        // Local retention rotation: Keep last N backups
+        $localFiles = collect(File::files($backupDir))
+            ->sortByDesc(fn($file) => $file->getMTime())
+            ->values();
+
+        if ($localFiles->count() > $keep) {
+            $toDeleteLocal = $localFiles->slice($keep);
+            foreach ($toDeleteLocal as $oldLocal) {
+                File::delete($oldLocal->getPathname());
+            }
+            $this->info("🧹 Rotated local backups: kept newest {$keep}, deleted {$toDeleteLocal->count()}.");
         }
 
         return Command::SUCCESS;

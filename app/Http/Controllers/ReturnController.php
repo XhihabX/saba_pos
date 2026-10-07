@@ -23,10 +23,10 @@ class ReturnController extends Controller
         if (!$user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id && $user->role !== 'super_admin') {
+        if (!$user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
-        return $user->tenant_id ?? 1;
+        return $user->tenant_id;
     }
 
     public function index()
@@ -94,12 +94,13 @@ class ReturnController extends Controller
                 ]);
             }
 
-            // 3. Cap refund amount at what was actually paid
+            // 3. Cap refund amount at paid price of returned items
+            $itemPaidPrice = ((float) $orderItem->total / (float) $orderItem->quantity) * (float) $validated['quantity'];
             $alreadyRefundedAmount = (float) ProductReturn::where('order_id', $order->id)->sum('refund_amount');
-            $maxRefundableAmount = max(0, (float) $order->paid_amount - $alreadyRefundedAmount);
-            if ($validated['refund_amount'] > $maxRefundableAmount) {
+            $maxRefundableAmount = min($itemPaidPrice, max(0, (float) $order->paid_amount - $alreadyRefundedAmount));
+            if ((float) $validated['refund_amount'] > $maxRefundableAmount + 0.01) {
                 throw ValidationException::withMessages([
-                    'refund_amount' => ["Refund amount (৳{$validated['refund_amount']}) exceeds maximum available refund amount (৳{$maxRefundableAmount})."]
+                    'refund_amount' => ["Refund amount (৳{$validated['refund_amount']}) exceeds maximum refundable paid price for these items (৳" . number_format($maxRefundableAmount, 2) . ")."]
                 ]);
             }
 
@@ -139,6 +140,21 @@ class ReturnController extends Controller
 
             if ($latestBatch) {
                 $latestBatch->increment('quantity', $validated['quantity']);
+            }
+
+            // Adjust customer ledger and loyalty points
+            if ($order->customer_id) {
+                $customer = \App\Models\Customer::where('id', $order->customer_id)->where('tenant_id', $tenantId)->first();
+                if ($customer) {
+                    $pointsDeducted = floor((float) $validated['refund_amount'] / 100);
+                    if ($pointsDeducted > 0 && (int) $customer->points > 0) {
+                        $customer->decrement('points', min((int) $customer->points, (int) $pointsDeducted));
+                    }
+                    if ((float) $customer->due_balance > 0 && $order->payment_status !== 'paid') {
+                        $dueReduction = min((float) $customer->due_balance, (float) $validated['refund_amount']);
+                        $customer->decrement('due_balance', $dueReduction);
+                    }
+                }
             }
 
             // Record in active shift cash totals

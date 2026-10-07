@@ -23,8 +23,7 @@ class MerchantToPosWorkflowTest extends TestCase
 
     public function test_complete_merchant_to_pos_counter_end_to_end_workflow(): void
     {
-        $this->withoutMiddleware();
-        $this->withoutExceptionHandling();
+
 
         // =================================================================
         // STEP 1: Merchant Self-Service SaaS Registration
@@ -232,9 +231,8 @@ class MerchantToPosWorkflowTest extends TestCase
 
     public function test_pos_checkout_requires_active_shift(): void
     {
-        $this->withoutMiddleware();
+        $tenant = Tenant::create(['name' => 'Shift Test Merchant', 'email' => 'shifttest@iotpos.com', 'code' => 'SHIFTTEST', 'subscription_status' => 'active', 'expires_at' => now()->addYear()]);
 
-        $tenant = Tenant::create(['name' => 'Shift Test Merchant', 'email' => 'shifttest@iotpos.com', 'code' => 'SHIFTTEST']);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Main Outlet', 'code' => 'STORE001']);
         $user = User::create([
             'tenant_id' => $tenant->id,

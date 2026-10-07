@@ -13,14 +13,14 @@ class RestoreDatabaseCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'pos:restore {filename : The backup filename in storage/app/backups/}';
+    protected $signature = 'pos:restore {filename : Backup filename in storage/app/backups/} {--force : Force restore without prompt}';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Restore MySQL/SQLite Database from backup file';
+    protected $description = 'Restore Database from backup archive (.sql, .sqlite, .gz)';
 
     /**
      * Execute the console command.
@@ -36,11 +36,34 @@ class RestoreDatabaseCommand extends Command
         }
 
         $this->info("Starting database restore from: {$filename}");
-        $driver = config('database.default', 'mysql');
+        $driver = config('database.default', 'sqlite');
 
         if ($driver === 'sqlite') {
             $dbPath = config('database.connections.sqlite.database');
-            File::copy($backupPath, $dbPath);
+            if ($dbPath === ':memory:' || !File::exists($dbPath)) {
+                $dbPath = database_path('database.sqlite');
+            }
+
+            if (!File::exists(dirname($dbPath))) {
+                File::makeDirectory(dirname($dbPath), 0755, true);
+            }
+
+            if (str_ends_with($filename, '.gz')) {
+                $tempSqlite = storage_path('app/backups/temp_restore.sqlite');
+                $fpIn = gzopen($backupPath, 'rb');
+                $fpOut = fopen($tempSqlite, 'wb');
+                while (!gzeof($fpIn)) {
+                    fwrite($fpOut, gzread($fpIn, 1024 * 512));
+                }
+                fclose($fpOut);
+                gzclose($fpIn);
+
+                File::copy($tempSqlite, $dbPath);
+                File::delete($tempSqlite);
+            } else {
+                File::copy($backupPath, $dbPath);
+            }
+
             $this->info("✅ SQLite database successfully restored from {$filename}!");
             Log::info("SQLite database restored from {$filename}");
             return Command::SUCCESS;

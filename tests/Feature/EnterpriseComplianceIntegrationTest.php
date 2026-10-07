@@ -24,7 +24,7 @@ class EnterpriseComplianceIntegrationTest extends TestCase
 
     public function test_enterprise_compliance_mfs_fefo_baki_and_z_report_integration(): void
     {
-        $this->withoutMiddleware();
+
 
         // 1. Setup Tenant, Store with BIN, & User
         $tenant = Tenant::create([
@@ -51,9 +51,10 @@ class EnterpriseComplianceIntegrationTest extends TestCase
             'name' => 'Karem Rahaman',
             'email' => 'cashier@metro.com',
             'password' => Hash::make('password'),
-            'role' => 'cashier',
+            'role' => 'merchant',
             'pos_pin' => '1234',
         ]);
+
 
         $this->actingAs($cashier);
 
@@ -67,15 +68,25 @@ class EnterpriseComplianceIntegrationTest extends TestCase
             'opened_at' => now(),
         ]);
 
-        // 3. Test MFS Webhook Listener Endpoint
+        // 3. Test MFS Webhook Listener Endpoint with HMAC Signature
+        $timestamp = time();
+        $secret = 'test_hmac_secret_key_12345';
+        \Illuminate\Support\Facades\Config::set('services.mfs.secret_key', $secret);
+        $signature = hash_hmac('sha256', "{$timestamp}.9K87J6H5G4.1260", $secret);
+
         $mfsPayload = [
             'trx_id' => '9K87J6H5G4',
             'sender' => '01811223344',
-            'amount' => 1500.00,
+            'amount' => 1260.00,
             'gateway' => 'bkash',
         ];
 
-        $mfsResponse = $this->postJson('/api/v1/mfs-webhook', $mfsPayload);
+        $headers = [
+            'X-MFS-Signature' => $signature,
+            'X-MFS-Timestamp' => (string) $timestamp,
+        ];
+
+        $mfsResponse = $this->postJson('/api/v1/mfs-webhook', $mfsPayload, $headers);
         $mfsResponse->assertStatus(201);
         $mfsResponse->assertJson(['success' => true]);
 
@@ -84,7 +95,7 @@ class EnterpriseComplianceIntegrationTest extends TestCase
         $this->assertEquals('unclaimed', $mfsRecord->status);
 
         // Test duplicate MFS TrxID prevention
-        $dupMfsResponse = $this->postJson('/api/v1/mfs-webhook', $mfsPayload);
+        $dupMfsResponse = $this->postJson('/api/v1/mfs-webhook', $mfsPayload, $headers);
         $dupMfsResponse->assertStatus(200);
 
         // 4. Test Customer Credit Limit Guard (Baki Khata)
@@ -193,14 +204,16 @@ class EnterpriseComplianceIntegrationTest extends TestCase
         $this->assertTrue($smsSent, 'SMS service must dispatch or log due payment reminder');
 
         // 8. Test Day-End Z-Report Endpoint
-        $zResponse = $this->get("/manager/shifts/{$shift->id}/z-report");
+        $zResponse = $this->actingAs($cashier)->get("/manager/shifts/{$shift->id}/z-report");
         $zResponse->assertStatus(200);
 
         // 9. Test NBR VAT Report & Stock Valuation Report Endpoints
-        $vatResponse = $this->get('/reports/vat');
+        $vatResponse = $this->actingAs($cashier)->get('/reports/vat');
         $vatResponse->assertStatus(200);
 
-        $stockReportResponse = $this->get('/reports/stock');
+        $stockReportResponse = $this->actingAs($cashier)->get('/reports/stock');
         $stockReportResponse->assertStatus(200);
     }
 }
+
+

@@ -21,6 +21,8 @@ class Product extends Model
         'unit_id',
         'purchase_cost',
         'selling_price',
+        'vat_rate',
+        'vat_mode',
         'alert_quantity',
         'has_serial',
         'image',
@@ -46,4 +48,10 @@ class Product extends Model
     {
         return $this->hasMany(Stock::class);
     }
+
+    public function variants()
+    {
+        return $this->hasMany(ProductVariant::class);
+    }
 }
+

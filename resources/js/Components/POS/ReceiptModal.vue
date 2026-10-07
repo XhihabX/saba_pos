@@ -21,7 +21,7 @@
           <img v-if="receipt?.store?.logo_url" :src="receipt.store.logo_url" alt="Store Logo" class="h-10 mx-auto mb-2 object-contain" />
           <h2 class="text-base font-extrabold uppercase tracking-wide">{{ receipt?.store?.name || receipt?.store_name || 'IOT POS Store' }}</h2>
           <p class="text-[11px] text-slate-600">{{ receipt?.store?.address || 'Main Branch' }}</p>
-          <p class="text-[11px] text-slate-600 font-bold">BIN: {{ receipt?.store?.bin_number || receipt?.store?.vat_number || '123456789-0000' }} | MUSAK-6.3</p>
+          <p class="text-[11px] text-slate-600 font-bold">BIN: {{ receipt?.store?.bin_number || receipt?.store?.vat_number || 'N/A' }} | MUSHAK-6.3</p>
           <p class="text-[11px] text-slate-600">Tel: {{ receipt?.store?.phone || '+880 1700 000000' }}</p>
           <p class="text-[10px] text-slate-500 mt-1 font-bold">{{ receipt?.store?.receipt_header || 'NBR Statutory Tax Invoice / Receipt' }}</p>
         </div>
@@ -79,7 +79,7 @@
             <span>-৳{{ formatMoney(receipt?.discount_amount) }}</span>
           </div>
           <div class="flex justify-between">
-            <span>VAT / Tax ({{ receipt?.store?.default_tax_rate || 5 }}%):</span>
+            <span>VAT / Tax ({{ receipt?.store?.default_tax_rate || 15 }}%):</span>
             <span>৳{{ formatMoney(receipt?.tax_amount) }}</span>
           </div>
           <div class="flex justify-between text-sm font-extrabold border-t border-slate-900 pt-1 mt-1">

@@ -3,30 +3,43 @@
 namespace App\Services;
 
 use App\Models\Order;
+use Illuminate\Validation\ValidationException;
 
+/**
+ * EFD Bridge Module
+ * NOTICE: Payload generator only, not connected to an NBR device.
+ */
 class EfdBridgeService
 {
     /**
      * Generate NBR EFD (Electronic Fiscal Device) Statutory JSON Payload & Hash
+     * Note: Payload generator only, not connected to an NBR device.
      */
     public static function generatePayload(Order $order): array
     {
         $store = $order->store;
-        $binNumber = $store?->bin_number ?? $store?->vat_number ?? '123456789-0000';
-        $taxRate = (float) ($store?->default_tax_rate ?? 15.0);
+        $binNumber = trim($store?->bin_number ?? $store?->vat_number ?? '');
 
-        $items = $order->items->map(function ($item) use ($taxRate) {
+        if ($store?->is_vat_registered && empty($binNumber)) {
+            throw ValidationException::withMessages([
+                'store' => ['VAT registered store must have a valid BIN number before issuing invoices.']
+            ]);
+        }
+
+        $items = $order->items->map(function ($item) {
             return [
                 'item_code' => $item->product?->sku ?? "PRD-{$item->product_id}",
                 'item_name' => $item->product_name,
                 'quantity' => (float) $item->quantity,
                 'unit_price' => (float) $item->unit_price,
                 'total_price' => (float) $item->total,
-                'vat_amount' => round((float) $item->total * ($taxRate / 100), 2),
+                'vat_rate' => (float) ($item->vat_rate ?? 15.0),
+                'vat_amount' => (float) ($item->vat_amount ?? 0.00),
             ];
         })->toArray();
 
         $payload = [
+            'disclaimer' => 'Payload generator only, not connected to an NBR device',
             'bin' => $binNumber,
             'store_code' => $store?->code ?? 'STORE-001',
             'invoice_number' => $order->invoice_no,
@@ -39,10 +52,12 @@ class EfdBridgeService
             'items' => $items,
         ];
 
-        $securityHash = hash_hmac('sha256', json_encode($payload), 'IOT_POS_EFD_SECRET_KEY');
+        $efdSecret = config('services.efd.secret_key') ?: env('EFD_SECRET_KEY', '');
+        $securityHash = hash_hmac('sha256', json_encode($payload), $efdSecret);
         $payload['security_hash'] = $securityHash;
         $payload['efd_status'] = 'READY_FOR_SDC';
 
         return $payload;
     }
 }
+

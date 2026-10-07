@@ -15,11 +15,8 @@ class BarcodeController extends Controller
         if (!$user) {
             abort(401, 'Unauthenticated');
         }
-        if ($user->role === 'super_admin') {
-            return Store::first()->tenant_id ?? 1;
-        }
         if (!$user->tenant_id) {
-            abort(403, 'Merchant tenant context required');
+            abort(403, 'User does not belong to any tenant');
         }
         return $user->tenant_id;
     }

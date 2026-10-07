@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -48,6 +49,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::policy(\App\Models\Store::class, \App\Policies\StorePolicy::class);
+        Gate::policy(\App\Models\Product::class, \App\Policies\ProductPolicy::class);
+        Gate::policy(\App\Models\Order::class, \App\Policies\OrderPolicy::class);
+        Gate::policy(\App\Models\Customer::class, \App\Policies\CustomerPolicy::class);
         $rawAppUrl = (string) env('APP_URL', '');
 
         // Enforce HTTPS scheme on production or when behind SSL / Reverse Proxies (cPanel, Nginx, Cloudflare)

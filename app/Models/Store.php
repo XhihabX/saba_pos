@@ -27,6 +27,8 @@ class Store extends Model
         'is_active',
         'is_godown',
         'allow_negative_stock',
+        'vat_mode',
+        'is_vat_registered',
         'mfs_number',
         'sms_gateway_url',
         'sms_api_key',

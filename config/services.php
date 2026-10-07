@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'efd' => [
+        'secret_key' => env('EFD_SECRET_KEY'),
+    ],
+
+    'mfs' => [
+        'secret_key' => env('MFS_WEBHOOK_SECRET'),
+    ],
+
 ];
+

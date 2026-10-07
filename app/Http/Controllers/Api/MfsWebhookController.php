@@ -25,7 +25,7 @@ class MfsWebhookController extends Controller
             $tenant = Tenant::where('id', $tenantIdHeader)->orWhere('code', $tenantIdHeader)->first();
         }
 
-        $expectedSecret = $tenant?->mfs_webhook_secret ?? config('services.mfs.secret_key', env('MFS_WEBHOOK_SECRET', 'iot_pos_mfs_secret_key_2026'));
+        $expectedSecret = (string) ($tenant?->mfs_webhook_secret ?? config('services.mfs.secret_key') ?? env('MFS_WEBHOOK_SECRET', ''));
 
         // 1. Timestamp Drift Replay Protection (5-minute / 300s window)
         if (!app()->environment('testing') && abs(time() - $timestamp) > 300) {
@@ -36,23 +36,26 @@ class MfsWebhookController extends Controller
             ], 403);
         }
 
-        // 2. HMAC-SHA256 or Secret Key Verification
+        // 2. HMAC-SHA256 Signature or Per-Tenant Secret Verification
         $isValidAuth = false;
-        if (!empty($providedSecret) && hash_equals($expectedSecret, (string) $providedSecret)) {
-            $isValidAuth = true;
-        }
 
-        if (!empty($providedSignature)) {
-            $trxIdForSig = strtoupper(trim((string) $request->input('trx_id', '')));
-            $amountForSig = (string) $request->input('amount', '');
-            $expectedSignature = hash_hmac('sha256', "{$timestamp}.{$trxIdForSig}.{$amountForSig}", $expectedSecret);
-            if (hash_equals($expectedSignature, (string) $providedSignature)) {
+        if (!empty($expectedSecret)) {
+            if (!empty($providedSecret) && hash_equals($expectedSecret, (string) $providedSecret)) {
                 $isValidAuth = true;
             }
-        }
 
-        if (app()->environment('testing') && empty($providedSecret) && empty($providedSignature)) {
-            $isValidAuth = true;
+            if (!empty($providedSignature)) {
+                $rawBody = $request->getContent();
+                $expectedBodySignature = hash_hmac('sha256', $rawBody, $expectedSecret);
+
+                $trxIdForSig = strtoupper(trim((string) $request->input('trx_id', '')));
+                $amountForSig = (string) $request->input('amount', '');
+                $expectedParamSignature = hash_hmac('sha256', "{$timestamp}.{$trxIdForSig}.{$amountForSig}", $expectedSecret);
+
+                if (hash_equals($expectedBodySignature, (string) $providedSignature) || hash_equals($expectedParamSignature, (string) $providedSignature)) {
+                    $isValidAuth = true;
+                }
+            }
         }
 
         if (!$isValidAuth) {

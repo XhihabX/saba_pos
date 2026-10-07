@@ -18,6 +18,7 @@ use App\Http\Controllers\StockTransferController;
 use App\Http\Controllers\StoreManagerController;
 use App\Http\Controllers\SuperAdminController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\TwoFactorController;
 use App\Http\Middleware\EnsureActiveSubscription;
 use App\Http\Middleware\EnsureMerchant;
 use App\Http\Middleware\EnsureStoreManager;
@@ -32,9 +33,11 @@ Route::post('/register', [AuthController::class, 'register'])->middleware('throt
 Route::get('/pending-approval', [AuthController::class, 'showPendingApproval'])->middleware('auth')->name('pending.approval');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// 2. Public SaaS Marketing Landing Page & Public Sandbox POS Demo
+// 2. Public SaaS Marketing Landing Page, Public Sandbox POS Demo & System Telemetry Health Check
 Route::get('/', [LandingController::class, 'index'])->name('landing');
 Route::get('/demo/pos', [PosController::class, 'sandboxDemo'])->name('pos.demo');
+Route::get('/health', [\App\Http\Controllers\HealthController::class, 'check'])->name('health');
+
 
 
 
@@ -137,11 +140,18 @@ Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () 
     Route::get('/pos/parked-orders', [PosController::class, 'getParkedOrders'])->name('pos.parked');
     Route::delete('/pos/parked-orders/{id}', [PosController::class, 'deleteParkedOrder'])->name('pos.parked.delete');
     Route::delete('/pos/parked/{id}', [PosController::class, 'deleteParkedOrder']);
-    Route::post('/pos/verify-pin', [PosController::class, 'verifyPin'])->name('pos.verify-pin');
+    Route::post('/pos/verify-pin', [PosController::class, 'verifyPin'])->middleware('throttle:5,1')->name('pos.verify-pin');
     Route::get('/pos/invoice/{id}/pdf', [PosController::class, 'downloadInvoicePdf'])->name('pos.invoice.pdf');
     Route::get('/vat/mushak-6.3/{id}', [PosController::class, 'downloadMushak63'])->name('vat.mushak63');
     Route::get('/reports/sales/export-csv', [PosController::class, 'exportSalesCsv'])->name('reports.sales.export-csv');
     Route::get('/pos/products/search', [PosController::class, 'searchProducts'])->name('pos.products.search');
+    Route::get('/pos/customers/search', [PosController::class, 'searchCustomers'])->name('pos.customers.search');
+
+    // 2FA TOTP Endpoints
+    Route::get('/2fa/setup', [TwoFactorController::class, 'setup'])->name('2fa.setup');
+    Route::post('/2fa/enable', [TwoFactorController::class, 'enable'])->name('2fa.enable');
+    Route::get('/2fa/challenge', [TwoFactorController::class, 'challenge'])->name('2fa.challenge');
+    Route::post('/2fa/verify', [TwoFactorController::class, 'verify'])->name('2fa.verify');
 
     // Register Shift Endpoints
     Route::get('/pos/shift/status', [ShiftController::class, 'currentShiftStatus'])->name('pos.shift.status');
@@ -152,9 +162,24 @@ Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () 
     Route::get('/hrm/attendance', [AttendanceController::class, 'index'])->name('hrm.attendance');
     Route::post('/hrm/attendance/toggle', [AttendanceController::class, 'toggleClock'])->name('hrm.attendance.toggle');
 
+    // PDF Export Endpoints (Dompdf)
+    Route::get('/invoices/{order}/pdf', [\App\Http\Controllers\PdfExportController::class, 'downloadInvoice'])->name('pdf.invoice');
+    Route::get('/invoices/{order}/mushak63/pdf', [\App\Http\Controllers\PdfExportController::class, 'downloadMushak63'])->name('pdf.mushak63');
+    Route::get('/reports/branch/pdf', [\App\Http\Controllers\PdfExportController::class, 'downloadBranchReport'])->name('pdf.branch-report');
+
+    // Stock Audit Workflow Endpoints
+    Route::get('/stock-audits', [\App\Http\Controllers\StockAuditController::class, 'index'])->name('stock-audits.index');
+    Route::post('/stock-audits', [\App\Http\Controllers\StockAuditController::class, 'store'])->name('stock-audits.store');
+    Route::post('/stock-audits/{audit}/items', [\App\Http\Controllers\StockAuditController::class, 'updateItems'])->name('stock-audits.update-items');
+    Route::post('/stock-audits/{audit}/approve', [\App\Http\Controllers\StockAuditController::class, 'approve'])->name('stock-audits.approve');
+
+    // Branch Performance Report
+    Route::get('/reports/branch', [ReportController::class, 'branchReport'])->name('reports.branch');
+
     // Inline Customer Registration for POS Cashier Workstation
     Route::post('/customers', [MerchantController::class, 'storeCustomer'])->name('customers.store');
 });
+
 
 use App\Http\Controllers\StockAdjustmentController;
 
@@ -192,5 +217,5 @@ Route::middleware(['auth', EnsureStoreManager::class, EnsureActiveSubscription::
 });
 
 // 8. Public API Webhook Endpoints
-Route::post('/api/v1/mfs-webhook', [\App\Http\Controllers\Api\MfsWebhookController::class, 'handle'])->name('api.mfs-webhook');
+Route::post('/api/v1/mfs-webhook', [\App\Http\Controllers\Api\MfsWebhookController::class, 'handle'])->middleware('throttle:30,1')->name('api.mfs-webhook');
 

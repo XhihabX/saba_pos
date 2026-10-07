@@ -14,11 +14,16 @@ class OrderItem extends Model
         'tenant_id',
         'order_id',
         'product_id',
+        'variant_id',
+        'variant_name',
         'product_name',
         'serial_number',
         'quantity',
         'unit_price',
+        'cost_price',
         'discount',
+        'vat_rate',
+        'vat_amount',
         'total',
     ];
 
@@ -31,4 +36,10 @@ class OrderItem extends Model
     {
         return $this->belongsTo(Product::class);
     }
+
+    public function variant()
+    {
+        return $this->belongsTo(ProductVariant::class);
+    }
 }
+

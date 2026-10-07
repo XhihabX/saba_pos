@@ -18,11 +18,8 @@ class ShiftController extends Controller
         if (!$user) {
             abort(401, 'Unauthenticated');
         }
-        if ($user->role === 'super_admin') {
-            return Store::first()->tenant_id ?? 1;
-        }
         if (!$user->tenant_id) {
-            abort(403, 'Merchant tenant context required');
+            abort(403, 'User does not belong to any tenant');
         }
         return $user->tenant_id;
     }
@@ -55,20 +52,12 @@ class ShiftController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        // Verify store belongs to tenant or fallback to available tenant store
+        // Verify store belongs to tenant
         $store = Store::where('id', $validated['store_id'])->where('tenant_id', $tenantId)->first();
         if (!$store) {
-            $store = Store::where('tenant_id', $tenantId)->first() ?? Store::where('id', $validated['store_id'])->first() ?? Store::first();
-        }
-
-        if (!$store) {
-            if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest' || $request->acceptsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'No valid store outlet found for shift opening.',
-                ], 422);
-            }
-            return redirect()->back()->withErrors(['store_id' => 'No valid store outlet found for shift opening.']);
+            throw ValidationException::withMessages([
+                'store_id' => ['Selected store outlet is invalid or belongs to another tenant.']
+            ]);
         }
 
         $userId = auth()->id();
@@ -151,13 +140,26 @@ class ShiftController extends Controller
               ->whereBetween('created_at', [$shift->opened_at, now()]);
         })->where('payment_method', 'mobile_wallet')->sum('amount');
 
-        $totalChangeReturn = \App\Models\Order::where('store_id', $shift->store_id)
+        $totalChangeReturn = (float) \App\Models\Order::where('store_id', $shift->store_id)
             ->where('user_id', $shift->user_id)
             ->whereBetween('created_at', [$shift->opened_at, now()])
             ->sum('change_return');
 
-        $expectedCash = $shift->opening_cash + $cashSales - $totalChangeReturn;
-        $cashDiff = $validated['closing_cash_counted'] - $expectedCash;
+        $cashRefunds = (float) \App\Models\ProductReturn::where('store_id', $shift->store_id)
+            ->whereBetween('created_at', [$shift->opened_at, now()])
+            ->sum('refund_amount');
+
+        $cashDuePayments = (float) \App\Models\AuditLog::where('tenant_id', $tenantId)
+            ->where('store_id', $shift->store_id)
+            ->where('action', 'customer_due_paid')
+            ->whereBetween('created_at', [$shift->opened_at, now()])
+            ->get()
+            ->sum(function($log) {
+                return (float) ($log->payload['amount'] ?? 0);
+            });
+
+        $expectedCash = round((float) $shift->opening_cash + (float) $cashSales - $cashRefunds + $cashDuePayments - $totalChangeReturn, 2);
+        $cashDiff = round((float) $validated['closing_cash_counted'] - $expectedCash, 2);
 
         $shift->update([
             'closing_cash_counted' => $validated['closing_cash_counted'],

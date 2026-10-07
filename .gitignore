@@ -27,3 +27,6 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# stray sqlite file from misconfigured DB_DATABASE
+/:memory:
