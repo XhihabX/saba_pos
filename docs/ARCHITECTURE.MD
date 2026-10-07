@@ -183,45 +183,45 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **What it does:** Enforces zero-shortcut production security controls across authentication, secret management, multi-tenancy, and API webhooks:
   1. Deleted legacy seeding/sync web routes (`/setup-database-seed`, `/sync-assets`); seeding restricted strictly to Artisan CLI commands.
   2. Isolated EFD and MFS secrets (`EFD_SECRET_KEY`, `MFS_WEBHOOK_SECRET`) into `.env` / `config/services.php` with zero hardcoded fallback strings.
-  3. Hardened `PosController::verifyPin` to validate `pos_pin` strictly using `Hash::check()` (removing user-ID and password fallbacks) and added `throttle:5,1` rate-limiting (HTTP 429 lockout after 5 failed attempts/min).
+  3. Hardened `PosController::verifyPin` using `ThrottleFailedPinAttempts` middleware (`throttle.pin`) tracking failed attempts per `user_id` + IP key (`pos-pin-failed:{user}:{ip}`), returning HTTP 429 lockout after 5 failed attempts/min without locking out successful entries.
   4. Enforced strict HTTP 403 authorization for orphan users without a `tenant_id` across all controllers, eliminating default tenant auto-assignment. Removed `?? Store::first()` fallbacks in sales checkout and product returns, returning HTTP 422 validation errors for invalid store IDs.
-  5. Applied `throttle:30,1` rate-limiting and mandatory HMAC-SHA256 request signature verification to `/api/v1/mfs-webhook`, rejecting unauthorized requests with HTTP 401/403.
+  5. Refactored `/api/v1/mfs-webhook` in `MfsWebhookController.php` to reject with HTTP 503 if no secret is configured (per-tenant or env). Removed all `app()->environment('testing')` bypasses; timestamp drift validation (>300s) is strictly enforced in all environments.
   6. Enforced production defaults (`APP_ENV=production`, `APP_DEBUG=false` in `.env.production.example` and confirmed `.env` git exclusion).
-- **Where it lives:** `routes/web.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/Api/MfsWebhookController.php`, `app/Services/EfdBridgeService.php`, `config/services.php`, `.env.production.example`, `.gitignore`, `tests/Feature/ProductionHardeningVerificationTest.php`.
-- **Key design decisions:** Pure cryptographic HMAC validation without test environment bypasses; zero auto-fallback tenant or store resolution; strict rate-limiting middleware.
-- **Depends on:** `PosController`, `MfsWebhookController`, `ReturnController`, `EfdBridgeService`, `Illuminate\Cache\RateLimiter`.
+- **Where it lives:** `routes/web.php`, `app/Http/Middleware/ThrottleFailedPinAttempts.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/Api/MfsWebhookController.php`, `app/Services/EfdBridgeService.php`, `config/services.php`, `tests/Feature/PinThrottleTest.php`, `tests/Feature/MfsWebhookHardeningTest.php`.
+- **Key design decisions:** Pure cryptographic HMAC validation without test environment bypasses; zero auto-fallback tenant or store resolution; failed-attempt rate-limiting middleware.
+- **Depends on:** `PosController`, `MfsWebhookController`, `ReturnController`, `EfdBridgeService`, `ThrottleFailedPinAttempts`.
 - **Last updated:** 2026-10-07
 
 ### 24. Hardened POS Checkout & Product Returns Concurrency Engine
-- **What it does:** Complete 9-point concurrency and financial safety overhaul for checkout and product returns:
-  1. Eliminated 100 phantom stock auto-creation (missing stock row defaults to `0.00` quantity).
-  2. Created migration `2026_10_07_000021_default_allow_negative_stock_to_false.php` setting `stores.allow_negative_stock` default to `false`.
-  3. Enclosed stock checks and deductions inside DB transactions using `lockForUpdate()` on `Product`, `Stock`, and `ProductBatch`.
+- **What it does:** Complete concurrency and financial safety overhaul for checkout, stock transfers, and product returns:
+  1. Eliminated 100 phantom stock auto-creation (missing stock row defaults strictly to `0.00` quantity).
+  2. Created migration `2026_10_07_000021_default_allow_negative_stock_to_false.php` setting `stores.allow_negative_stock` default to `false` and backfilling existing store rows.
+  3. Enclosed stock checks and deductions inside DB transactions using `lockForUpdate()` on `Product`, `Stock`, `ProductBatch`, and `StockTransfer`.
   4. Enforced unique `orders.idempotency_key` checking inside transactions via `lockForUpdate()`, returning existing orders for duplicate submissions.
   5. Enforced server-side validation: payment tender sum equals `paid_amount`, line discount <= line gross, order discount <= subtotal, and supervisor PIN required for discounts above threshold.
   6. Verified MFS payments (`bkash`, `nagad`, `rocket`, `upay`) against unclaimed `MfsTransaction` rows for the tenant with matching amounts, marking them `claimed` with `lockForUpdate()`.
   7. Conducted monetary math in integer paisa / cents with single VAT rounding per invoice.
   8. Hardened returns: validated item presence in order, capped quantity <= sold minus already returned (supporting decimals), capped refund <= item paid price, restocked batches, reduced customer due/loyalty points, and recorded refunds in shift `total_refunds`.
   9. Factored cash sales, cash refunds, cash due payments, and change returns in shift `closeShift` `expected_cash` calculations.
-- **Where it lives:** `database/migrations/2026_10_07_000021_default_allow_negative_stock_to_false.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/ShiftController.php`, `tests/Feature/ProductionHardeningVerificationTest.php`.
+- **Where it lives:** `database/migrations/2026_10_07_000021_default_allow_negative_stock_to_false.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/ShiftController.php`, `app/Http/Controllers/StockTransferController.php`, `tests/Feature/StockIntegrityConcurrencyTest.php`.
 - **Key design decisions:** DB row locking prevents concurrency race conditions; integer paisa math eliminates float inaccuracy; strict MFS transaction claiming prevents payment spoofing.
 - **Depends on:** `Order`, `OrderItem`, `Stock`, `ProductBatch`, `MfsTransaction`, `RegisterShift`, `ProductReturn`.
 - **Last updated:** 2026-10-07
 
 ### 25. Configurable Store & Product VAT Rates, Stored Itemized Tax & NBR Compliance Engine
 - **What it does:** Configurable multi-tier VAT and NBR statutory tax engine:
-  1. Configurable VAT rates per store (`stores.default_tax_rate`) and per product (`products.vat_rate` allowing 0%, 5%, 7.5%, 10%, 15% overrides).
+  1. Default VAT rate for new stores set to 15.00% via migration `2026_10_07_000028_default_store_tax_rate_to_15.php`, Eloquent `$attributes`, `AuthController`, `MerchantStoreController`, and `SuperAdminController`. Configurable per store (`stores.default_tax_rate`) and per product (`products.vat_rate` allowing 0%, 5%, 7.5%, 10%, 15% overrides).
   2. Configurable tax pricing modes per store (`stores.vat_mode`) and per product (`products.vat_mode`) supporting `'inclusive'` (extracting VAT from price) and `'exclusive'` (adding VAT on top of subtotal). Removed all hardcoded 5% VAT references.
   3. Itemized VAT storage at sale time in `order_items` (`vat_rate`, `vat_amount`). Invoices, thermal receipts, EFD payloads, and VAT reporting use stored itemized VAT rather than recalculated figures.
   4. VAT and Sales reporting (`ReportController::vatReport`) automatically subtract product returns (`ProductReturn`) using exact stored itemized line VAT.
   5. NBR Mushak 6.3 receipts and PDF invoices render Store BIN, Invoice No, Date/Time, itemized VAT rates/amounts, and statutory fields.
   6. EFD module (`EfdBridgeService.php`) removed fake BIN fallback (`'123456789-0000'`). Blocks invoice issuance with HTTP 422 if a store is flagged `is_vat_registered = true` and `bin_number` is empty. Marked as payload generator only in UI and code.
-- **Where it lives:** `database/migrations/2026_10_07_000022_add_vat_fields_to_stores_products_and_order_items.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReportController.php`, `app/Services/EfdBridgeService.php`, `resources/views/pdf/invoice.blade.php`, `resources/views/pdf/mushak63.blade.php`, `resources/js/Components/POS/ReceiptModal.vue`, `tests/Feature/ProductionHardeningVerificationTest.php`.
+- **Where it lives:** `database/migrations/2026_10_07_000022_add_vat_fields_to_stores_products_and_order_items.php`, `database/migrations/2026_10_07_000028_default_store_tax_rate_to_15.php`, `app/Models/Store.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReportController.php`, `app/Services/EfdBridgeService.php`, `resources/views/pdf/invoice.blade.php`, `resources/views/pdf/mushak63.blade.php`, `tests/Feature/StoreVatConfigurationTest.php`.
 - **Key design decisions:** Itemized VAT stored permanently at purchase time to maintain audit trail fidelity even if product/store tax rates change later; strict BIN validation prevents unregistered tax collection.
 - **Depends on:** `Store`, `Product`, `Order`, `OrderItem`, `ProductReturn`, `EfdBridgeService`.
 - **Last updated:** 2026-10-07
 
-### 26. High-Scale SQL Aggregation, Stored COGS, Indexing & Streaming Engine
+### 26. High-Scale SQL Aggregation, Stored COGS, Indexing & Telemetry Engine
 - **What it does:** Enterprise scale optimization supporting 500,000+ orders and 20,000+ products:
   1. Stored `cost_price` on `order_items` at sale time in `PosController::checkout`. Profit & Loss COGS uses SQL aggregation (`SUM(quantity * cost_price)`), eliminating loading all order items into PHP memory.
   2. All BI financial reports (`ReportController` for profit-loss, VAT, stock) replace unpaginated `->get()` calls with SQL aggregations (`SUM`, `COUNT`, `GROUP BY`) and paginate detail tables with `paginate(50)`.
@@ -229,9 +229,9 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
   4. Composite performance database indexes applied across `orders`, `order_items`, `order_payments`, `stocks`, `customers`, `products`, `audit_logs`, and `mfs_transactions`.
   5. Scoped unique SKU constraint to per-tenant (`tenant_id`, `sku`), removing global SKU collision blocks.
   6. Universal server-side pagination across list pages and streaming CSV exports using `response()->stream()` with `chunk(1000)`.
-  7. Tested against scale database: all page loads execute under 35 milliseconds (< 2.0s target) with 32 MB peak memory (< 256 MB cap).
+  7. Benchmark command (`BenchmarkPerformanceCommand.php`, `php artisan pos:benchmark`) reports DB driver (`sqlite`, `mysql`), PDO version, and live table row counts (`Products`, `Customers`, `Orders`, `OrderItems`, `Stocks`) with every performance telemetry metric.
 - **Where it lives:** `database/migrations/2026_10_07_000023_add_cost_price_to_order_items_and_indexes.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReportController.php`, `app/Console/Commands/BenchmarkPerformanceCommand.php`, `tests/Feature/ProductionHardeningVerificationTest.php`.
-- **Key design decisions:** Pure database-level aggregation and chunk streaming eliminates memory leaks and caps response latency to sub-second speeds.
+- **Key design decisions:** Pure database-level aggregation, chunk streaming, and DB telemetry reporting eliminates memory leaks and caps response latency to sub-second speeds.
 - **Depends on:** `Order`, `OrderItem`, `Product`, `Customer`, `Stock`, `AuditLog`, `MfsTransaction`.
 - **Last updated:** 2026-10-07
 
