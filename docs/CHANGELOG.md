@@ -2,6 +2,22 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-07] — Hardening, PHP 8.3 Platform Lock, Client UUID Enforcement, Git Filter Purge & Telemetry (67 / 67 PHPUnit Green)
+**What:** Executed 6-point enterprise hardening, dependency platform alignment, checkout idempotency enforcement, history purge, and telemetry:
+1. **Return VAT Cap (`ReturnController`):** Fixed refund cap math to compute proportional VAT (`lineGrossPaid / quantity * returnQty`). Allowed full refund of customer paid amount ($115 for 15% exclusive tax item) and blocked over-refund ($125). Added `ProductReturnVatTest.php`. Committed in `b87f4fc`.
+2. **PHP 8.3 Platform Lock (`composer.json`):** Set `"config.platform.php": "8.3.17"` in `composer.json`. Ran `composer update -W` (updated lockfile down to Symfony v7.4 for PHP 8.3 support). Verified `composer install` exit code 0. Committed in `bf24c64`.
+3. **Client UUID Checkout Requirement:** Added `'client_uuid' => 'required|string'` validation to `/pos/checkout` in `PosController.php`. Updated `Terminal.vue` to assign `crypto.randomUUID()` per sale and `CheckoutModal.vue` to disable Pay button while `isSubmitting` is true. Added `CheckoutClientUuidTest.php` and updated test payloads across suite. Committed in `47af822`.
+4. **GitHub Actions Workflow Readiness:** Prepared `.github/workflows/tests.yml` for automated CI test execution. Committed in `3bedf0d`.
+5. **Git History Secret & File Purge:** Ran `git-filter-repo` to permanently purge `chat.md`, `PRODUCTION_READINESS_REPORT.md`, and `cpanel_dist/.env.production` from all git history. Force pushed clean main branch to GitHub (`origin main`). Recorded committed secrets for live server rotation.
+6. **Benchmark Telemetry (`pos:benchmark`):** Updated `BenchmarkPerformanceCommand.php` to include `client_uuid` in benchmark checkout calls. Executed `php artisan pos:benchmark --run-only` returning row counts and real execution timings. Committed in `cb20304`.
+7. **Automated Verification:** Executed full PHPUnit test suite: **67 / 67 passed (336 assertions green)**.
+**Why:** Prevent refund math errors, lock PHP 8.3 target platform, prevent duplicate sale submission from network retries, purge committed credentials/logs from git history, and report real performance telemetry.
+**How:** Updated controllers, Vue components, composer config, test payloads, ran `git-filter-repo`, force-pushed clean history, and verified full test pass rate.
+**Where:** `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/PosController.php`, `composer.json`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/Components/POS/CheckoutModal.vue`, `app/Console/Commands/BenchmarkPerformanceCommand.php`, `tests/Feature/*`, `docs/CHANGELOG.md`
+**Impact:** Platform has zero failing tests (67/67 green), strict platform locking for PHP 8.3, mandatory UUID sales idempotency, clean git commit history, and verified execution telemetry.
+
+---
+
 ## [2026-10-07] — Production Hardening, Rate Limiting, MFS Webhook Auth, Stock Concurrency & VAT Defaults (63 / 63 PHPUnit Green)
 **What:** Completed 7-point enterprise security, concurrency, tax, and telemetry overhaul across 6 separate commits:
 1. **RateLimiter-Based PIN Throttle:** Created `ThrottleFailedPinAttempts` middleware (`throttle.pin`) tracking failed PIN attempts per `user_id` + IP key (`pos-pin-failed:{user}:{ip}`). Returns HTTP 429 lockout after 5 failed attempts/min without locking out successful entries. Verified with `PinThrottleTest.php`.
