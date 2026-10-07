@@ -221,10 +221,18 @@ class BenchmarkPerformanceCommand extends Command
             ['tenant_id' => $tenant->id, 'sku' => 'SKU-BENCH-01'],
             ['name' => 'Benchmark Product', 'selling_price' => 100.00, 'purchase_cost' => 80.00, 'is_active' => true]
         );
-        Stock::firstOrCreate(
-            ['tenant_id' => $tenant->id, 'store_id' => $store->id, 'product_id' => $prod->id],
-            ['quantity' => 100.0]
-        );
+        $stock = Stock::where('tenant_id', $tenant->id)
+            ->where('store_id', $store->id)
+            ->where('product_id', $prod->id)
+            ->first();
+        if (!$stock) {
+            Stock::create([
+                'tenant_id' => $tenant->id,
+                'store_id' => $store->id,
+                'product_id' => $prod->id,
+                'quantity' => 100.0,
+            ]);
+        }
 
         $t4 = microtime(true);
         $req4 = Request::create('/pos/checkout', 'POST', [

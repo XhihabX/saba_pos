@@ -97,18 +97,48 @@ class StockTransferController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                // Deduct from Source Store
-                $fromStock = Stock::firstOrCreate(
-                    ['store_id' => $validated['from_store_id'], 'product_id' => $item['product_id']],
-                    ['quantity' => 0]
-                );
+                $fromStore = \App\Models\Store::find($validated['from_store_id']);
+                $allowNegative = (bool) ($fromStore?->allow_negative_stock ?? false);
+
+                // Deduct from Source Store with DB lock
+                $fromStock = Stock::where('store_id', $validated['from_store_id'])
+                    ->where('product_id', $item['product_id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$fromStock) {
+                    $fromStock = Stock::create([
+                        'tenant_id' => $tenantId,
+                        'store_id' => $validated['from_store_id'],
+                        'product_id' => $item['product_id'],
+                        'quantity' => 0.00,
+                    ]);
+                }
+
+                if (!$allowNegative && (float) $fromStock->quantity < $item['quantity']) {
+                    $prodName = \App\Models\Product::find($item['product_id'])?->name ?? 'Product';
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'items' => ["Insufficient stock in origin store for '{$prodName}'. Available: {$fromStock->quantity}, requested: {$item['quantity']}."]
+                    ]);
+                }
+
                 $fromStock->decrement('quantity', $item['quantity']);
 
-                // Add to Target Store
-                $toStock = Stock::firstOrCreate(
-                    ['store_id' => $validated['to_store_id'], 'product_id' => $item['product_id']],
-                    ['quantity' => 0]
-                );
+                // Add to Target Store with DB lock
+                $toStock = Stock::where('store_id', $validated['to_store_id'])
+                    ->where('product_id', $item['product_id'])
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$toStock) {
+                    $toStock = Stock::create([
+                        'tenant_id' => $tenantId,
+                        'store_id' => $validated['to_store_id'],
+                        'product_id' => $item['product_id'],
+                        'quantity' => 0.00,
+                    ]);
+                }
+
                 $toStock->increment('quantity', $item['quantity']);
             }
 
