@@ -94,8 +94,10 @@ class ReturnController extends Controller
                 ]);
             }
 
-            // 3. Cap refund amount at paid price of returned items
-            $itemPaidPrice = ((float) $orderItem->total / (float) $orderItem->quantity) * (float) $validated['quantity'];
+            // 3. Cap refund amount at paid price of returned items (including proportional VAT)
+            $isExclusive = ($orderItem->vat_mode ?? 'exclusive') === 'exclusive';
+            $lineGrossPaid = (float) $orderItem->total + ($isExclusive ? (float) $orderItem->vat_amount : 0.0);
+            $itemPaidPrice = ($lineGrossPaid / (float) $orderItem->quantity) * (float) $validated['quantity'];
             $alreadyRefundedAmount = (float) ProductReturn::where('order_id', $order->id)->sum('refund_amount');
             $maxRefundableAmount = min($itemPaidPrice, max(0, (float) $order->paid_amount - $alreadyRefundedAmount));
             if ((float) $validated['refund_amount'] > $maxRefundableAmount + 0.01) {
@@ -164,7 +166,7 @@ class ReturnController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if ($activeShift) {
+            if ($activeShift && \Illuminate\Support\Facades\Schema::hasColumn('register_shifts', 'total_refunds')) {
                 $activeShift->increment('total_refunds', $validated['refund_amount']);
             }
 
