@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\MfsTransaction;
+use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -18,7 +19,13 @@ class MfsWebhookController extends Controller
         $providedSignature = $request->header('X-MFS-Signature') ?? $request->input('signature');
         $providedSecret = $request->header('X-MFS-Secret') ?? $request->input('secret_key') ?? $request->input('secret');
 
-        $expectedSecret = config('services.mfs.secret_key', env('MFS_WEBHOOK_SECRET', 'iot_pos_mfs_secret_key_2026'));
+        $tenantIdHeader = $request->header('X-MFS-Tenant-ID') ?? $request->header('X-MFS-Tenant') ?? $request->input('tenant_id') ?? $request->input('tenant_code');
+        $tenant = null;
+        if (!empty($tenantIdHeader)) {
+            $tenant = Tenant::where('id', $tenantIdHeader)->orWhere('code', $tenantIdHeader)->first();
+        }
+
+        $expectedSecret = $tenant?->mfs_webhook_secret ?? config('services.mfs.secret_key', env('MFS_WEBHOOK_SECRET', 'iot_pos_mfs_secret_key_2026'));
 
         // 1. Timestamp Drift Replay Protection (5-minute / 300s window)
         if (!app()->environment('testing') && abs(time() - $timestamp) > 300) {
@@ -64,6 +71,7 @@ class MfsWebhookController extends Controller
         ]);
 
         $trxId = strtoupper(trim($validated['trx_id']));
+        $targetTenantId = $tenant?->id ?? ($request->user()?->tenant_id ?? 1);
 
         // Check duplicate TrxID
         $existing = MfsTransaction::where('trx_id', $trxId)->first();
@@ -76,6 +84,7 @@ class MfsWebhookController extends Controller
         }
 
         $transaction = MfsTransaction::create([
+            'tenant_id' => $targetTenantId,
             'trx_id' => $trxId,
             'sender' => $validated['sender'] ?? null,
             'amount' => $validated['amount'],
@@ -83,7 +92,7 @@ class MfsWebhookController extends Controller
             'status' => 'unclaimed',
         ]);
 
-        Log::info("MFS Webhook Logged: TrxID {$trxId}, Amount {$validated['amount']}, Gateway {$transaction->gateway}");
+        Log::info("MFS Webhook Logged: TrxID {$trxId}, Tenant {$targetTenantId}, Amount {$validated['amount']}, Gateway {$transaction->gateway}");
 
         return response()->json([
             'success' => true,

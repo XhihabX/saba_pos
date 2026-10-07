@@ -13,15 +13,16 @@ class EfdBridgeService
     {
         $store = $order->store;
         $binNumber = $store?->bin_number ?? $store?->vat_number ?? '123456789-0000';
+        $taxRate = (float) ($store?->default_tax_rate ?? 15.0);
 
-        $items = $order->items->map(function ($item) {
+        $items = $order->items->map(function ($item) use ($taxRate) {
             return [
                 'item_code' => $item->product?->sku ?? "PRD-{$item->product_id}",
                 'item_name' => $item->product_name,
                 'quantity' => (float) $item->quantity,
                 'unit_price' => (float) $item->unit_price,
                 'total_price' => (float) $item->total,
-                'vat_amount' => round((float) $item->total * 0.05, 2),
+                'vat_amount' => round((float) $item->total * ($taxRate / 100), 2),
             ];
         })->toArray();
 

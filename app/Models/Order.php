@@ -12,6 +12,7 @@ class Order extends Model
 
     protected $fillable = [
         'tenant_id',
+        'idempotency_key',
         'invoice_no',
         'store_id',
         'customer_id',
@@ -26,7 +27,6 @@ class Order extends Model
         'payment_method',
         'notes',
     ];
-
 
     public function store()
     {

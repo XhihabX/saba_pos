@@ -151,6 +151,8 @@ class MerchantToPosWorkflowTest extends TestCase
         $this->assertNotNull($activeShift, 'Cashier shift must be open');
         $this->assertEquals(5000.00, (float) $activeShift->opening_cash);
 
+        $cashierUser->update(['pos_pin' => Hash::make('1234')]);
+
         // =================================================================
         // STEP 5: POS Counter Workstation Sales Checkout
         // =================================================================
@@ -169,6 +171,7 @@ class MerchantToPosWorkflowTest extends TestCase
             ],
             'subtotal' => 2500.00,
             'discount_amount' => 100.00,
+            'supervisor_pin' => '1234',
             'tax_amount' => 120.00,
             'grand_total' => 2520.00,
             'paid_amount' => 3000.00,

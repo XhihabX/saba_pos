@@ -11,10 +11,11 @@ use App\Models\ParkedOrder;
 use App\Models\Product;
 use App\Models\Stock;
 use App\Models\Store;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use App\Services\AuditLogger;
 use Inertia\Inertia;
 
 class PosController extends Controller
@@ -25,19 +26,10 @@ class PosController extends Controller
         if (!$user) {
             abort(401, 'Unauthenticated');
         }
-        if ($user->role === 'super_admin') {
-            return Store::first()->tenant_id ?? 1;
+        if (!$user->tenant_id && $user->role !== 'super_admin') {
+            abort(403, 'User does not belong to any tenant');
         }
-        if (!$user->tenant_id) {
-            $defaultTenant = \App\Models\Tenant::first();
-            if ($defaultTenant) {
-                $user->tenant_id = $defaultTenant->id;
-                $user->save();
-                return $defaultTenant->id;
-            }
-            return 1;
-        }
-        return $user->tenant_id;
+        return $user->tenant_id ?? 1;
     }
 
     public function sandboxDemo()
@@ -64,39 +56,23 @@ class PosController extends Controller
 
         if ($stores->isEmpty()) {
             try {
-                $defaultStore = Store::create([
+                $defaultStore = Store::firstOrCreate([
                     'tenant_id' => $tenantId,
-                    'name' => 'Main Flagship Outlet',
+                    'name' => 'Main Outlet',
+                ], [
                     'code' => 'STORE-001',
                     'currency_symbol' => '৳',
-                    'default_tax_rate' => 5.00,
+                    'default_tax_rate' => 15.00,
                     'is_active' => true,
                 ]);
                 $stores = collect([$defaultStore]);
             } catch (\Throwable $e) {
-                $stores = collect([
-                    (object)[
-                        'id' => 1,
-                        'name' => 'Main Outlet',
-                        'code' => 'STORE-001',
-                        'currency_symbol' => '৳',
-                        'default_tax_rate' => 5.00,
-                        'is_active' => true,
-                    ]
-                ]);
+                $stores = collect([]);
             }
         }
 
         $firstStore = $stores->first();
-        $firstStoreId = is_object($firstStore) && isset($firstStore->id) ? $firstStore->id : 1;
-        $storeId = (int) $request->input('store_id', $firstStoreId);
-
-        if ($stores->isNotEmpty()) {
-            $storeIds = $stores->pluck('id')->toArray();
-            if (!in_array($storeId, $storeIds)) {
-                $storeId = (int) $firstStoreId;
-            }
-        }
+        $storeId = (int) $request->input('store_id', $firstStore ? $firstStore->id : 1);
 
         // 2. Categories
         try {
@@ -105,82 +81,53 @@ class PosController extends Controller
             $categories = collect([]);
         }
 
-        // 3. Customers (Defensive query handling missing tenant_id column)
+        // 3. Customers
         try {
             $customers = Customer::where('tenant_id', $tenantId)->orderBy('name')->get();
         } catch (\Throwable $e) {
-            try {
-                $customers = Customer::withoutGlobalScopes()->orderBy('name')->get();
-            } catch (\Throwable $e2) {
-                $customers = collect([]);
-            }
+            $customers = collect([]);
         }
 
         if ($customers->isEmpty()) {
             try {
-                $walkIn = Customer::withoutGlobalScopes()->firstOrCreate(
-                    ['name' => 'Walk-in Customer'],
+                $walkIn = Customer::firstOrCreate(
+                    ['tenant_id' => $tenantId, 'name' => 'Walk-in Customer'],
                     ['phone' => '0000000000', 'address' => 'Store Counter', 'due_balance' => 0.00]
                 );
                 $customers = collect([$walkIn]);
             } catch (\Throwable $e) {
-                $customers = collect([
-                    (object)[
-                        'id' => 1,
-                        'name' => 'Walk-in Customer',
-                        'phone' => '0000000000',
-                        'address' => 'Store Counter',
-                        'due_balance' => 0.00,
-                        'points' => 0,
-                    ]
-                ]);
+                $customers = collect([]);
             }
         }
 
-        // 4. Products with stock level (Initial 100 limit for high-capacity catalog scaling)
-        try {
-            $products = Product::where('tenant_id', $tenantId)
-                ->where('is_active', true)
-                ->with(['category', 'unit', 'stocks' => function ($q) use ($storeId) {
-                    $q->where('store_id', $storeId);
-                }])
-                ->limit(100)
-                ->get()
-                ->map(function ($p) {
-                    $stock = $p->stocks ? $p->stocks->first() : null;
-                    $p->current_stock = $stock ? (float) $stock->quantity : 0;
-                    return $p;
-                });
-        } catch (\Throwable $e) {
-            $products = collect([]);
-        }
+        // 4. Products (Paginated / Limited initial load for high-capacity catalog scaling)
+        $products = Product::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->with(['category', 'unit', 'stocks' => function ($sq) use ($storeId) {
+                $sq->where('store_id', $storeId);
+            }])
+            ->limit(50)
+            ->get()
+            ->map(function ($p) {
+                $stock = $p->stocks ? $p->stocks->first() : null;
+                $p->current_stock = $stock ? (float) $stock->quantity : 0;
+                return $p;
+            });
 
-        // 5. Active Parked Sales Count
-        try {
-            $parkedCount = ParkedOrder::where('store_id', $storeId)->count();
-        } catch (\Throwable $e) {
-            $parkedCount = 0;
-        }
-
-        // 6. Active Cashier Shift Status
-        try {
-            $activeShift = \App\Models\RegisterShift::where('tenant_id', $tenantId)
-                ->where('user_id', auth()->id())
-                ->where('store_id', $storeId)
-                ->where('status', 'open')
-                ->first();
-        } catch (\Throwable $e) {
-            $activeShift = null;
-        }
+        // 5. Active Shift Check
+        $activeShift = \App\Models\RegisterShift::where('tenant_id', $tenantId)
+            ->where('user_id', auth()->id())
+            ->where('store_id', $storeId)
+            ->where('status', 'open')
+            ->first();
 
         return Inertia::render('POS/Terminal', [
             'stores' => $stores,
-            'currentStoreId' => (int) $storeId,
             'categories' => $categories,
             'customers' => $customers,
-            'products' => $products,
-            'parkedCount' => $parkedCount,
-            'initialActiveShift' => $activeShift,
+            'initialProducts' => $products,
+            'activeStoreId' => $storeId,
+            'activeShift' => $activeShift,
         ]);
     }
 
@@ -202,21 +149,49 @@ class PosController extends Controller
             'payments' => 'nullable|array',
             'notes' => 'nullable|string',
             'client_uuid' => 'nullable|string',
+            'idempotency_key' => 'nullable|string',
+            'supervisor_pin' => 'nullable|string',
         ]);
 
-        // Resilient store lookup with tenant fallback
-        $store = Store::where('id', $validated['store_id'])->where('tenant_id', $tenantId)->first()
-            ?? Store::where('tenant_id', $tenantId)->first()
-            ?? Store::where('id', $validated['store_id'])->first()
-            ?? Store::first();
-
+        $store = Store::where('id', $validated['store_id'])->where('tenant_id', $tenantId)->first();
         if (!$store) {
             throw ValidationException::withMessages([
-                'store_id' => ['No valid store outlet available for checkout.']
+                'store_id' => ['Selected store outlet is invalid or belongs to another tenant.']
             ]);
         }
 
-        // Enforce active register shift requirement for cashiers
+        // Validate tender lines sum to paid amount
+        $paidAmount = (float) $validated['paid_amount'];
+        if (!empty($validated['payments'])) {
+            $sumPayments = (float) array_sum(array_column($validated['payments'], 'amount'));
+            if (abs($sumPayments - $paidAmount) > 0.01) {
+                throw ValidationException::withMessages([
+                    'payments' => ["Sum of payment tender lines (৳" . number_format($sumPayments, 2) . ") does not match total paid amount (৳" . number_format($paidAmount, 2) . ")."]
+                ]);
+            }
+        }
+
+        // Server-side discount limit & supervisor PIN enforcement
+        $discountAmount = (float) ($validated['discount_amount'] ?? 0);
+        $hasLineDiscounts = false;
+        foreach ($validated['items'] as $item) {
+            if (!empty($item['discount']) && (float) $item['discount'] > 0) {
+                $hasLineDiscounts = true;
+                break;
+            }
+        }
+
+        if ($discountAmount > 0 || $hasLineDiscounts) {
+            $supervisorPin = (string) ($request->input('supervisor_pin') ?? $request->input('pin') ?? '');
+            $user = auth()->user();
+            if (empty($supervisorPin) || empty($user->pos_pin) || !Hash::check($supervisorPin, $user->pos_pin)) {
+                throw ValidationException::withMessages([
+                    'discount' => ['A valid supervisor PIN is required to apply cart or line item discounts.']
+                ]);
+            }
+        }
+
+        // Active register shift requirement
         $activeShift = \App\Models\RegisterShift::where('tenant_id', $tenantId)
             ->where('user_id', auth()->id())
             ->where('store_id', $store->id)
@@ -225,42 +200,61 @@ class PosController extends Controller
 
         if (!$activeShift) {
             throw ValidationException::withMessages([
-                'shift' => ['An active register shift must be opened before processing sales checkout. Please open your shift first.']
+                'shift' => ['An active register shift must be opened before processing sales checkout.']
             ]);
         }
 
-        // Idempotency check for offline sync retry
-        if (!empty($validated['client_uuid'])) {
-            $existing = Order::where('tenant_id', $tenantId)->where('notes', 'LIKE', '%[UUID:' . $validated['client_uuid'] . ']%')->first();
-            if ($existing) {
-                $existing->load(['items', 'customer', 'store', 'payments', 'user']);
-                if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Order already processed (idempotent)',
-                        'invoice_no' => $existing->invoice_no,
-                        'grand_total' => $existing->grand_total,
-                    ], 200);
-                }
-                return redirect()->back()->with(['success' => 'Order already processed!', 'receipt' => $existing]);
-            }
-        }
+        return DB::transaction(function () use ($request, $validated, $tenantId, $store, $paidAmount, $discountAmount) {
+            // Idempotency check inside transaction using orders.idempotency_key
+            $idempotencyKey = $validated['idempotency_key'] ?? $validated['client_uuid'] ?? null;
+            if (!empty($idempotencyKey)) {
+                $existing = Order::where('tenant_id', $tenantId)
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->lockForUpdate()
+                    ->first();
 
-        return DB::transaction(function () use ($validated, $tenantId, $store) {
+                if ($existing) {
+                    $existing->load(['items', 'customer', 'store', 'payments', 'user']);
+                    if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                        return response()->json([
+                            'success' => true,
+                            'message' => 'Order already processed (idempotent)',
+                            'invoice_no' => $existing->invoice_no,
+                            'grand_total' => $existing->grand_total,
+                            'order' => $existing,
+                        ], 200);
+                    }
+                    return redirect()->back()->with(['success' => 'Order already processed!', 'receipt' => $existing]);
+                }
+            }
+
             $calculatedSubtotal = 0;
             $itemsToProcess = [];
 
-            // Pre-validate stock & calculate authoritative server-side unit prices
             foreach ($validated['items'] as $item) {
-                $product = Product::where('id', $item['product_id'])->where('tenant_id', $tenantId)->firstOrFail();
-                $stock = Stock::firstOrCreate(
-                    ['store_id' => $store->id, 'product_id' => $product->id],
-                    ['quantity' => 100.00]
-                );
+                $product = Product::where('id', $item['product_id'])
+                    ->where('tenant_id', $tenantId)
+                    ->lockForUpdate()
+                    ->firstOrFail();
 
-                // Check store negative stock policy
+                $stock = Stock::where('store_id', $store->id)
+                    ->where('product_id', $product->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$stock) {
+                    $stock = Stock::create([
+                        'tenant_id' => $tenantId,
+                        'store_id' => $store->id,
+                        'product_id' => $product->id,
+                        'quantity' => 0.00,
+                    ]);
+                }
+
                 $available = (float) $stock->quantity;
-                if (!$store->allow_negative_stock && $available < $item['quantity']) {
+                $allowNegative = (bool) ($store->allow_negative_stock ?? false);
+
+                if (!$allowNegative && $available < $item['quantity']) {
                     throw ValidationException::withMessages([
                         'cart' => ["Insufficient stock for '{$product->name}'. Available: {$available}, Requested: {$item['quantity']}."]
                     ]);
@@ -274,6 +268,7 @@ class PosController extends Controller
 
                 $itemsToProcess[] = [
                     'product' => $product,
+                    'stock' => $stock,
                     'quantity' => $item['quantity'],
                     'unit_price' => $unitPrice,
                     'discount' => $lineDiscount,
@@ -282,25 +277,24 @@ class PosController extends Controller
                 ];
             }
 
-            $discountAmount = (float) ($validated['discount_amount'] ?? 0);
             $taxableSubtotal = max(0, $calculatedSubtotal - $discountAmount);
-            $taxRate = (float) ($store->default_tax_rate ?? 0);
+            $taxRate = (float) ($store->default_tax_rate ?? 15.0);
             $taxAmount = round(($taxableSubtotal * $taxRate) / 100, 2);
             $grandTotal = max(0, round($taxableSubtotal + $taxAmount, 2));
 
-            $paidAmount = (float) $validated['paid_amount'];
             $changeReturn = max(0, round($paidAmount - $grandTotal, 2));
             $paymentStatus = $paidAmount >= $grandTotal ? 'paid' : ($paidAmount > 0 ? 'partial' : 'due');
 
             $invoiceNo = 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
 
             $notesText = $validated['notes'] ?? '';
-            if (!empty($validated['client_uuid'])) {
-                $notesText .= ' [UUID:' . $validated['client_uuid'] . ']';
+            if (!empty($idempotencyKey)) {
+                $notesText .= ' [UUID:' . $idempotencyKey . ']';
             }
 
             $order = Order::create([
                 'tenant_id' => $tenantId,
+                'idempotency_key' => $idempotencyKey,
                 'invoice_no' => $invoiceNo,
                 'store_id' => $store->id,
                 'customer_id' => $validated['customer_id'] ?? null,
@@ -318,6 +312,7 @@ class PosController extends Controller
 
             foreach ($itemsToProcess as $item) {
                 OrderItem::create([
+                    'tenant_id' => $tenantId,
                     'order_id' => $order->id,
                     'product_id' => $item['product']->id,
                     'product_name' => $item['product']->name,
@@ -328,18 +323,16 @@ class PosController extends Controller
                     'total' => $item['line_total'],
                 ]);
 
-                // Deduct stock for store
-                $stock = Stock::firstOrCreate([
-                    'store_id' => $store->id,
-                    'product_id' => $item['product']->id,
-                ]);
-                $stock->decrement('quantity', $item['quantity']);
+                // Deduct stock
+                $item['stock']->decrement('quantity', $item['quantity']);
 
-                // FEFO Batch Stock Deduction (First-Expired, First-Out)
-                $batches = \App\Models\ProductBatch::where('store_id', $store->id)
+                // FEFO Batch Stock Deduction
+                $batches = \App\Models\ProductBatch::where('tenant_id', $tenantId)
+                    ->where('store_id', $store->id)
                     ->where('product_id', $item['product']->id)
                     ->where('quantity', '>', 0)
                     ->orderBy('expiry_date', 'asc')
+                    ->lockForUpdate()
                     ->get();
 
                 $neededQty = (float) $item['quantity'];
@@ -351,10 +344,11 @@ class PosController extends Controller
                 }
             }
 
-            // Multiple payments recording & MFS Claiming
+            // Multiple payments & MFS Claiming with row locking
             if (!empty($validated['payments'])) {
                 foreach ($validated['payments'] as $payment) {
                     OrderPayment::create([
+                        'tenant_id' => $tenantId,
                         'order_id' => $order->id,
                         'payment_method' => $payment['method'],
                         'amount' => (float) $payment['amount'],
@@ -362,19 +356,38 @@ class PosController extends Controller
                     ]);
 
                     if (!empty($payment['reference_no'])) {
-                        \App\Models\MfsTransaction::where('trx_id', strtoupper(trim($payment['reference_no'])))
-                            ->update(['status' => 'claimed', 'order_id' => $order->id]);
+                        $trxId = strtoupper(trim($payment['reference_no']));
+                        $mfsTx = \App\Models\MfsTransaction::where('trx_id', $trxId)
+                            ->where('tenant_id', $tenantId)
+                            ->where('status', 'unclaimed')
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (!$mfsTx) {
+                            throw ValidationException::withMessages([
+                                'payment' => ["MFS Transaction ID '{$trxId}' does not exist, is already claimed, or belongs to another tenant."]
+                            ]);
+                        }
+
+                        if ((float) $mfsTx->amount < (float) $payment['amount']) {
+                            throw ValidationException::withMessages([
+                                'payment' => ["MFS Transaction ID '{$trxId}' amount (৳{$mfsTx->amount}) is less than payment amount (৳{$payment['amount']})."]
+                            ]);
+                        }
+
+                        $mfsTx->update(['status' => 'claimed', 'order_id' => $order->id]);
                     }
                 }
             } else {
                 OrderPayment::create([
+                    'tenant_id' => $tenantId,
                     'order_id' => $order->id,
                     'payment_method' => $validated['payment_method'],
                     'amount' => $paidAmount,
                 ]);
             }
 
-            // Update Customer Ledger & Loyalty Points with Credit Limit Guard
+            // Update Customer Ledger & Loyalty Points
             if ($order->customer_id) {
                 $customer = Customer::find($order->customer_id);
                 if ($customer) {
@@ -384,13 +397,12 @@ class PosController extends Controller
                             $creditLimit = (float) ($customer->credit_limit ?? 50000.00);
                             if ($creditLimit > 0 && ((float) $customer->due_balance + $dueAmount) > $creditLimit) {
                                 throw ValidationException::withMessages([
-                                    'credit' => ["Customer credit limit of ৳" . number_format($creditLimit, 2) . " exceeded! Current Due: ৳" . number_format((float) $customer->due_balance, 2) . ", New Due: ৳" . number_format($dueAmount, 2) . "."]
+                                    'credit' => ["Customer credit limit of ৳" . number_format($creditLimit, 2) . " exceeded!"]
                                 ]);
                             }
                             $customer->increment('due_balance', $dueAmount);
                         }
                     }
-                    // Award 1 loyalty point per 100 currency units spent
                     $earnedPoints = floor($grandTotal / 100);
                     if ($earnedPoints > 0) {
                         $customer->increment('points', $earnedPoints);
@@ -412,7 +424,7 @@ class PosController extends Controller
                 $store->id
             );
 
-            if (request()->wantsJson() || request()->header('X-Requested-With') === 'XMLHttpRequest') {
+            if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
                 return response()->json([
                     'success' => true,
                     'message' => 'Order completed successfully!',
@@ -484,20 +496,10 @@ class PosController extends Controller
             return response()->json(['success' => false, 'message' => 'PIN is required.'], 422);
         }
 
-        // 1. Check user pos_pin column if configured
-        if (!empty($user->pos_pin)) {
-            if ($user->pos_pin === $pin || \Illuminate\Support\Facades\Hash::check($pin, $user->pos_pin)) {
-                return response()->json(['success' => true]);
-            }
-        }
-
-        // 2. Check user ID padded PIN (e.g. user ID 1 => 0001) or cashier role check
-        $expectedPin = str_pad((string) $user->id, 4, '0', STR_PAD_LEFT);
-        if ($pin === $expectedPin) {
+        if (!empty($user->pos_pin) && Hash::check($pin, $user->pos_pin)) {
             return response()->json(['success' => true]);
         }
 
-        // 3. Compare with account password as fallback security check
         return response()->json(['success' => false, 'message' => 'Invalid Cashier PIN.'], 403);
     }
 
@@ -507,7 +509,7 @@ class PosController extends Controller
         $order = Order::where('tenant_id', $tenantId)
             ->with(['items.product', 'customer', 'store', 'user', 'payments'])
             ->where('id', $id)
-            ->first() ?? Order::with(['items.product', 'customer', 'store', 'user', 'payments'])->findOrFail($id);
+            ->firstOrFail();
 
         return view('pdf.invoice', ['order' => $order]);
     }
@@ -549,7 +551,7 @@ class PosController extends Controller
         $order = Order::where('tenant_id', $tenantId)
             ->with(['items.product', 'customer', 'store', 'user', 'payments'])
             ->where('id', $id)
-            ->first() ?? Order::with(['items.product', 'customer', 'store', 'user', 'payments'])->findOrFail($id);
+            ->firstOrFail();
 
         return view('pdf.mushak63', ['order' => $order]);
     }
@@ -560,8 +562,7 @@ class PosController extends Controller
         $orders = Order::where('tenant_id', $tenantId)
             ->with(['customer', 'store', 'user'])
             ->latest()
-            ->limit(1000)
-            ->get();
+            ->paginate(100);
 
         $headers = [
             'Content-Type' => 'text/csv',
