@@ -259,6 +259,7 @@ class BenchmarkPerformanceCommand extends Command
 
         $t4 = microtime(true);
         $req4 = Request::create('/pos/checkout', 'POST', [
+            'client_uuid' => 'IDEM-BENCH-' . uniqid(),
             'store_id' => $store->id,
             'idempotency_key' => 'IDEM-BENCH-' . uniqid(),
             'items' => [['product_id' => $prod->id, 'quantity' => 1]],
