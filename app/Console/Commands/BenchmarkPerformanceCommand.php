@@ -174,9 +174,32 @@ class BenchmarkPerformanceCommand extends Command
 
     private function runPerformanceTelemetry($tenant, $store, $user)
     {
-        $this->info("\n==================================================");
+        $dbDriver = DB::connection()->getDriverName();
+        $dbVersion = 'Unknown';
+        try {
+            $pdo = DB::connection()->getPdo();
+            $dbVersion = $pdo->getAttribute(\PDO::ATTR_SERVER_VERSION) ?? 'Unknown';
+        } catch (\Throwable $e) {
+            $dbVersion = 'N/A';
+        }
+
+        $prodCount = Product::count();
+        $custCount = Customer::count();
+        $orderCount = Order::count();
+        $orderItemCount = OrderItem::count();
+        $stockCount = Stock::count();
+
+        $this->info("\n==========================================================================================");
         $this->info(" REAL TELEMETRY RESULTS (Target: < 2.0s, < 256MB)");
-        $this->info("==================================================");
+        $this->info(sprintf(" DB Engine: %s (v%s)", strtoupper($dbDriver), $dbVersion));
+        $this->info(sprintf(" Database Row Counts: Products: %s | Customers: %s | Orders: %s | OrderItems: %s | Stocks: %s",
+            number_format($prodCount),
+            number_format($custCount),
+            number_format($orderCount),
+            number_format($orderItemCount),
+            number_format($stockCount)
+        ));
+        $this->info("==========================================================================================");
 
         $posController = new \App\Http\Controllers\PosController();
         $reportController = new \App\Http\Controllers\ReportController();
