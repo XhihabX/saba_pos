@@ -93,7 +93,7 @@ class SuperAdminController extends Controller
                 'phone' => $validated['phone'] ?? null,
                 'email' => $validated['email'],
                 'currency_symbol' => '৳',
-                'default_tax_rate' => 5.00,
+                'default_tax_rate' => 15.00,
                 'is_active' => true,
             ]);
 
@@ -308,7 +308,7 @@ class SuperAdminController extends Controller
             'support_phone' => '+880 1700 000000',
             'support_email' => 'support@iotpos.com',
             'currency_symbol' => '৳',
-            'default_tax_rate' => 5.0,
+            'default_tax_rate' => 15.00,
             'maintenance_mode' => false,
         ];
 

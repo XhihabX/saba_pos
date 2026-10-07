@@ -171,10 +171,10 @@ class MerchantToPosWorkflowTest extends TestCase
             'subtotal' => 2500.00,
             'discount_amount' => 100.00,
             'supervisor_pin' => '1234',
-            'tax_amount' => 120.00,
-            'grand_total' => 2520.00,
+            'tax_amount' => 360.00,
+            'grand_total' => 2760.00,
             'paid_amount' => 3000.00,
-            'change_return' => 480.00,
+            'change_return' => 240.00,
             'payment_method' => 'cash',
             'payments' => [
                 ['method' => 'cash', 'amount' => 3000.00]
@@ -187,7 +187,7 @@ class MerchantToPosWorkflowTest extends TestCase
         // Verify Order Record created
         $order = Order::where('tenant_id', $tenant->id)->first();
         $this->assertNotNull($order, 'Order record must be created in database');
-        $this->assertEquals(2520.00, (float) $order->grand_total);
+        $this->assertEquals(2760.00, (float) $order->grand_total);
         $this->assertEquals('paid', $order->payment_status);
 
         // Verify Inventory Stock Deduction
@@ -218,7 +218,7 @@ class MerchantToPosWorkflowTest extends TestCase
         // =================================================================
         $shiftCloseResponse = $this->postJson('/pos/shift/close', [
             'shift_id' => $activeShift->id,
-            'closing_cash_counted' => 7520.00, // 5000 opening + 2520 sales = 7520 expected
+            'closing_cash_counted' => 7760.00, // 5000 opening + 2760 sales = 7760 expected
         ]);
 
         $shiftCloseResponse->assertStatus(200);

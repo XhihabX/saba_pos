@@ -61,7 +61,7 @@ class MerchantStoreController extends Controller
             'email' => $validated['email'] ?? null,
             'address' => $validated['address'] ?? null,
             'currency_symbol' => $validated['currency_symbol'] ?? '৳',
-            'default_tax_rate' => $validated['default_tax_rate'] ?? 5.00,
+            'default_tax_rate' => $validated['default_tax_rate'] ?? 15.00,
             'is_active' => true,
         ]);
 

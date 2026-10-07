@@ -11,6 +11,11 @@ class Store extends Model
 {
     use HasFactory, Tenantable, SoftDeletes;
 
+    protected $attributes = [
+        'default_tax_rate' => 15.00,
+        'allow_negative_stock' => false,
+    ];
+
     protected $fillable = [
         'tenant_id',
         'name',

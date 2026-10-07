@@ -140,7 +140,7 @@ class AuthController extends Controller
                 'phone' => $validated['phone'] ?? null,
                 'email' => $validated['email'],
                 'currency_symbol' => '৳',
-                'default_tax_rate' => 5.00,
+                'default_tax_rate' => 15.00,
                 'is_active' => true,
             ]);
 
