@@ -125,7 +125,7 @@ class BenchmarkPerformanceCommand extends Command
                             'updated_at' => now(),
                         ];
                     }
-                    foreach (array_chunk($productRows, 500) as $chunk) {
+                    foreach (array_chunk($productRows, 1000) as $chunk) {
                         DB::table('products')->insert($chunk);
                     }
 
@@ -147,7 +147,7 @@ class BenchmarkPerformanceCommand extends Command
                             'updated_at' => now(),
                         ];
                     }
-                    foreach (array_chunk($stockRows, 500) as $chunk) {
+                    foreach (array_chunk($stockRows, 1000) as $chunk) {
                         DB::table('stocks')->insert($chunk);
                     }
                 });
@@ -177,7 +177,7 @@ class BenchmarkPerformanceCommand extends Command
                             'updated_at' => now(),
                         ];
                     }
-                    foreach (array_chunk($customerRows, 500) as $chunk) {
+                    foreach (array_chunk($customerRows, 1000) as $chunk) {
                         DB::table('customers')->insert($chunk);
                     }
                 });
@@ -225,7 +225,7 @@ class BenchmarkPerformanceCommand extends Command
                             'updated_at' => $randomDate,
                         ];
                     }
-                    foreach (array_chunk($orderRows, 500) as $chunk) {
+                    foreach (array_chunk($orderRows, 1000) as $chunk) {
                         DB::table('orders')->insert($chunk);
                     }
 
@@ -248,9 +248,11 @@ class BenchmarkPerformanceCommand extends Command
                                 'order_id' => $ord->id,
                                 'product_id' => $pid,
                                 'product_name' => "Scale Product {$pid}",
+                                'serial_number' => null,
                                 'quantity' => 1.0,
                                 'unit_price' => 100.00,
                                 'cost_price' => 80.00,
+                                'discount' => 0.00,
                                 'vat_rate' => 15.00,
                                 'vat_amount' => 15.00,
                                 'total' => 115.00,
@@ -264,15 +266,16 @@ class BenchmarkPerformanceCommand extends Command
                             'order_id' => $ord->id,
                             'payment_method' => $ord->payment_method,
                             'amount' => $ord->grand_total,
+                            'reference_no' => 'REF-SEED-' . uniqid(),
                             'created_at' => $ord->created_at,
                             'updated_at' => $ord->created_at,
                         ];
                     }
 
-                    foreach (array_chunk($itemRows, 500) as $chunk) {
+                    foreach (array_chunk($itemRows, 1000) as $chunk) {
                         DB::table('order_items')->insert($chunk);
                     }
-                    foreach (array_chunk($paymentRows, 500) as $chunk) {
+                    foreach (array_chunk($paymentRows, 1000) as $chunk) {
                         DB::table('order_payments')->insert($chunk);
                     }
                 });
@@ -409,16 +412,27 @@ class BenchmarkPerformanceCommand extends Command
                 $start = microtime(true);
                 try {
                     $res = $callback();
-                    if ($res instanceof \Symfony\Component\HttpFoundation\Response) {
+                    if (!($res instanceof \Symfony\Component\HttpFoundation\Response)) {
+                        $hadError = true;
+                        $errorMessage = "Invalid Response";
+                    } else {
                         $code = $res->getStatusCode();
-                        if ($code >= 400) {
+                        if ($code !== 200) {
                             $hadError = true;
                             $errorMessage = "HTTP {$code}";
+                        } else if ($res instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+                            // Streamed HTTP 200 response (CSV Export)
+                        } else {
+                            $content = $res->getContent();
+                            if ($content === false || strlen(trim((string)$content)) === 0) {
+                                $hadError = true;
+                                $errorMessage = "Empty Body";
+                            }
                         }
                     }
                 } catch (\Throwable $e) {
                     $hadError = true;
-                    $errorMessage = substr($e->getMessage(), 0, 50);
+                    $errorMessage = substr($e->getMessage(), 0, 45);
                 }
                 $timings[] = microtime(true) - $start;
             }

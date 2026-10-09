@@ -35,12 +35,12 @@ class ReportController extends Controller
             ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
             ->sum('grand_total') ?? 0.00);
 
-        // 2. Cost of Goods Sold (COGS) using stored order_items.cost_price via SQL Aggregation
-        $cogs = (float) (OrderItem::whereHas('order', function ($q) use ($startDate, $endDate, $tenantId) {
-            $q->where('tenant_id', $tenantId)
-              ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
-        })->selectRaw('SUM(quantity * CASE WHEN cost_price > 0 THEN cost_price ELSE (SELECT purchase_cost FROM products WHERE products.id = order_items.product_id) END) as total_cogs')
-          ->value('total_cogs') ?? 0.00);
+        // 2. Cost of Goods Sold (COGS) using stored order_items.cost_price via SQL Aggregation with direct JOIN
+        $cogs = (float) (OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->where('orders.tenant_id', $tenantId)
+            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->selectRaw('SUM(order_items.quantity * CASE WHEN order_items.cost_price > 0 THEN order_items.cost_price ELSE (SELECT purchase_cost FROM products WHERE products.id = order_items.product_id) END) as total_cogs')
+            ->value('total_cogs') ?? 0.00);
 
         // 3. Gross Profit = Sales - COGS
         $grossProfit = $totalSales - $cogs;
@@ -53,34 +53,34 @@ class ReportController extends Controller
         // 5. Net Profit = Gross Profit - Expenses
         $netProfit = $grossProfit - $totalExpenses;
 
-        // 6. Sales Breakdown by Category via SQL Aggregation
-        $salesByCategory = OrderItem::whereHas('order', function ($q) use ($startDate, $endDate, $tenantId) {
-            $q->where('tenant_id', $tenantId)
-              ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
-        })->join('products', 'order_items.product_id', '=', 'products.id')
-          ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
-          ->selectRaw('COALESCE(categories.name, "Uncategorized") as category, SUM(order_items.quantity) as qty, SUM(order_items.total) as total')
-          ->groupBy('category')
-          ->get();
+        // 6. Sales Breakdown by Category via direct SQL JOIN Aggregation
+        $salesByCategory = OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
+            ->where('orders.tenant_id', $tenantId)
+            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->selectRaw('COALESCE(categories.name, "Uncategorized") as category, SUM(order_items.quantity) as qty, SUM(order_items.total) as total')
+            ->groupBy('categories.id', 'categories.name')
+            ->get();
 
-        // 7. Sales Breakdown by Payment Method via SQL Aggregation
-        $salesByPayment = \App\Models\OrderPayment::whereHas('order', function ($q) use ($startDate, $endDate, $tenantId) {
-            $q->where('tenant_id', $tenantId)
-              ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
-        })->selectRaw('payment_method, SUM(amount) as total')
-          ->groupBy('payment_method')
-          ->get()
-          ->map(fn($row) => [
-              'method' => ucfirst(str_replace('_', ' ', $row->payment_method)),
-              'total' => (float) $row->total,
-          ]);
+        // 7. Sales Breakdown by Payment Method via direct SQL JOIN Aggregation
+        $salesByPayment = \App\Models\OrderPayment::join('orders', 'order_payments.order_id', '=', 'orders.id')
+            ->where('orders.tenant_id', $tenantId)
+            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->selectRaw('order_payments.payment_method, SUM(order_payments.amount) as total')
+            ->groupBy('order_payments.payment_method')
+            ->get()
+            ->map(fn($row) => [
+                'method' => ucfirst(str_replace('_', ' ', $row->payment_method)),
+                'total' => (float) $row->total,
+            ]);
 
         // 8. Sales Breakdown by Cashier Staff via SQL Aggregation
         $salesByCashier = Order::where('orders.tenant_id', $tenantId)
             ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
             ->leftJoin('users', 'orders.user_id', '=', 'users.id')
             ->selectRaw('COALESCE(users.name, "System Staff") as cashier, COUNT(orders.id) as order_count, SUM(orders.grand_total) as total_sales')
-            ->groupBy('cashier')
+            ->groupBy('users.id', 'users.name')
             ->get();
 
         return Inertia::render('Reports/ProfitLoss', [
