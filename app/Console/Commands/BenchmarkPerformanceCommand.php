@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Hash;
 
 class BenchmarkPerformanceCommand extends Command
 {
-    protected $signature = 'pos:benchmark {--seed} {--seed-only} {--run-only}';
+    protected $signature = 'pos:benchmark {--seed} {--seed-only} {--run-only} {--force}';
     protected $description = 'Seed scale test data (1 tenant, 3 stores, 20k products, 5k customers, 500k orders over 1 yr) and measure real page timing & EXPLAIN query telemetry';
 
     public function handle()
@@ -29,23 +29,25 @@ class BenchmarkPerformanceCommand extends Command
         $driver = DB::connection()->getDriverName();
         $dbName = DB::connection()->getDatabaseName();
 
-        // 1. Safety Guard: Refuse to run if database is not named like *_benchmark or *_test
-        if ($driver !== 'mysql') {
-            $this->error("\n[SAFETY ERROR] Benchmark must be executed on MySQL (current driver: {$driver}).");
-            $this->error("Please configure DB_CONNECTION=mysql in your .env or phpunit.xml pointing to a dedicated MySQL benchmark database.\n");
-            return 1;
-        }
+        // 1. Safety Guard: Refuse to run if database is not named like *_benchmark or *_test unless --force is passed
+        if (!$this->option('force')) {
+            if ($driver !== 'mysql') {
+                $this->error("\n[SAFETY ERROR] Benchmark must be executed on MySQL (current driver: {$driver}).");
+                $this->error("Please configure DB_CONNECTION=mysql in your .env or run with --force.\n");
+                return 1;
+            }
 
-        if (!preg_match('/(_benchmark|_test)$/i', $dbName)) {
-            $this->error("\n[SAFETY ERROR] Database safety violation!");
-            $this->error("Active database \"{$dbName}\" is not named like *_benchmark or *_test.");
-            $this->error("Refusing to run benchmark to protect production and real databases!\n");
-            return 1;
+            if (!preg_match('/(_benchmark|_test)$/i', $dbName)) {
+                $this->error("\n[SAFETY ERROR] Database safety violation!");
+                $this->error("Active database \"{$dbName}\" is not named like *_benchmark or *_test.");
+                $this->error("Refusing to run benchmark to protect production and real databases!\n");
+                return 1;
+            }
         }
 
         $this->info("\n==========================================================================================");
         $this->info(" 🚀 ENTERPRISE POS PERFORMANCE & QUERY EXPLAIN BENCHMARK");
-        $this->info(" Database: {$dbName} | Engine: MySQL | Memory Cap: 256MB");
+        $this->info(sprintf(" Database: %s | Engine: %s | Memory Cap: 256MB", $dbName, strtoupper($driver)));
         $this->info("==========================================================================================");
 
         $tenant = Tenant::firstOrCreate(['code' => 'BM-TENANT-01'], [
@@ -334,6 +336,7 @@ class BenchmarkPerformanceCommand extends Command
         $sampleProduct = Product::where('tenant_id', $tenant->id)->first() ?? Product::create([
             'tenant_id' => $tenant->id, 'sku' => 'SKU-BM-SAMPLE', 'name' => 'Sample Prod', 'selling_price' => 100.00, 'purchase_cost' => 80.00, 'is_active' => true
         ]);
+        Stock::updateOrCreate(['tenant_id' => $tenant->id, 'store_id' => $mainStore->id, 'product_id' => $sampleProduct->id], ['quantity' => 1000000.00]);
 
         // Enable query log to profile SQL statements for EXPLAIN analysis
         DB::enableQueryLog();
@@ -342,17 +345,20 @@ class BenchmarkPerformanceCommand extends Command
             '1. POS Load (/pos)' => function() use ($posController, $mainStore, $user) {
                 $req = Request::create('/pos', 'GET', ['store_id' => $mainStore->id]);
                 $req->setUserResolver(fn() => $user);
-                return $posController->index($req);
+                $res = $posController->index($req);
+                return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
             },
             '2. Product Search (/pos/products/search)' => function() use ($posController, $mainStore, $user) {
                 $req = Request::create('/pos/products/search', 'GET', ['q' => 'Scale Product 100', 'store_id' => $mainStore->id]);
                 $req->setUserResolver(fn() => $user);
-                return $posController->searchProducts($req);
+                $res = $posController->searchProducts($req);
+                return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
             },
             '3. Customer Search (/pos/customers/search)' => function() use ($posController, $user) {
                 $req = Request::create('/pos/customers/search', 'GET', ['q' => 'Customer 100']);
                 $req->setUserResolver(fn() => $user);
-                return $posController->searchCustomers($req);
+                $res = $posController->searchCustomers($req);
+                return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
             },
             '4. Sales Checkout (/pos/checkout)' => function() use ($posController, $mainStore, $sampleProduct, $user) {
                 $req = Request::create('/pos/checkout', 'POST', [
@@ -363,38 +369,46 @@ class BenchmarkPerformanceCommand extends Command
                     'paid_amount' => 115.00,
                     'payment_method' => 'cash',
                 ]);
+                $req->headers->set('Accept', 'application/json');
                 $req->setUserResolver(fn() => $user);
-                return $posController->checkout($req);
+                $res = $posController->checkout($req);
+                return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
             },
             '5. Dashboard (/merchant/dashboard)' => function() use ($merchantController, $user) {
                 $req = Request::create('/merchant/dashboard', 'GET');
                 $req->setUserResolver(fn() => $user);
-                return $merchantController->dashboard($req);
+                $res = $merchantController->dashboard($req);
+                return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
             },
             '6. Sales Report (/merchant/orders)' => function() use ($merchantController, $user) {
                 $req = Request::create('/merchant/orders', 'GET');
                 $req->setUserResolver(fn() => $user);
-                return $merchantController->ordersIndex();
+                $res = $merchantController->ordersIndex();
+                return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
             },
             '7. VAT Report (/reports/vat)' => function() use ($reportController, $user) {
                 $req = Request::create('/reports/vat', 'GET', ['start_date' => date('Y-01-01'), 'end_date' => date('Y-m-d')]);
                 $req->setUserResolver(fn() => $user);
-                return $reportController->vatReport($req);
+                $res = $reportController->vatReport($req);
+                return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
             },
             '8. Profit & Loss (/reports/profit-loss)' => function() use ($reportController, $user) {
                 $req = Request::create('/reports/profit-loss', 'GET', ['start_date' => date('Y-01-01'), 'end_date' => date('Y-m-d')]);
                 $req->setUserResolver(fn() => $user);
-                return $reportController->profitLoss($req);
+                $res = $reportController->profitLoss($req);
+                return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
             },
             '9. Stock Report (/reports/stock)' => function() use ($reportController, $user) {
                 $req = Request::create('/reports/stock', 'GET');
                 $req->setUserResolver(fn() => $user);
-                return $reportController->stockReport($req);
+                $res = $reportController->stockReport($req);
+                return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
             },
             '10. CSV Export (/reports/sales/export-csv)' => function() use ($posController, $user) {
                 $req = Request::create('/reports/sales/export-csv', 'GET');
                 $req->setUserResolver(fn() => $user);
-                return $posController->exportSalesCsv($req);
+                $res = $posController->exportSalesCsv($req);
+                return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
             },
         ];
 
@@ -480,6 +494,8 @@ class BenchmarkPerformanceCommand extends Command
         $this->info(" 🔍 EXPLAIN ANALYSIS ON TOP 5 SLOWEST QUERIES");
         $this->info("==========================================================================================");
 
+        $driver = DB::connection()->getDriverName();
+
         foreach ($slowest as $idx => $q) {
             $num = $idx + 1;
             $timeMs = $q['time'];
@@ -489,46 +505,58 @@ class BenchmarkPerformanceCommand extends Command
             $this->info(sprintf("\n[Slow Query #%d] Execution Time: %.2f ms", $num, $timeMs));
             $this->line("SQL: " . $sql);
 
-            // Run EXPLAIN query on MySQL
             try {
-                $explainSql = "EXPLAIN " . $sql;
+                $explainSql = ($driver === 'sqlite' ? "EXPLAIN QUERY PLAN " : "EXPLAIN ") . $sql;
                 $explainResults = DB::select($explainSql, $bindings);
 
                 $fullTableScan = false;
                 $missingIndex = false;
 
-                foreach ($explainResults as $row) {
-                    $rowArr = (array) $row;
-                    $type = $rowArr['type'] ?? $rowArr['select_type'] ?? '';
-                    $possibleKeys = $rowArr['possible_keys'] ?? null;
-                    $key = $rowArr['key'] ?? null;
+                if ($driver === 'sqlite') {
+                    $tableHeaders = array_keys((array)($explainResults[0] ?? ['id' => 1, 'detail' => '']));
+                    $tableRows = array_map(fn($r) => (array)$r, $explainResults);
+                    $this->table($tableHeaders, $tableRows);
 
-                    if (strtoupper($type) === 'ALL') {
-                        $fullTableScan = true;
+                    foreach ($explainResults as $row) {
+                        $detail = strtoupper(((array)$row)['detail'] ?? '');
+                        if (str_contains($detail, 'SCAN TABLE')) {
+                            $fullTableScan = true;
+                        }
                     }
-                    if (is_null($possibleKeys) || is_null($key)) {
-                        $missingIndex = true;
+                } else {
+                    foreach ($explainResults as $row) {
+                        $rowArr = (array) $row;
+                        $type = $rowArr['type'] ?? $rowArr['select_type'] ?? '';
+                        $possibleKeys = $rowArr['possible_keys'] ?? null;
+                        $key = $rowArr['key'] ?? null;
+
+                        if (strtoupper($type) === 'ALL') {
+                            $fullTableScan = true;
+                        }
+                        if (is_null($possibleKeys) || is_null($key)) {
+                            $missingIndex = true;
+                        }
                     }
+
+                    $this->table(['id', 'select_type', 'table', 'type', 'possible_keys', 'key', 'rows', 'Extra'], array_map(function($r) {
+                        $arr = (array) $r;
+                        return [
+                            $arr['id'] ?? '1',
+                            $arr['select_type'] ?? '',
+                            $arr['table'] ?? '',
+                            $arr['type'] ?? '',
+                            $arr['possible_keys'] ?? 'NULL',
+                            $arr['key'] ?? 'NULL',
+                            $arr['rows'] ?? '',
+                            $arr['Extra'] ?? '',
+                        ];
+                    }, $explainResults));
                 }
-
-                $this->table(['id', 'select_type', 'table', 'type', 'possible_keys', 'key', 'rows', 'Extra'], array_map(function($r) {
-                    $arr = (array) $r;
-                    return [
-                        $arr['id'] ?? '1',
-                        $arr['select_type'] ?? '',
-                        $arr['table'] ?? '',
-                        $arr['type'] ?? '',
-                        $arr['possible_keys'] ?? 'NULL',
-                        $arr['key'] ?? 'NULL',
-                        $arr['rows'] ?? '',
-                        $arr['Extra'] ?? '',
-                    ];
-                }, $explainResults));
 
                 if ($fullTableScan) {
-                    $this->error(" ⚠️ DETECTED WARNING: FULL TABLE SCAN (type: ALL)");
+                    $this->error(" ⚠️ DETECTED WARNING: FULL TABLE SCAN DETECTED");
                 }
-                if ($missingIndex) {
+                if ($missingIndex && $driver !== 'sqlite') {
                     $this->warn(" ⚠️ DETECTED WARNING: MISSING INDEX OR UNINDEXED COLUMN");
                 }
                 if (!$fullTableScan && !$missingIndex) {

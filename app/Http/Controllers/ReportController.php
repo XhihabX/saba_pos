@@ -35,11 +35,15 @@ class ReportController extends Controller
             ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
             ->sum('grand_total') ?? 0.00);
 
-        // 2. Cost of Goods Sold (COGS) using stored order_items.cost_price via SQL Aggregation with direct JOIN
-        $cogs = (float) (OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
-            ->where('orders.tenant_id', $tenantId)
-            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->selectRaw('SUM(order_items.quantity * CASE WHEN order_items.cost_price > 0 THEN order_items.cost_price ELSE (SELECT purchase_cost FROM products WHERE products.id = order_items.product_id) END) as total_cogs')
+        // 2. Cost of Goods Sold (COGS) using stored order_items.cost_price via SQL Aggregation with PK JOIN to orders
+        $cogs = (float) (OrderItem::where('order_items.tenant_id', $tenantId)
+            ->join('orders', function($join) use ($tenantId, $startDate, $endDate) {
+                $join->on('order_items.order_id', '=', 'orders.id')
+                     ->where('orders.tenant_id', '=', $tenantId)
+                     ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+            })
+            ->join('products', 'order_items.product_id', '=', 'products.id')
+            ->selectRaw('SUM(order_items.quantity * COALESCE(NULLIF(order_items.cost_price, 0), products.purchase_cost, 0)) as total_cogs')
             ->value('total_cogs') ?? 0.00);
 
         // 3. Gross Profit = Sales - COGS
@@ -54,11 +58,14 @@ class ReportController extends Controller
         $netProfit = $grossProfit - $totalExpenses;
 
         // 6. Sales Breakdown by Category via direct SQL JOIN Aggregation
-        $salesByCategory = OrderItem::join('orders', 'order_items.order_id', '=', 'orders.id')
+        $salesByCategory = OrderItem::where('order_items.tenant_id', $tenantId)
+            ->join('orders', function($join) use ($tenantId, $startDate, $endDate) {
+                $join->on('order_items.order_id', '=', 'orders.id')
+                     ->where('orders.tenant_id', '=', $tenantId)
+                     ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+            })
             ->join('products', 'order_items.product_id', '=', 'products.id')
             ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
-            ->where('orders.tenant_id', $tenantId)
-            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
             ->selectRaw('COALESCE(categories.name, "Uncategorized") as category, SUM(order_items.quantity) as qty, SUM(order_items.total) as total')
             ->groupBy('categories.id', 'categories.name')
             ->get();
@@ -100,7 +107,7 @@ class ReportController extends Controller
     public function vatReport(Request $request)
     {
         $tenantId = $this->getTenantId();
-        $startDate = $request->input('start_date', date('Y-m-01'));
+        $startDate = $request->input('start_date', date('Y-01-01'));
         $endDate = $request->input('end_date', date('Y-m-d'));
 
         // SQL Aggregation for totals
@@ -148,7 +155,7 @@ class ReportController extends Controller
         $orders = Order::where('tenant_id', $tenantId)
             ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
             ->with(['store', 'customer'])
-            ->latest()
+            ->orderBy('id', 'desc')
             ->paginate(50);
 
         return Inertia::render('Reports/Vat', [

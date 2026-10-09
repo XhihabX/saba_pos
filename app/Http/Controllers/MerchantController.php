@@ -352,11 +352,19 @@ class MerchantController extends Controller
             ->paginate(50);
         $stores = Store::where('tenant_id', $tenantId)->get();
 
+        $orderStats = Order::where('tenant_id', $tenantId)
+            ->selectRaw('
+                SUM(grand_total) as total_revenue,
+                COUNT(*) as total_orders,
+                SUM(CASE WHEN payment_status = "paid" THEN 1 ELSE 0 END) as paid_orders,
+                SUM(CASE WHEN payment_status IN ("due", "partial") THEN 1 ELSE 0 END) as due_orders
+            ')->first();
+
         $stats = [
-            'total_revenue' => (float) Order::where('tenant_id', $tenantId)->sum('grand_total'),
-            'total_orders' => Order::where('tenant_id', $tenantId)->count(),
-            'paid_orders' => Order::where('tenant_id', $tenantId)->where('payment_status', 'paid')->count(),
-            'due_orders' => Order::where('tenant_id', $tenantId)->whereIn('payment_status', ['due', 'partial'])->count(),
+            'total_revenue' => (float) ($orderStats->total_revenue ?? 0),
+            'total_orders' => (int) ($orderStats->total_orders ?? 0),
+            'paid_orders' => (int) ($orderStats->paid_orders ?? 0),
+            'due_orders' => (int) ($orderStats->due_orders ?? 0),
         ];
 
         return Inertia::render('Merchant/Orders', [
