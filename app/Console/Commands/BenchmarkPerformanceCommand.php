@@ -125,7 +125,9 @@ class BenchmarkPerformanceCommand extends Command
                             'updated_at' => now(),
                         ];
                     }
-                    DB::table('products')->insert($productRows);
+                    foreach (array_chunk($productRows, 500) as $chunk) {
+                        DB::table('products')->insert($chunk);
+                    }
 
                     // Fetch inserted product IDs for stock seeding across the 3 stores
                     $insertedProducts = Product::where('tenant_id', $tenant->id)
@@ -145,7 +147,9 @@ class BenchmarkPerformanceCommand extends Command
                             'updated_at' => now(),
                         ];
                     }
-                    DB::table('stocks')->insert($stockRows);
+                    foreach (array_chunk($stockRows, 500) as $chunk) {
+                        DB::table('stocks')->insert($chunk);
+                    }
                 });
             }
             $this->info("✓ 20,000 Products and Stock records seeded.");
@@ -173,7 +177,9 @@ class BenchmarkPerformanceCommand extends Command
                             'updated_at' => now(),
                         ];
                     }
-                    DB::table('customers')->insert($customerRows);
+                    foreach (array_chunk($customerRows, 500) as $chunk) {
+                        DB::table('customers')->insert($chunk);
+                    }
                 });
             }
             $this->info("✓ 5,000 Customers seeded.");
@@ -184,7 +190,7 @@ class BenchmarkPerformanceCommand extends Command
         if ($currentOrders < 500000) {
             $targetOrders = 500000 - $currentOrders;
             $this->info("--> Seeding 500,000 orders + 1,500,000 items + payments spread over 12 months across 3 stores...");
-            $batchSize = 5000;
+            $batchSize = 2000;
             $sampleProducts = Product::where('tenant_id', $tenant->id)->limit(100)->pluck('id')->toArray();
             if (empty($sampleProducts)) {
                 $sampleProducts = [1];
@@ -219,7 +225,9 @@ class BenchmarkPerformanceCommand extends Command
                             'updated_at' => $randomDate,
                         ];
                     }
-                    DB::table('orders')->insert($orderRows);
+                    foreach (array_chunk($orderRows, 500) as $chunk) {
+                        DB::table('orders')->insert($chunk);
+                    }
 
                     // Retrieve inserted orders for matching order_items & order_payments
                     $insertedOrders = DB::table('orders')
@@ -239,6 +247,7 @@ class BenchmarkPerformanceCommand extends Command
                                 'tenant_id' => $tenant->id,
                                 'order_id' => $ord->id,
                                 'product_id' => $pid,
+                                'product_name' => "Scale Product {$pid}",
                                 'quantity' => 1.0,
                                 'unit_price' => 100.00,
                                 'cost_price' => 80.00,
@@ -260,8 +269,12 @@ class BenchmarkPerformanceCommand extends Command
                         ];
                     }
 
-                    DB::table('order_items')->insert($itemRows);
-                    DB::table('order_payments')->insert($paymentRows);
+                    foreach (array_chunk($itemRows, 500) as $chunk) {
+                        DB::table('order_items')->insert($chunk);
+                    }
+                    foreach (array_chunk($paymentRows, 500) as $chunk) {
+                        DB::table('order_payments')->insert($chunk);
+                    }
                 });
 
                 if (($i + $batchSize) % 50000 === 0 || ($i + $batchSize) >= $targetOrders) {
@@ -352,32 +365,32 @@ class BenchmarkPerformanceCommand extends Command
             },
             '5. Dashboard (/merchant/dashboard)' => function() use ($merchantController, $user) {
                 $req = Request::create('/merchant/dashboard', 'GET');
-                $req.setUserResolver(fn() => $user);
+                $req->setUserResolver(fn() => $user);
                 return $merchantController->dashboard($req);
             },
             '6. Sales Report (/merchant/orders)' => function() use ($merchantController, $user) {
                 $req = Request::create('/merchant/orders', 'GET');
-                $req.setUserResolver(fn() => $user);
-                return $merchantController->orders($req);
+                $req->setUserResolver(fn() => $user);
+                return $merchantController->ordersIndex();
             },
             '7. VAT Report (/reports/vat)' => function() use ($reportController, $user) {
                 $req = Request::create('/reports/vat', 'GET', ['start_date' => date('Y-01-01'), 'end_date' => date('Y-m-d')]);
-                $req.setUserResolver(fn() => $user);
+                $req->setUserResolver(fn() => $user);
                 return $reportController->vatReport($req);
             },
             '8. Profit & Loss (/reports/profit-loss)' => function() use ($reportController, $user) {
                 $req = Request::create('/reports/profit-loss', 'GET', ['start_date' => date('Y-01-01'), 'end_date' => date('Y-m-d')]);
-                $req.setUserResolver(fn() => $user);
+                $req->setUserResolver(fn() => $user);
                 return $reportController->profitLoss($req);
             },
             '9. Stock Report (/reports/stock)' => function() use ($reportController, $user) {
                 $req = Request::create('/reports/stock', 'GET');
-                $req.setUserResolver(fn() => $user);
+                $req->setUserResolver(fn() => $user);
                 return $reportController->stockReport($req);
             },
             '10. CSV Export (/reports/sales/export-csv)' => function() use ($posController, $user) {
                 $req = Request::create('/reports/sales/export-csv', 'GET');
-                $req.setUserResolver(fn() => $user);
+                $req->setUserResolver(fn() => $user);
                 return $posController->exportSalesCsv($req);
             },
         ];
@@ -389,14 +402,23 @@ class BenchmarkPerformanceCommand extends Command
 
         foreach ($endpoints as $label => $callback) {
             $timings = [];
-            $initialMem = memory_get_usage(true);
+            $hadError = false;
+            $errorMessage = '';
 
             for ($run = 1; $run <= 5; $run++) {
                 $start = microtime(true);
                 try {
-                    $callback();
+                    $res = $callback();
+                    if ($res instanceof \Symfony\Component\HttpFoundation\Response) {
+                        $code = $res->getStatusCode();
+                        if ($code >= 400) {
+                            $hadError = true;
+                            $errorMessage = "HTTP {$code}";
+                        }
+                    }
                 } catch (\Throwable $e) {
-                    // Ignore Inertia redirect exceptions
+                    $hadError = true;
+                    $errorMessage = substr($e->getMessage(), 0, 50);
                 }
                 $timings[] = microtime(true) - $start;
             }
@@ -407,12 +429,15 @@ class BenchmarkPerformanceCommand extends Command
             $max = $timings[4];
             $peakMemMb = memory_get_peak_usage(true) / 1024 / 1024;
 
-            $pass = ($max <= 2.0 && $peakMemMb <= 256.0);
+            $pass = (!$hadError && $max <= 2.0 && $peakMemMb <= 256.0);
             if (!$pass) {
                 $overallPass = false;
             }
 
             $statusStr = $pass ? "<fg=green>PASS</>" : "<fg=red;options=bold>FAIL</>";
+            if ($hadError) {
+                $statusStr .= " <fg=red>({$errorMessage})</>";
+            }
 
             $this->line(sprintf("%-45s | %6.3fs | %6.3fs | %6.3fs | %8.2f MB | %s",
                 $label, $min, $median, $max, $peakMemMb, $statusStr

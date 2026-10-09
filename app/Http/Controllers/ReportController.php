@@ -142,7 +142,7 @@ class ReportController extends Controller
             ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
             ->leftJoin('stores', 'orders.store_id', '=', 'stores.id')
             ->selectRaw('COALESCE(stores.name, "Default Outlet") as store_name, COALESCE(stores.bin_number, stores.vat_number, "") as bin_number, COUNT(orders.id) as order_count, SUM(orders.subtotal) as net_amount, SUM(orders.tax_amount) as vat_collected, SUM(orders.grand_total) as gross_total')
-            ->groupBy('store_name', 'bin_number')
+            ->groupBy('stores.id', 'stores.name', 'stores.bin_number', 'stores.vat_number')
             ->get();
 
         $orders = Order::where('tenant_id', $tenantId)

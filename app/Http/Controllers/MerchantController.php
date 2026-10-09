@@ -226,7 +226,7 @@ class MerchantController extends Controller
         $customers = Customer::where('tenant_id', $tenantId)
             ->withCount('orders')
             ->latest()
-            ->get();
+            ->paginate(50);
 
         $stats = [
             'total_customers' => Customer::where('tenant_id', $tenantId)->count(),
@@ -349,7 +349,7 @@ class MerchantController extends Controller
         $orders = Order::where('tenant_id', $tenantId)
             ->with(['store', 'customer', 'items.product', 'user'])
             ->latest()
-            ->get();
+            ->paginate(50);
         $stores = Store::where('tenant_id', $tenantId)->get();
 
         $stats = [
