@@ -73,26 +73,38 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('product_batches');
-        Schema::dropIfExists('mfs_transactions');
+        Schema::disableForeignKeyConstraints();
+        try {
+            Schema::dropIfExists('product_batches');
+            Schema::dropIfExists('mfs_transactions');
 
-        Schema::table('orders', function (Blueprint $table) {
-            if (Schema::hasColumn('orders', 'idempotency_key')) {
-                $table->dropColumn('idempotency_key');
+            if (Schema::hasTable('orders')) {
+                Schema::table('orders', function (Blueprint $table) {
+                    if (Schema::hasColumn('orders', 'idempotency_key')) {
+                        try { $table->dropColumn('idempotency_key'); } catch (\Throwable $e) {}
+                    }
+                });
             }
-        });
 
-        Schema::table('customers', function (Blueprint $table) {
-            if (Schema::hasColumn('customers', 'credit_limit')) {
-                $table->dropColumn('credit_limit');
+            if (Schema::hasTable('customers')) {
+                Schema::table('customers', function (Blueprint $table) {
+                    if (Schema::hasColumn('customers', 'credit_limit')) {
+                        try { $table->dropColumn('credit_limit'); } catch (\Throwable $e) {}
+                    }
+                });
             }
-        });
 
-        Schema::table('stores', function (Blueprint $table) {
-            $cols = array_filter(['bin_number', 'is_godown', 'mfs_number', 'sms_gateway_url', 'sms_api_key'], fn($c) => Schema::hasColumn('stores', $c));
-            if (!empty($cols)) {
-                $table->dropColumn($cols);
+            if (Schema::hasTable('stores')) {
+                Schema::table('stores', function (Blueprint $table) {
+                    $cols = array_filter(['bin_number', 'is_godown', 'mfs_number', 'sms_gateway_url', 'sms_api_key'], fn($c) => Schema::hasColumn('stores', $c));
+                    if (!empty($cols)) {
+                        try { $table->dropColumn($cols); } catch (\Throwable $e) {}
+                    }
+                });
             }
-        });
+        } catch (\Throwable $e) {
+            // Ignore rollback errors
+        }
+        Schema::enableForeignKeyConstraints();
     }
 };

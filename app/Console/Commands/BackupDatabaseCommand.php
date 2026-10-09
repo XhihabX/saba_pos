@@ -49,16 +49,50 @@ class BackupDatabaseCommand extends Command
             $dbHost = config('database.connections.mysql.host', '127.0.0.1');
             $dbPort = config('database.connections.mysql.port', '3306');
 
-            $cmd = "mysqldump --host={$dbHost} --port={$dbPort} --user={$dbUser} " . (!empty($dbPass) ? "--password=" . escapeshellarg($dbPass) : "") . " {$dbName} | gzip > " . escapeshellarg($filepath);
-            exec($cmd, $output, $exitCode);
-
-            if ($exitCode !== 0 || !File::exists($filepath)) {
-                $rawSqlPath = "{$backupDir}/pos_db_backup_{$timestamp}.sql";
-                File::put($rawSqlPath, "-- DB Snapshot generated at {$timestamp}\n");
-                $cmdGzip = "gzip -f " . escapeshellarg($rawSqlPath);
-                exec($cmdGzip);
-                $filepath = "{$rawSqlPath}.gz";
+            // Try mysqldump path or fallback to PHP native sql dump
+            $mysqldumpBin = "mysqldump";
+            if (File::exists('C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqldump.exe')) {
+                $mysqldumpBin = '"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqldump.exe"';
             }
+
+            $rawSqlPath = "{$backupDir}/pos_db_backup_{$timestamp}.sql";
+            $cmd = "{$mysqldumpBin} --single-transaction --skip-lock-tables --host={$dbHost} --port={$dbPort} --user={$dbUser} " . (!empty($dbPass) ? "--password=" . escapeshellarg($dbPass) : "") . " {$dbName} > " . escapeshellarg($rawSqlPath);
+            @exec($cmd, $output, $exitCode);
+
+            if ($exitCode !== 0 || !File::exists($rawSqlPath) || filesize($rawSqlPath) === 0) {
+                // PHP native SQL dumper fallback
+                $pdo = DB::connection()->getPdo();
+                $tables = DB::select("SELECT table_name AS name FROM information_schema.tables WHERE table_schema = DATABASE()");
+                $sqlContent = "-- MySQL Snapshot generated at {$timestamp}\nSET FOREIGN_KEY_CHECKS=0;\n";
+                foreach ($tables as $t) {
+                    $tName = $t->name;
+                    $createRow = DB::selectOne("SHOW CREATE TABLE `{$tName}`");
+                    $createSqlKey = 'Create Table';
+                    $createSql = (array)$createRow;
+                    if (isset($createSql[$createSqlKey])) {
+                        $sqlContent .= "DROP TABLE IF EXISTS `{$tName}`;\n";
+                        $sqlContent .= $createSql[$createSqlKey] . ";\n";
+                    }
+                    $rows = DB::table($tName)->get();
+                    foreach ($rows as $row) {
+                        $cols = array_keys((array)$row);
+                        $vals = array_map(fn($v) => is_null($v) ? 'NULL' : $pdo->quote($v), array_values((array)$row));
+                        $sqlContent .= "INSERT INTO `{$tName}` (`" . implode('`, `', $cols) . "`) VALUES (" . implode(', ', $vals) . ");\n";
+                    }
+                }
+                $sqlContent .= "SET FOREIGN_KEY_CHECKS=1;\n";
+                File::put($rawSqlPath, $sqlContent);
+            }
+
+            // PHP native gzopen compression
+            $fpOut = gzopen($filepath, 'wb9');
+            $fpIn = fopen($rawSqlPath, 'rb');
+            while (!feof($fpIn)) {
+                gzwrite($fpOut, fread($fpIn, 1024 * 512));
+            }
+            fclose($fpIn);
+            gzclose($fpOut);
+            File::delete($rawSqlPath);
         } else {
             // SQLite driver backup
             $dbPath = config('database.connections.sqlite.database');

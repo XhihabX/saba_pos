@@ -141,12 +141,15 @@ class ProductionHardeningFeaturesTest extends TestCase
         ]);
 
         OrderItem::create([
+            'tenant_id' => $this->tenant->id,
             'order_id' => $order->id,
             'product_id' => $product->id,
             'product_name' => 'Item 1',
             'quantity' => 1,
             'unit_price' => 1000.00,
-            'total' => 1000.00,
+            'vat_rate' => 15.00,
+            'vat_amount' => 150.00,
+            'total' => 1150.00,
         ]);
 
         $response = $this->actingAs($user)->get("/vat/mushak-6.3/{$order->id}");
@@ -186,15 +189,23 @@ class ProductionHardeningFeaturesTest extends TestCase
         $this->assertStringContainsString('INV-CSV-1', $content);
     }
 
+    #[\PHPUnit\Framework\Attributes\Group('backup')]
     public function test_database_backup_and_restore_commands_execute_successfully()
     {
+        $backupDir = storage_path('app/backups');
+        if (File::exists($backupDir)) {
+            File::cleanDirectory($backupDir);
+        } else {
+            File::makeDirectory($backupDir, 0755, true);
+        }
+
         $exitCodeBackup = Artisan::call('pos:backup');
         $this->assertEquals(0, $exitCodeBackup);
 
-        $backupFiles = File::files(storage_path('app/backups'));
+        $backupFiles = File::files($backupDir);
         $this->assertNotEmpty($backupFiles, 'Backup file should exist in storage/app/backups');
 
-        $latestBackup = basename($backupFiles[0]->getPathname());
+        $latestBackup = collect($backupFiles)->sortByDesc(fn($f) => $f->getMTime())->first()->getFilename();
 
         $exitCodeRestore = Artisan::call('pos:restore', ['filename' => $latestBackup]);
         $this->assertEquals(0, $exitCodeRestore);

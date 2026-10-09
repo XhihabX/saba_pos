@@ -94,59 +94,85 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('register_shifts');
+        Schema::disableForeignKeyConstraints();
+        try {
+            Schema::dropIfExists('register_shifts');
 
-        Schema::table('expenses', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropColumn('tenant_id');
-        });
+            if (Schema::hasTable('expenses')) {
+                Schema::table('expenses', function (Blueprint $table) {
+                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
+                    if (Schema::hasColumn('expenses', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                });
+            }
 
-        Schema::table('customers', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropColumn('tenant_id');
-        });
+            if (Schema::hasTable('customers')) {
+                Schema::table('customers', function (Blueprint $table) {
+                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
+                    if (Schema::hasColumn('customers', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                });
+            }
 
-        Schema::table('suppliers', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropColumn('tenant_id');
-        });
+            if (Schema::hasTable('suppliers')) {
+                Schema::table('suppliers', function (Blueprint $table) {
+                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
+                    if (Schema::hasColumn('suppliers', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                });
+            }
 
-        Schema::table('brands', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropColumn('tenant_id');
-        });
+            if (Schema::hasTable('brands')) {
+                Schema::table('brands', function (Blueprint $table) {
+                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
+                    if (Schema::hasColumn('brands', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                });
+            }
 
-        Schema::table('units', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropColumn('tenant_id');
-        });
+            if (Schema::hasTable('units')) {
+                Schema::table('units', function (Blueprint $table) {
+                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
+                    if (Schema::hasColumn('units', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                });
+            }
 
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropColumn('tenant_id');
-        });
+            if (Schema::hasTable('orders')) {
+                Schema::table('orders', function (Blueprint $table) {
+                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
+                    if (Schema::hasColumn('orders', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                });
+            }
 
-        Schema::table('products', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropColumn('tenant_id');
-        });
+            if (Schema::hasTable('products')) {
+                Schema::table('products', function (Blueprint $table) {
+                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
+                    if (Schema::hasColumn('products', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                });
+            }
 
-        Schema::table('categories', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropColumn('tenant_id');
-        });
+            if (Schema::hasTable('categories')) {
+                Schema::table('categories', function (Blueprint $table) {
+                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
+                    if (Schema::hasColumn('categories', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                });
+            }
 
-        Schema::table('stores', function (Blueprint $table) {
-            $table->dropForeign(['tenant_id']);
-            $table->dropColumn('tenant_id');
-        });
+            if (Schema::hasTable('stores')) {
+                Schema::table('stores', function (Blueprint $table) {
+                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
+                    if (Schema::hasColumn('stores', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                });
+            }
 
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropForeign(['store_id']);
-            $table->dropForeign(['tenant_id']);
-            $table->dropColumn(['role', 'store_id', 'tenant_id']);
-        });
+            if (Schema::hasTable('users')) {
+                Schema::table('users', function (Blueprint $table) {
+                    try { $table->dropForeign(['store_id']); } catch (\Throwable $e) {}
+                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
+                    try { $table->dropColumn(['role', 'store_id', 'tenant_id']); } catch (\Throwable $e) {}
+                });
+            }
 
-        Schema::dropIfExists('tenants');
+            Schema::dropIfExists('tenants');
+        } catch (\Throwable $e) {
+            // Ignore rollback errors
+        }
+        Schema::enableForeignKeyConstraints();
     }
 };

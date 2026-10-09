@@ -50,8 +50,8 @@ class PdfExportController extends Controller
             $ordersQuery = Order::where('tenant_id', $tenantId)->where('store_id', $store->id);
             
             $totalOrders = (clone $ordersQuery)->count();
-            $grossRevenue = (clone $ordersQuery)->sum('total_amount');
-            $vatCollected = (clone $ordersQuery)->sum('vat_amount');
+            $grossRevenue = (clone $ordersQuery)->sum('grand_total');
+            $vatCollected = (clone $ordersQuery)->sum('tax_amount');
 
             $orderIds = (clone $ordersQuery)->pluck('id');
 

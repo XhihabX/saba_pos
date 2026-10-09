@@ -211,6 +211,7 @@ return new class extends Migration
 
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('stock_transfer_items');
         Schema::dropIfExists('stock_transfers');
         Schema::dropIfExists('expenses');
@@ -228,5 +229,6 @@ return new class extends Migration
         Schema::dropIfExists('brands');
         Schema::dropIfExists('categories');
         Schema::dropIfExists('stores');
+        Schema::enableForeignKeyConstraints();
     }
 };

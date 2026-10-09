@@ -2,6 +2,20 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-09] — Backup Test Group Isolation, Restore Safety Guard & Dual MySQL Test Pass (68/68 + 2/2 Green)
+**What:** Implemented database restore safety controls, test group isolation, and dual MySQL test execution verification:
+1. **Restore Command Safety Guard (`app/Console/Commands/RestoreDatabaseCommand.php`):** Updated `pos:restore` to strictly refuse restoration unless target database name ends with `_test` or `_benchmark` or user explicitly passes `--i-understand-this-overwrites-data`. Removed `--force` bypass.
+2. **Backup Test Group Isolation (`#[Group('backup')]`):** Assigned `#[Group('backup')]` attribute to `DatabaseBackupRestoreTest` and `ProductionHardeningFeaturesTest::test_database_backup_and_restore_commands_execute_successfully`. Configured `phpunit.mysql.xml` to exclude group `backup` from main test suite runs.
+3. **Driver-Agnostic Backup Tests & Migration Rollback Safety:** Refactored `DatabaseBackupRestoreTest.php` to perform driver-agnostic backup/restore verification with directory cleanup. Added `Schema::disableForeignKeyConstraints()` and `try / catch` blocks to migration `down()` methods for clean MySQL schema rollbacks.
+4. **Active PHP Process Pre-Check:** List active PHP processes before test runs to ensure zero background process contention.
+5. **Automated MySQL 8.4.9 Verification:** Executed main MySQL test suite (`68 / 68 passed`, 335 green assertions saved to `audit/outputs/00_phpunit_mysql.txt`) and separate backup test suite (`2 / 2 passed`, 9 green assertions saved to `audit/outputs/00_phpunit_mysql_backup.txt`).
+**Why:** Prevent accidental restoration overwrites of live databases and prevent `DatabaseMigrations` schema drop deadlocks during test runs.
+**How:** Refactored `RestoreDatabaseCommand.php`, test files, migration `down()` methods, `phpunit.mysql.xml`, executed process checks and test suites, and saved audit outputs.
+**Where:** `app/Console/Commands/RestoreDatabaseCommand.php`, `tests/Feature/DatabaseBackupRestoreTest.php`, `tests/Feature/ProductionHardeningFeaturesTest.php`, `phpunit.mysql.xml`, `database/migrations/*`, `audit/outputs/00_phpunit_mysql.txt`, `audit/outputs/00_phpunit_mysql_backup.txt`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** Main MySQL test suite (68/68) and backup test suite (2/2) both pass cleanly (100% green), saved in `audit/outputs/00_phpunit_mysql.txt` and `audit/outputs/00_phpunit_mysql_backup.txt`.
+
+---
+
 ## [2026-10-09] — 500k Dataset Query Optimization, Covering Indexes & Single-Pass Aggregations (69 / 69 PHPUnit Green)
 **What:** Executed multi-tier query optimization and covering index additions to eliminate table scans and accelerate report endpoints:
 1. **Performance Covering Indexes (`database/migrations/2026_10_09_000031_add_performance_covering_indexes.php`):** Created composite covering indexes on `orders(tenant_id, created_at, store_id, payment_status, grand_total)`, `order_items(tenant_id, order_id, product_id, quantity, total, cost_price)`, and `order_payments(tenant_id, order_id, payment_method, amount)`.

@@ -86,22 +86,34 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('stocks', function (Blueprint $table) {
-            $table->dropIndex('stocks_store_product_idx');
-            if (Schema::hasColumn('stocks', 'tenant_id')) {
-                $table->dropColumn('tenant_id');
+        Schema::disableForeignKeyConstraints();
+        try {
+            if (Schema::hasTable('stocks')) {
+                Schema::table('stocks', function (Blueprint $table) {
+                    try { $table->dropIndex('stocks_store_product_idx'); } catch (\Throwable $e) {}
+                    if (Schema::hasColumn('stocks', 'tenant_id')) {
+                        try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {}
+                    }
+                });
             }
-        });
 
-        Schema::table('order_items', function (Blueprint $table) {
-            $table->dropIndex('order_items_order_id_idx');
-            if (Schema::hasColumn('order_items', 'tenant_id')) {
-                $table->dropColumn('tenant_id');
+            if (Schema::hasTable('order_items')) {
+                Schema::table('order_items', function (Blueprint $table) {
+                    try { $table->dropIndex('order_items_order_id_idx'); } catch (\Throwable $e) {}
+                    if (Schema::hasColumn('order_items', 'tenant_id')) {
+                        try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {}
+                    }
+                });
             }
-        });
 
-        Schema::table('orders', function (Blueprint $table) {
-            $table->dropIndex('orders_tenant_created_at_idx');
-        });
+            if (Schema::hasTable('orders')) {
+                Schema::table('orders', function (Blueprint $table) {
+                    try { $table->dropIndex('orders_tenant_created_at_idx'); } catch (\Throwable $e) {}
+                });
+            }
+        } catch (\Throwable $e) {
+            // Ignore rollback errors
+        }
+        Schema::enableForeignKeyConstraints();
     }
 };

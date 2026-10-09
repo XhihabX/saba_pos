@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Hash;
 
 class BenchmarkPerformanceCommand extends Command
 {
-    protected $signature = 'pos:benchmark {--seed} {--seed-only} {--run-only} {--force}';
+    protected $signature = 'pos:benchmark {--seed} {--seed-only} {--run-only}';
     protected $description = 'Seed scale test data (1 tenant, 3 stores, 20k products, 5k customers, 500k orders over 1 yr) and measure real page timing & EXPLAIN query telemetry';
 
     public function handle()
@@ -29,20 +29,18 @@ class BenchmarkPerformanceCommand extends Command
         $driver = DB::connection()->getDriverName();
         $dbName = DB::connection()->getDatabaseName();
 
-        // 1. Safety Guard: Refuse to run if database is not named like *_benchmark or *_test unless --force is passed
-        if (!$this->option('force')) {
-            if ($driver !== 'mysql') {
-                $this->error("\n[SAFETY ERROR] Benchmark must be executed on MySQL (current driver: {$driver}).");
-                $this->error("Please configure DB_CONNECTION=mysql in your .env or run with --force.\n");
-                return 1;
-            }
+        // 1. Safety Guard: Refuse to run unless driver is mysql AND database name ends in _benchmark or _test
+        if ($driver !== 'mysql') {
+            $this->error("\n[SAFETY ERROR] Benchmark must be executed on MySQL (current driver: {$driver}).");
+            $this->error("Please configure DB_CONNECTION=mysql in your .env.\n");
+            return 1;
+        }
 
-            if (!preg_match('/(_benchmark|_test)$/i', $dbName)) {
-                $this->error("\n[SAFETY ERROR] Database safety violation!");
-                $this->error("Active database \"{$dbName}\" is not named like *_benchmark or *_test.");
-                $this->error("Refusing to run benchmark to protect production and real databases!\n");
-                return 1;
-            }
+        if (!preg_match('/(_benchmark|_test)$/i', $dbName)) {
+            $this->error("\n[SAFETY ERROR] Database safety violation!");
+            $this->error("Active database \"{$dbName}\" is not named like *_benchmark or *_test.");
+            $this->error("Refusing to run benchmark to protect production and real databases!\n");
+            return 1;
         }
 
         $this->info("\n==========================================================================================");
@@ -83,7 +81,7 @@ class BenchmarkPerformanceCommand extends Command
 
         auth()->login($user);
 
-        if ($this->option('seed') || (!$this->option('run-only') && Order::where('tenant_id', $tenant->id)->count() < 500000)) {
+        if ($this->option('seed') || $this->option('seed-only')) {
             $this->seedBenchmarkData($tenant, $stores);
         }
 

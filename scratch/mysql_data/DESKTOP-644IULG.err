@@ -1,0 +1,12 @@
+2026-10-09T07:03:27.720886Z 0 [System] [MY-015017] [Server] MySQL Server Initialization - start.
+2026-10-09T07:03:27.735834Z 0 [System] [MY-013169] [Server] C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqld.exe (mysqld 8.4.9) initializing of server in progress as process 5668
+2026-10-09T07:03:28.257215Z 1 [System] [MY-013576] [InnoDB] InnoDB initialization has started.
+2026-10-09T07:03:30.827728Z 1 [ERROR] [MY-012611] [InnoDB] Operating system error number 32 in a file operation.
+2026-10-09T07:03:30.831509Z 1 [ERROR] [MY-012615] [InnoDB] The error means that another program is using InnoDB's files. This might be a backup or antivirus software or another instance of MySQL. Please close it to get rid of this error.
+2026-10-09T07:03:40.867536Z 1 [ERROR] [MY-013904] [InnoDB] Failed to mark unused redo log file .\#innodb_redo\#ib_redo0_tmp as in use (by renaming to .\#innodb_redo\#ib_redo0).
+2026-10-09T07:03:40.869862Z 1 [ERROR] [MY-013891] [InnoDB] Failed to rename .\#innodb_redo\#ib_redo0_tmp when creating redo log file .\#innodb_redo\#ib_redo0 (error: 11)
+2026-10-09T07:03:40.872058Z 1 [ERROR] [MY-012929] [InnoDB] InnoDB Database creation was aborted with error Generic error. You may need to delete the ibdata1 file before trying to start up again.
+2026-10-09T07:03:40.935068Z 0 [ERROR] [MY-010020] [Server] Data Dictionary initialization failed.
+2026-10-09T07:03:40.936379Z 0 [ERROR] [MY-013236] [Server] The designated data directory d:\Projects\Saba POS\scratch\mysql_data\ is unusable. You can remove all files that the server added to it.
+2026-10-09T07:03:40.939005Z 0 [ERROR] [MY-010119] [Server] Aborting
+2026-10-09T07:03:40.985186Z 0 [System] [MY-015018] [Server] MySQL Server Initialization - end.

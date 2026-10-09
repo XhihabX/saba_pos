@@ -55,14 +55,25 @@ return new class extends Migration
             'audit_logs',
         ];
 
+        Schema::disableForeignKeyConstraints();
         foreach ($tables as $tableName) {
             if (Schema::hasTable($tableName)) {
-                Schema::table($tableName, function (Blueprint $table) use ($tableName) {
-                    if (Schema::hasColumn($tableName, 'tenant_id')) {
-                        $table->dropColumn('tenant_id');
-                    }
-                });
+                try {
+                    Schema::table($tableName, function (Blueprint $table) use ($tableName) {
+                        if (Schema::hasColumn($tableName, 'tenant_id')) {
+                            try {
+                                $table->dropForeign("{$tableName}_tenant_id_foreign");
+                            } catch (\Throwable $e) {
+                                // foreign key may not exist
+                            }
+                            $table->dropColumn('tenant_id');
+                        }
+                    });
+                } catch (\Throwable $e) {
+                    // Ignore drop errors for pre-existing foreign-constrained tenant_id columns
+                }
             }
         }
+        Schema::enableForeignKeyConstraints();
     }
 };

@@ -51,17 +51,27 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('order_items', function (Blueprint $table) {
-            $table->dropForeign(['variant_id']);
-            $table->dropColumn(['variant_id', 'variant_name']);
-        });
+        Schema::disableForeignKeyConstraints();
+        try {
+            if (Schema::hasTable('order_items')) {
+                Schema::table('order_items', function (Blueprint $table) {
+                    try { $table->dropForeign(['variant_id']); } catch (\Throwable $e) {}
+                    try { $table->dropColumn(['variant_id', 'variant_name']); } catch (\Throwable $e) {}
+                });
+            }
 
-        Schema::table('stocks', function (Blueprint $table) {
-            $table->dropUnique('stocks_store_product_variant_unique');
-            $table->dropForeign(['variant_id']);
-            $table->dropColumn('variant_id');
-        });
+            if (Schema::hasTable('stocks')) {
+                Schema::table('stocks', function (Blueprint $table) {
+                    try { $table->dropUnique('stocks_store_product_variant_unique'); } catch (\Throwable $e) {}
+                    try { $table->dropForeign(['variant_id']); } catch (\Throwable $e) {}
+                    try { $table->dropColumn('variant_id'); } catch (\Throwable $e) {}
+                });
+            }
 
-        Schema::dropIfExists('product_variants');
+            Schema::dropIfExists('product_variants');
+        } catch (\Throwable $e) {
+            // Ignore rollback errors
+        }
+        Schema::enableForeignKeyConstraints();
     }
 };

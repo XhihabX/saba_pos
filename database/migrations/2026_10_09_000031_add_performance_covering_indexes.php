@@ -29,22 +29,28 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (Schema::hasTable('orders')) {
-            Schema::table('orders', function (Blueprint $table) {
-                $table->dropIndex('orders_tenant_created_perf_v2_idx');
-            });
-        }
+        Schema::disableForeignKeyConstraints();
+        try {
+            if (Schema::hasTable('orders')) {
+                Schema::table('orders', function (Blueprint $table) {
+                    try { $table->dropIndex('orders_tenant_created_perf_v2_idx'); } catch (\Throwable $e) {}
+                });
+            }
 
-        if (Schema::hasTable('order_items')) {
-            Schema::table('order_items', function (Blueprint $table) {
-                $table->dropIndex('order_items_tenant_ord_prod_perf_v2_idx');
-            });
-        }
+            if (Schema::hasTable('order_items')) {
+                Schema::table('order_items', function (Blueprint $table) {
+                    try { $table->dropIndex('order_items_tenant_ord_prod_perf_v2_idx'); } catch (\Throwable $e) {}
+                });
+            }
 
-        if (Schema::hasTable('order_payments')) {
-            Schema::table('order_payments', function (Blueprint $table) {
-                $table->dropIndex('order_payments_tenant_ord_perf_v2_idx');
-            });
+            if (Schema::hasTable('order_payments')) {
+                Schema::table('order_payments', function (Blueprint $table) {
+                    try { $table->dropIndex('order_payments_tenant_ord_perf_v2_idx'); } catch (\Throwable $e) {}
+                });
+            }
+        } catch (\Throwable $e) {
+            // Ignore rollback index drop errors
         }
+        Schema::enableForeignKeyConstraints();
     }
 };

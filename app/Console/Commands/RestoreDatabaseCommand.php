@@ -13,7 +13,7 @@ class RestoreDatabaseCommand extends Command
      *
      * @var string
      */
-    protected $signature = 'pos:restore {filename : Backup filename in storage/app/backups/} {--force : Force restore without prompt}';
+    protected $signature = 'pos:restore {filename : Backup filename in storage/app/backups/} {--force : Force restore without prompt} {--i-understand-this-overwrites-data : Allow restoring non-test database}';
 
     /**
      * The console command description.
@@ -35,8 +35,20 @@ class RestoreDatabaseCommand extends Command
             return Command::FAILURE;
         }
 
-        $this->info("Starting database restore from: {$filename}");
         $driver = config('database.default', 'sqlite');
+        $dbName = config("database.connections.{$driver}.database");
+        $dbBaseName = pathinfo((string)$dbName, PATHINFO_FILENAME);
+        $isTestDb = (bool) preg_match('/(_benchmark|_test)$/i', $dbBaseName);
+
+        if (!$isTestDb && !$this->option('i-understand-this-overwrites-data')) {
+            $this->error("\n[SAFETY ERROR] Database restoration safety violation!");
+            $this->error("Active target database \"{$dbName}\" is not named like *_benchmark or *_test.");
+            $this->error("Refusing to restore database to protect real/production data!");
+            $this->error("Pass --i-understand-this-overwrites-data to override safety guard.\n");
+            return Command::FAILURE;
+        }
+
+        $this->info("Starting database restore from: {$filename}");
 
         if ($driver === 'sqlite') {
             $dbPath = config('database.connections.sqlite.database');
@@ -70,27 +82,35 @@ class RestoreDatabaseCommand extends Command
         }
 
         // MySQL Restore
-        $dbName = config('database.connections.mysql.database');
         $dbUser = config('database.connections.mysql.username');
         $dbPass = config('database.connections.mysql.password');
         $dbHost = config('database.connections.mysql.host', '127.0.0.1');
         $dbPort = config('database.connections.mysql.port', '3306');
 
-        if (str_ends_with($filename, '.gz')) {
-            $cmd = "gunzip -c " . escapeshellarg($backupPath) . " | mysql --host={$dbHost} --port={$dbPort} --user={$dbUser} " . (!empty($dbPass) ? "--password=" . escapeshellarg($dbPass) : "") . " {$dbName}";
-        } else {
-            $cmd = "mysql --host={$dbHost} --port={$dbPort} --user={$dbUser} " . (!empty($dbPass) ? "--password=" . escapeshellarg($dbPass) : "") . " {$dbName} < " . escapeshellarg($backupPath);
+        $mysqlBin = "mysql";
+        if (File::exists('C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe')) {
+            $mysqlBin = '"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe"';
         }
 
-        exec($cmd, $output, $exitCode);
+        $sqlContent = '';
+        if (str_ends_with($filename, '.gz')) {
+            $fpIn = gzopen($backupPath, 'rb');
+            while (!gzeof($fpIn)) {
+                $sqlContent .= gzread($fpIn, 1024 * 512);
+            }
+            gzclose($fpIn);
+        } else {
+            $sqlContent = File::get($backupPath);
+        }
 
-        if ($exitCode === 0) {
+        if (!empty($sqlContent)) {
+            \Illuminate\Support\Facades\DB::unprepared($sqlContent);
             $this->info("✅ MySQL database successfully restored from {$filename}!");
             Log::info("MySQL database restored from {$filename}");
             return Command::SUCCESS;
         }
 
-        $this->error("❌ MySQL restore failed with exit code {$exitCode}.");
+        $this->error("❌ MySQL restore failed: empty SQL file.");
         return Command::FAILURE;
     }
 }
