@@ -1,0 +1,85 @@
+
+==========================================================================================
+ 🚀 ENTERPRISE POS PERFORMANCE & QUERY EXPLAIN BENCHMARK
+ Database: sabapos_benchmark | Engine: MYSQL | Memory Cap: 256MB
+==========================================================================================
+
+==========================================================================================
+ 📊 REAL BENCHMARK ROW COUNTS & ENGINE TELEMETRY
+ Engine: MYSQL (v8.4.9) | Target: < 2.0s Max Duration, < 256 MB Peak Memory
+ Tenants: 1 | Stores: 3 | Products: 20,000 | Customers: 5,000
+ Orders: 500,079 | OrderItems: 1,500,079 | OrderPayments: 500,079 | Stocks: 20,001
+==========================================================================================
+
+Endpoint Operation | Min (s) | Med (s) | Max (s) | Peak Memory | Status
+----------------------------------------------------------------------------------------------------
+1. POS Load (/pos) | 0.528s | 0.658s | 0.868s | 38.00 MB | PASS
+2. Product Search (/pos/products/search) | 0.049s | 0.051s | 0.165s | 38.00 MB | PASS
+3. Customer Search (/pos/customers/search) | 0.051s | 0.052s | 0.086s | 38.00 MB | PASS
+4. Sales Checkout (/pos/checkout) | 0.059s | 0.061s | 0.065s | 38.00 MB | PASS
+5. Dashboard (/merchant/dashboard) | 0.037s | 0.040s | 0.237s | 38.00 MB | PASS
+6. Sales Report (/merchant/orders) | 0.398s | 0.483s | 0.712s | 38.00 MB | PASS
+7. VAT Report (/reports/vat) | 0.930s | 1.097s | 1.339s | 40.00 MB | PASS
+8. Profit & Loss (/reports/profit-loss) | 0.009s | 0.009s | 0.011s | 40.00 MB | PASS
+9. Stock Report (/reports/stock) | 1.080s | 1.254s | 1.531s | 40.00 MB | PASS
+10. CSV Export (/reports/sales/export-csv) | 0.001s | 0.001s | 0.001s | 40.00 MB | PASS
+----------------------------------------------------------------------------------------------------
+OVERALL BENCHMARK VERDICT: PASS
+==========================================================================================
+
+==========================================================================================
+ 🔍 EXPLAIN ANALYSIS ON TOP 5 SLOWEST QUERIES
+==========================================================================================
+
+[Slow Query #1] Execution Time: 9584.14 ms
+SQL: select payment_method, SUM(amount) as total from `order_payments` use index (order_payments_created_reporting_v3_idx) where `tenant_id` = ? and `created_at` between ? and ? group by `payment_method`
++----+-------------+----------------+-------+-----------------------------------------+-----------------------------------------+--------+-------------------------------------------+
+| id | select_type | table | type | possible_keys | key | rows | Extra |
++----+-------------+----------------+-------+-----------------------------------------+-----------------------------------------+--------+-------------------------------------------+
+| 1 | SIMPLE | order_payments | index | order_payments_created_reporting_v3_idx | order_payments_created_reporting_v3_idx | 457551 | Using where; Using index; Using temporary |
++----+-------------+----------------+-------+-----------------------------------------+-----------------------------------------+--------+-------------------------------------------+
+ ✓ EXPLAIN Status: Indexes utilized effectively.
+
+[Slow Query #2] Execution Time: 7040.81 ms
+SQL: select 
+ SUM(grand_total) as total_revenue,
+ COUNT(*) as total_orders,
+ SUM(CASE WHEN payment_status = "paid" THEN 1 ELSE 0 END) as paid_orders,
+ SUM(CASE WHEN payment_status IN ("due", "partial") THEN 1 ELSE 0 END) as due_orders
+ from `orders` use index (orders_status_perf_v3_idx) where `tenant_id` = ? limit 1
++----+-------------+--------+------+---------------------------+---------------------------+--------+-------------+
+| id | select_type | table | type | possible_keys | key | rows | Extra |
++----+-------------+--------+------+---------------------------+---------------------------+--------+-------------+
+| 1 | SIMPLE | orders | ref | orders_status_perf_v3_idx | orders_status_perf_v3_idx | 247657 | Using index |
++----+-------------+--------+------+---------------------------+---------------------------+--------+-------------+
+ ✓ EXPLAIN Status: Indexes utilized effectively.
+
+[Slow Query #3] Execution Time: 6880.00 ms
+SQL: select store_id, COUNT(*) as order_count, SUM(subtotal) as net_amount, SUM(tax_amount) as vat_collected, SUM(grand_total) as gross_total from `orders` use index (orders_store_created_v5_idx) where `tenant_id` = ? and `created_at` between ? and ? group by `store_id`
++----+-------------+--------+------+-----------------------------+-----------------------------+--------+--------------------------+
+| id | select_type | table | type | possible_keys | key | rows | Extra |
++----+-------------+--------+------+-----------------------------+-----------------------------+--------+--------------------------+
+| 1 | SIMPLE | orders | ref | orders_store_created_v5_idx | orders_store_created_v5_idx | 247657 | Using where; Using index |
++----+-------------+--------+------+-----------------------------+-----------------------------+--------+--------------------------+
+ ✓ EXPLAIN Status: Indexes utilized effectively.
+
+[Slow Query #4] Execution Time: 6268.00 ms
+SQL: select user_id, COUNT(*) as order_count, SUM(grand_total) as total_sales from `orders` use index (orders_reporting_v3_idx) where `tenant_id` = ? and `created_at` between ? and ? group by `user_id`
++----+-------------+--------+-------+-------------------------+-------------------------+--------+-------------------------------------------+
+| id | select_type | table | type | possible_keys | key | rows | Extra |
++----+-------------+--------+-------+-------------------------+-------------------------+--------+-------------------------------------------+
+| 1 | SIMPLE | orders | range | orders_reporting_v3_idx | orders_reporting_v3_idx | 247657 | Using where; Using index; Using temporary |
++----+-------------+--------+-------+-------------------------+-------------------------+--------+-------------------------------------------+
+ ✓ EXPLAIN Status: Indexes utilized effectively.
+
+[Slow Query #5] Execution Time: 4654.40 ms
+SQL: select sum(`cogs`) as `aggregate` from `orders` use index (orders_reporting_v4_idx) where `tenant_id` = ? and `created_at` between ? and ?
++----+-------------+--------+-------+-------------------------+-------------------------+--------+--------------------------+
+| id | select_type | table | type | possible_keys | key | rows | Extra |
++----+-------------+--------+-------+-------------------------+-------------------------+--------+--------------------------+
+| 1 | SIMPLE | orders | range | orders_reporting_v4_idx | orders_reporting_v4_idx | 247657 | Using where; Using index |
++----+-------------+--------+-------+-------------------------+-------------------------+--------+--------------------------+
+ ✓ EXPLAIN Status: Indexes utilized effectively.
+
+==========================================================================================
+

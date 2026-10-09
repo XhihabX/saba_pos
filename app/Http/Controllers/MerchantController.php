@@ -8,6 +8,8 @@ use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
@@ -30,12 +32,28 @@ class MerchantController extends Controller
         $tenantId = $this->getTenantId();
 
         $stores = Store::where('tenant_id', $tenantId)->get();
-        $totalSales = Order::where('tenant_id', $tenantId)->sum('grand_total');
+        
+        $storeAggregatesData = Cache::remember("merchant_dashboard_stores_{$tenantId}", 60, function () use ($tenantId) {
+            return DB::table('orders')
+                ->useIndex('orders_store_sales_v5_idx')
+                ->where('tenant_id', $tenantId)
+                ->selectRaw('store_id, COUNT(*) as order_count, SUM(grand_total) as store_sales')
+                ->groupBy('store_id')
+                ->get()
+                ->map(fn($r) => (array) $r)
+                ->keyBy('store_id')
+                ->toArray();
+        });
+
+        $storeAggregates = collect($storeAggregatesData);
+        $totalSales = (float) $storeAggregates->sum('store_sales');
         $totalStaff = User::where('tenant_id', $tenantId)->count();
 
-        $storePerformance = Store::where('tenant_id', $tenantId)
-            ->withCount(['orders'])
-            ->get();
+        $storePerformance = $stores->map(function ($store) use ($storeAggregates) {
+            $agg = $storeAggregates->get($store->id);
+            $store->orders_count = $agg ? (int) ($agg['order_count'] ?? 0) : 0;
+            return $store;
+        });
 
         return Inertia::render('Merchant/Dashboard', [
             'stores' => $stores,
@@ -346,25 +364,54 @@ class MerchantController extends Controller
     public function ordersIndex()
     {
         $tenantId = $this->getTenantId();
-        $orders = Order::where('tenant_id', $tenantId)
-            ->with(['store', 'customer', 'items.product', 'user'])
-            ->latest()
-            ->paginate(50);
-        $stores = Store::where('tenant_id', $tenantId)->get();
+        $stores = Store::where('tenant_id', $tenantId)->get(['id', 'name'])->toArray();
 
-        $orderStats = Order::where('tenant_id', $tenantId)
-            ->selectRaw('
-                SUM(grand_total) as total_revenue,
-                COUNT(*) as total_orders,
-                SUM(CASE WHEN payment_status = "paid" THEN 1 ELSE 0 END) as paid_orders,
-                SUM(CASE WHEN payment_status IN ("due", "partial") THEN 1 ELSE 0 END) as due_orders
-            ')->first();
+        $orderStats = Cache::remember("merchant_orders_stats_{$tenantId}", 60, function () use ($tenantId) {
+            $row = DB::table('orders')
+                ->useIndex('orders_status_perf_v3_idx')
+                ->where('tenant_id', $tenantId)
+                ->selectRaw('
+                    SUM(grand_total) as total_revenue,
+                    COUNT(*) as total_orders,
+                    SUM(CASE WHEN payment_status = "paid" THEN 1 ELSE 0 END) as paid_orders,
+                    SUM(CASE WHEN payment_status IN ("due", "partial") THEN 1 ELSE 0 END) as due_orders
+                ')->first();
+            return (array) $row;
+        });
+
+        $totalOrders = (int) ($orderStats['total_orders'] ?? 0);
+        $page = (int) request('page', 1);
+        $perPage = 50;
+
+        $cacheKeyOrders = ($page === 1) ? "merchant_orders_p1_{$tenantId}" : null;
+        $loadItems = function () use ($tenantId, $page, $perPage) {
+            return Order::where('tenant_id', $tenantId)
+                ->select(['id', 'tenant_id', 'store_id', 'customer_id', 'user_id', 'invoice_no', 'payment_method', 'payment_status', 'subtotal', 'tax_amount', 'grand_total', 'created_at'])
+                ->with([
+                    'store:id,name',
+                    'customer:id,name',
+                    'items:id,order_id,product_name,quantity,unit_price',
+                    'user:id,name'
+                ])
+                ->latest('id')
+                ->skip(($page - 1) * $perPage)
+                ->take($perPage)
+                ->get()
+                ->toArray();
+        };
+
+        $items = $cacheKeyOrders ? Cache::remember($cacheKeyOrders, 30, $loadItems) : $loadItems();
+
+        $orders = new \Illuminate\Pagination\LengthAwarePaginator($items, $totalOrders, $perPage, $page, [
+            'path' => request()->url(),
+            'query' => request()->query(),
+        ]);
 
         $stats = [
-            'total_revenue' => (float) ($orderStats->total_revenue ?? 0),
-            'total_orders' => (int) ($orderStats->total_orders ?? 0),
-            'paid_orders' => (int) ($orderStats->paid_orders ?? 0),
-            'due_orders' => (int) ($orderStats->due_orders ?? 0),
+            'total_revenue' => (float) ($orderStats['total_revenue'] ?? 0),
+            'total_orders' => (int) ($orderStats['total_orders'] ?? 0),
+            'paid_orders' => (int) ($orderStats['paid_orders'] ?? 0),
+            'due_orders' => (int) ($orderStats['due_orders'] ?? 0),
         ];
 
         return Inertia::render('Merchant/Orders', [

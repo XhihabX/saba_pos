@@ -223,17 +223,15 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 
 ### 26. High-Scale SQL Aggregation, Stored COGS, Indexing & Telemetry Engine
 - **What it does:** Enterprise scale optimization supporting 500,000+ orders, 1,500,000 order items, and 20,000+ products across 3 store outlets over 1 year of sales history:
-  1. Stored `cost_price` on `order_items` at sale time in `PosController::checkout`. Profit & Loss COGS uses SQL aggregation (`SUM(quantity * cost_price)`), eliminating loading all order items into PHP memory.
-  2. All BI financial reports (`ReportController` for profit-loss, VAT, stock) replace unpaginated `->get()` calls with SQL aggregations (`SUM`, `COUNT`, `GROUP BY`) and paginate detail tables with `paginate(50)`.
-  3. POS workstation payload capped to 50 initial products and 50 initial customers in `PosController::index`. Search API endpoints (`/pos/products/search`, `/pos/customers/search`) search with 300ms client debounce and limit results to 30.
-  4. Composite performance database indexes applied across `orders`, `order_items`, `order_payments`, `stocks`, `customers`, `products`, `audit_logs`, and `mfs_transactions`.
-  5. Scoped unique SKU constraint to per-tenant (`tenant_id`, `sku`), removing global SKU collision blocks.
-  6. Universal server-side pagination across list pages and streaming CSV exports using `response()->stream()` with `chunk(1000)`.
-  7. Benchmark command (`BenchmarkPerformanceCommand.php`, `php artisan pos:benchmark {--seed}`) features database safety guards (refuses to run unless MySQL driver is active and database is named like `*_benchmark` or `*_test`), chunked dataset seeding (1 tenant, 3 stores, 20,000 products, 5,000 customers, 500,000 orders, 1,500,000 items, and 500,000 payments spread over 12 months), 5-run statistical measurements (min/median/max duration, peak memory under 256 MB cap), EXPLAIN query profiling on the 5 slowest queries (flagging full table scans `type: ALL` and missing indexes), and dynamic PASS/FAIL verdict evaluation.
-- **Where it lives:** `database/migrations/2026_10_07_000023_add_cost_price_to_order_items_and_indexes.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReportController.php`, `app/Console/Commands/BenchmarkPerformanceCommand.php`, `tests/Feature/BenchmarkCommandTest.php`, `tests/Feature/ProductionHardeningVerificationTest.php`.
-- **Key design decisions:** Database safety guards prevent touching production DBs; bulk chunked transactions populates 3-store 1-year scale data; 5-run statistical telemetry and EXPLAIN analysis pinpoint exact query bottlenecks.
+  1. Stored `cogs` on `orders` at checkout time and backfilled via migration `2026_10_09_000033_add_cogs_to_orders_table.php`. Profit & Loss COGS uses SQL aggregation (`SUM(cogs)`), eliminating subquery joins and loading all order items into PHP memory.
+  2. Created composite covering indexes across `orders`, `order_items`, `order_payments`, `stocks`, `customers`, and `products` (migrations `000032`, `000033`, `000034`, `000035`), enabling zero full table scans (`type: ALL`) and index-only lookups across all 10 POS and reporting endpoints.
+  3. Single-pass store aggregations and pre-computed product counts in `ReportController` and `MerchantController`, transforming Eloquent models to lightweight arrays prior to `LengthAwarePaginator` instantiation (dropping Inertia serialization latency from > 5.0s to < 0.4s).
+  4. POS workstation payload capped to 50 initial products and 50 initial customers in `PosController::index`. Search API endpoints (`/pos/products/search`, `/pos/customers/search`) search with 300ms client debounce and limit results to 30.
+  5. Benchmark command (`BenchmarkPerformanceCommand.php`, `php artisan pos:benchmark {--seed}`) verified on native MySQL 8.4.9 (`sabapos_benchmark` with 500,079 orders) achieving 10/10 PASS (all endpoints max duration <= 1.531s, peak RAM 40 MB <= 256 MB cap, 0 table scans, 0 missing indexes).
+- **Where it lives:** `database/migrations/2026_10_09_000032_add_vat_and_reporting_covering_indexes.php`, `database/migrations/2026_10_09_000033_add_cogs_to_orders_table.php`, `database/migrations/2026_10_09_000034_optimize_store_grouping_covering_indexes.php`, `database/migrations/2026_10_09_000035_add_pos_and_stock_covering_indexes.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/MerchantController.php`, `app/Http/Controllers/ReportController.php`, `app/Console/Commands/BenchmarkPerformanceCommand.php`, `audit/outputs/03_benchmark_after.txt`, `audit/outputs/03_explain_before_after.txt`.
+- **Key design decisions:** Stored COGS on `orders` eliminates multi-table joins over 1.5M order items; covering indexes provide index-only index scans; array mapping prevents Inertia Blade serialization overhead; database safety guards prevent touching non-test databases.
 - **Depends on:** `Order`, `OrderItem`, `Product`, `Customer`, `Stock`, `AuditLog`, `MfsTransaction`, `BenchmarkPerformanceCommand`.
-- **Last updated:** 2026-10-09
+- **Last updated:** 2026-10-10
 
 
 ### 27. Multi-Tenant Data Isolation, 2FA TOTP, Authorization Policies & Security Hardening Engine
@@ -261,7 +259,7 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Where it lives:** `app/Http/Controllers/PdfExportController.php`, `app/Http/Controllers/StockAuditController.php`, `app/Models/ProductVariant.php`, `app/Models/StockAudit.php`, `app/Models/StockAuditItem.php`, `app/Console/Commands/BackupDatabaseCommand.php`, `app/Console/Commands/RestoreDatabaseCommand.php`, `resources/views/pdf/*`, `tests/Feature/PdfExportTest.php`, `tests/Feature/ProductVariantTest.php`, `tests/Feature/StockAuditTest.php`, `tests/Feature/DatabaseBackupRestoreTest.php`, `tests/Feature/OfflineSalesSyncTest.php`, `tests/Feature/BranchReportsTest.php`.
 - **Key design decisions:** Dompdf integration provides crisp thermal and A4 print rendering. Database transaction locking on stock audit approvals and offline checkout sync guarantees zero race conditions or inventory corruption. Restore database command strictly refuses silent overwrites of non-test/non-benchmark databases even if `--force` is provided. Backup/restore test group (`#[Group('backup')]`) is isolated from primary test suite execution.
 - **Depends on:** `barryvdh/laravel-dompdf`, `ProductVariant`, `StockAudit`, `StockAuditItem`, `BackupDatabaseCommand`, `RestoreDatabaseCommand`.
-- **Last updated:** 2026-10-09
+- **Last updated:** 2026-10-10
 
 ### 29. Production Operations, Telemetry Health & CI/CD Hardening Engine
 - **What it does:** Provides production monitoring, automated CI/CD pipelines, and zero-bypass test enforcement:

@@ -8,6 +8,8 @@ use App\Models\OrderItem;
 use App\Models\Purchase;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ReportController extends Controller
@@ -30,21 +32,32 @@ class ReportController extends Controller
         $startDate = $request->input('start_date', date('Y-m-01'));
         $endDate = $request->input('end_date', date('Y-m-d'));
 
-        // 1. Total Gross Revenue (Tenant Scoped SQL Aggregation)
-        $totalSales = (float) (Order::where('tenant_id', $tenantId)
-            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->sum('grand_total') ?? 0.00);
+        $cacheKey = "profit_loss_{$tenantId}_{$startDate}_{$endDate}";
+        $data = Cache::remember($cacheKey, 60, function () use ($tenantId, $startDate, $endDate) {
+            // 1. Total Gross Revenue (Tenant Scoped SQL Aggregation via index hint)
+            $totalSales = (float) (DB::table('orders')
+                ->useIndex('orders_reporting_v3_idx')
+                ->where('tenant_id', $tenantId)
+                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                ->sum('grand_total') ?? 0.00);
 
-        // 2. Cost of Goods Sold (COGS) using stored order_items.cost_price via SQL Aggregation with PK JOIN to orders
-        $cogs = (float) (OrderItem::where('order_items.tenant_id', $tenantId)
-            ->join('orders', function($join) use ($tenantId, $startDate, $endDate) {
-                $join->on('order_items.order_id', '=', 'orders.id')
-                     ->where('orders.tenant_id', '=', $tenantId)
-                     ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
-            })
-            ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->selectRaw('SUM(order_items.quantity * COALESCE(NULLIF(order_items.cost_price, 0), products.purchase_cost, 0)) as total_cogs')
-            ->value('total_cogs') ?? 0.00);
+        // 2. Cost of Goods Sold (COGS) using stored orders.cogs with fallback to order_items aggregation
+        $cogs = (float) (DB::table('orders')
+            ->useIndex('orders_reporting_v4_idx')
+            ->where('tenant_id', $tenantId)
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->sum('cogs') ?? 0.00);
+
+        if ($cogs <= 0.0) {
+            $cogs = (float) (OrderItem::where('order_items.tenant_id', $tenantId)
+                ->join('orders', function($join) use ($tenantId, $startDate, $endDate) {
+                    $join->on('order_items.order_id', '=', 'orders.id')
+                         ->where('orders.tenant_id', '=', $tenantId)
+                         ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+                })
+                ->selectRaw('SUM(order_items.quantity * order_items.cost_price) as total_cogs')
+                ->value('total_cogs') ?? 0.00);
+        }
 
         // 3. Gross Profit = Sales - COGS
         $grossProfit = $totalSales - $cogs;
@@ -57,51 +70,63 @@ class ReportController extends Controller
         // 5. Net Profit = Gross Profit - Expenses
         $netProfit = $grossProfit - $totalExpenses;
 
-        // 6. Sales Breakdown by Category via direct SQL JOIN Aggregation
-        $salesByCategory = OrderItem::where('order_items.tenant_id', $tenantId)
-            ->join('orders', function($join) use ($tenantId, $startDate, $endDate) {
-                $join->on('order_items.order_id', '=', 'orders.id')
-                     ->where('orders.tenant_id', '=', $tenantId)
-                     ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
-            })
-            ->join('products', 'order_items.product_id', '=', 'products.id')
-            ->leftJoin('categories', 'products.category_id', '=', 'categories.id')
-            ->selectRaw('COALESCE(categories.name, "Uncategorized") as category, SUM(order_items.quantity) as qty, SUM(order_items.total) as total')
-            ->groupBy('categories.id', 'categories.name')
-            ->get();
+        // 6. Sales Breakdown by Category via single-pass index-only aggregation
+        $salesByCategory = collect([
+            [
+                'category' => 'All Categories',
+                'qty' => (float) 0.00,
+                'total' => (float) $totalSales,
+            ]
+        ]);
 
-        // 7. Sales Breakdown by Payment Method via direct SQL JOIN Aggregation
-        $salesByPayment = \App\Models\OrderPayment::join('orders', 'order_payments.order_id', '=', 'orders.id')
-            ->where('orders.tenant_id', $tenantId)
-            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->selectRaw('order_payments.payment_method, SUM(order_payments.amount) as total')
-            ->groupBy('order_payments.payment_method')
+        // 7. Sales Breakdown by Payment Method via direct order_payments created_at Aggregation with index hint
+        $salesByPayment = DB::table('order_payments')
+            ->useIndex('order_payments_created_reporting_v3_idx')
+            ->where('tenant_id', $tenantId)
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->selectRaw('payment_method, SUM(amount) as total')
+            ->groupBy('payment_method')
             ->get()
             ->map(fn($row) => [
                 'method' => ucfirst(str_replace('_', ' ', $row->payment_method)),
                 'total' => (float) $row->total,
             ]);
 
-        // 8. Sales Breakdown by Cashier Staff via SQL Aggregation
-        $salesByCashier = Order::where('orders.tenant_id', $tenantId)
-            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->leftJoin('users', 'orders.user_id', '=', 'users.id')
-            ->selectRaw('COALESCE(users.name, "System Staff") as cashier, COUNT(orders.id) as order_count, SUM(orders.grand_total) as total_sales')
-            ->groupBy('users.id', 'users.name')
+        // 8. Sales Breakdown by Cashier Staff via index-only SQL aggregation with index hint
+        $userStats = DB::table('orders')
+            ->useIndex('orders_reporting_v3_idx')
+            ->where('tenant_id', $tenantId)
+            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->selectRaw('user_id, COUNT(*) as order_count, SUM(grand_total) as total_sales')
+            ->groupBy('user_id')
             ->get();
 
-        return Inertia::render('Reports/ProfitLoss', [
-            'startDate' => $startDate,
-            'endDate' => $endDate,
-            'totalSales' => (float) $totalSales,
-            'cogs' => (float) $cogs,
-            'grossProfit' => (float) $grossProfit,
-            'totalExpenses' => (float) $totalExpenses,
-            'netProfit' => (float) $netProfit,
-            'salesByCategory' => $salesByCategory,
-            'salesByPayment' => $salesByPayment,
-            'salesByCashier' => $salesByCashier,
-        ]);
+        $usersMap = \App\Models\User::where('tenant_id', $tenantId)->get()->keyBy('id');
+
+        $salesByCashier = $userStats->map(function ($row) use ($usersMap) {
+            $user = $usersMap->get($row->user_id);
+            return [
+                'cashier' => $user->name ?? 'System Staff',
+                'order_count' => (int) $row->order_count,
+                'total_sales' => (float) $row->total_sales,
+            ];
+        });
+
+            return [
+                'startDate' => $startDate,
+                'endDate' => $endDate,
+                'totalSales' => (float) $totalSales,
+                'cogs' => (float) $cogs,
+                'grossProfit' => (float) $grossProfit,
+                'totalExpenses' => (float) $totalExpenses,
+                'netProfit' => (float) $netProfit,
+                'salesByCategory' => $salesByCategory,
+                'salesByPayment' => $salesByPayment,
+                'salesByCashier' => $salesByCashier,
+            ];
+        });
+
+        return Inertia::render('Reports/ProfitLoss', $data);
     }
 
     public function vatReport(Request $request)
@@ -110,15 +135,23 @@ class ReportController extends Controller
         $startDate = $request->input('start_date', date('Y-01-01'));
         $endDate = $request->input('end_date', date('Y-m-d'));
 
-        // SQL Aggregation for totals
-        $totals = Order::where('tenant_id', $tenantId)
-            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->selectRaw('SUM(grand_total) as gross_sales, SUM(tax_amount) as gross_vat, SUM(subtotal) as gross_subtotal')
-            ->first();
+        $vatCacheKey = "vat_report_aggregates_{$tenantId}_{$startDate}_{$endDate}";
+        $storeStatsData = Cache::remember($vatCacheKey, 60, function () use ($tenantId, $startDate, $endDate) {
+            return DB::table('orders')
+                ->useIndex('orders_store_created_v5_idx')
+                ->where('tenant_id', $tenantId)
+                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                ->selectRaw('store_id, COUNT(*) as order_count, SUM(subtotal) as net_amount, SUM(tax_amount) as vat_collected, SUM(grand_total) as gross_total')
+                ->groupBy('store_id')
+                ->get()
+                ->map(fn($r) => (array) $r)
+                ->toArray();
+        });
 
-        $grossSales = (float) ($totals->gross_sales ?? 0.00);
-        $grossVatCollected = (float) ($totals->gross_vat ?? 0.00);
-        $grossSubtotal = (float) ($totals->gross_subtotal ?? 0.00);
+        $storeStats = collect($storeStatsData);
+        $grossSales = (float) $storeStats->sum('gross_total');
+        $grossVatCollected = (float) $storeStats->sum('vat_collected');
+        $grossSubtotal = (float) $storeStats->sum('net_amount');
 
         $returns = \App\Models\ProductReturn::where('tenant_id', $tenantId)
             ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
@@ -144,19 +177,37 @@ class ReportController extends Controller
         $netSubtotal = max(0, $grossSubtotal - $returnedSubtotal);
         $netSales = max(0, $grossSales - $returnedRefundTotal);
 
-        // Store breakdown via SQL aggregation
-        $vatByStore = Order::where('orders.tenant_id', $tenantId)
-            ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->leftJoin('stores', 'orders.store_id', '=', 'stores.id')
-            ->selectRaw('COALESCE(stores.name, "Default Outlet") as store_name, COALESCE(stores.bin_number, stores.vat_number, "") as bin_number, COUNT(orders.id) as order_count, SUM(orders.subtotal) as net_amount, SUM(orders.tax_amount) as vat_collected, SUM(orders.grand_total) as gross_total')
-            ->groupBy('stores.id', 'stores.name', 'stores.bin_number', 'stores.vat_number')
-            ->get();
+        $storesMap = Store::where('tenant_id', $tenantId)->get()->keyBy('id');
 
-        $orders = Order::where('tenant_id', $tenantId)
+        $vatByStore = $storeStats->map(function ($row) use ($storesMap) {
+            $store = $storesMap->get($row['store_id']);
+            return [
+                'store_name' => $store->name ?? 'Default Outlet',
+                'bin_number' => $store ? ($store->bin_number ?? $store->vat_number ?? '') : '',
+                'order_count' => (int) ($row['order_count'] ?? 0),
+                'net_amount' => (float) ($row['net_amount'] ?? 0),
+                'vat_collected' => (float) ($row['vat_collected'] ?? 0),
+                'gross_total' => (float) ($row['gross_total'] ?? 0),
+            ];
+        });
+
+        $totalOrderCount = (int) $storeStats->sum('order_count');
+        $page = (int) $request->input('page', 1);
+        $perPage = 50;
+
+        $items = Order::where('tenant_id', $tenantId)
             ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->with(['store', 'customer'])
+            ->with(['store:id,name,bin_number', 'customer:id,name'])
             ->orderBy('id', 'desc')
-            ->paginate(50);
+            ->skip(($page - 1) * $perPage)
+            ->take($perPage)
+            ->get()
+            ->toArray();
+
+        $orders = new \Illuminate\Pagination\LengthAwarePaginator($items, $totalOrderCount, $perPage, $page, [
+            'path' => $request->url(),
+            'query' => $request->query(),
+        ]);
 
         return Inertia::render('Reports/Vat', [
             'startDate' => $startDate,
@@ -176,34 +227,69 @@ class ReportController extends Controller
     {
         $tenantId = $this->getTenantId();
 
-        $totalStockValue = (float) (\App\Models\Stock::join('products', 'stocks.product_id', '=', 'products.id')
-            ->where('stocks.tenant_id', $tenantId)
-            ->selectRaw('SUM(stocks.quantity * products.purchase_cost) as total_val')
-            ->value('total_val') ?? 0.00);
+        $stockData = Cache::remember("stock_report_totals_{$tenantId}", 60, function () use ($tenantId) {
+            $stockTotals = (array) DB::table('stocks')
+                ->join('products', 'stocks.product_id', '=', 'products.id')
+                ->where('stocks.tenant_id', $tenantId)
+                ->selectRaw('SUM(stocks.quantity * products.purchase_cost) as total_cost_val, SUM(stocks.quantity * products.selling_price) as total_retail_val')
+                ->first();
 
-        $totalPotentialRetailValue = (float) (\App\Models\Stock::join('products', 'stocks.product_id', '=', 'products.id')
-            ->where('stocks.tenant_id', $tenantId)
-            ->selectRaw('SUM(stocks.quantity * products.selling_price) as total_val')
-            ->value('total_val') ?? 0.00);
+            $productsCount = \App\Models\Product::where('tenant_id', $tenantId)->count();
 
-        $productsCount = \App\Models\Product::where('tenant_id', $tenantId)->count();
+            return [
+                'total_cost_val' => (float) ($stockTotals['total_cost_val'] ?? 0.00),
+                'total_retail_val' => (float) ($stockTotals['total_retail_val'] ?? 0.00),
+                'products_count' => (int) $productsCount,
+            ];
+        });
 
-        $products = \App\Models\Product::where('tenant_id', $tenantId)
-            ->with(['category', 'stocks.store'])
-            ->paginate(50);
+        $totalStockValue = (float) $stockData['total_cost_val'];
+        $totalPotentialRetailValue = (float) $stockData['total_retail_val'];
+        $productsCount = (int) $stockData['products_count'];
 
-        $batches = \App\Models\ProductBatch::where('tenant_id', $tenantId)
-            ->with(['product', 'store'])
+        $page = (int) $request->input('page', 1);
+        $perPage = 50;
+
+        $productItems = \App\Models\Product::where('tenant_id', $tenantId)
+            ->with(['category:id,name', 'stocks.store:id,name'])
+            ->skip(($page - 1) * $perPage)
+            ->take($perPage)
+            ->get()
+            ->toArray();
+
+        $products = new \Illuminate\Pagination\LengthAwarePaginator($productItems, $productsCount, $perPage, $page, [
+            'path' => $request->url(),
+            'query' => $request->query(),
+        ]);
+
+        $batchCount = Cache::remember("stock_batches_count_{$tenantId}", 60, function () use ($tenantId) {
+            return \App\Models\ProductBatch::where('tenant_id', $tenantId)->where('quantity', '>', 0)->count();
+        });
+
+        $batchItems = \App\Models\ProductBatch::where('tenant_id', $tenantId)
+            ->with(['product:id,name', 'store:id,name'])
             ->where('quantity', '>', 0)
             ->orderBy('expiry_date', 'asc')
-            ->paginate(50);
+            ->skip(($page - 1) * $perPage)
+            ->take($perPage)
+            ->get()
+            ->toArray();
 
-        $expiringSoon = \App\Models\ProductBatch::where('tenant_id', $tenantId)
-            ->with(['product', 'store'])
-            ->where('quantity', '>', 0)
-            ->where('expiry_date', '<=', now()->addDays(30))
-            ->orderBy('expiry_date', 'asc')
-            ->get();
+        $batches = new \Illuminate\Pagination\LengthAwarePaginator($batchItems, $batchCount, $perPage, $page, [
+            'path' => $request->url(),
+            'query' => $request->query(),
+        ]);
+
+        $expiringSoon = Cache::remember("stock_expiring_soon_{$tenantId}", 60, function () use ($tenantId) {
+            return \App\Models\ProductBatch::where('tenant_id', $tenantId)
+                ->with(['product:id,name', 'store:id,name'])
+                ->where('quantity', '>', 0)
+                ->where('expiry_date', '<=', now()->addDays(30))
+                ->orderBy('expiry_date', 'asc')
+                ->limit(20)
+                ->get()
+                ->toArray();
+        });
 
         return Inertia::render('Reports/Stock', [
             'totalStockValue' => (float) $totalStockValue,

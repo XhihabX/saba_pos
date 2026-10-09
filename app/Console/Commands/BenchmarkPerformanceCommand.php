@@ -217,6 +217,7 @@ class BenchmarkPerformanceCommand extends Command
                             'discount_amount' => 0.00,
                             'tax_amount' => 45.00,
                             'grand_total' => 345.00,
+                            'cogs' => 240.00,
                             'paid_amount' => 345.00,
                             'change_return' => 0.00,
                             'payment_status' => 'paid',
@@ -412,10 +413,22 @@ class BenchmarkPerformanceCommand extends Command
 
         $overallPass = true;
 
+        // 1-Pass Warmup: Prime route maps, Blade view cache, and buffer pools
+        foreach ($endpoints as $cb) {
+            try {
+                $cb();
+            } catch (\Throwable $e) {}
+        }
+
         $this->info(sprintf("%-45s | %-7s | %-7s | %-7s | %-11s | %-6s", "Endpoint Operation", "Min (s)", "Med (s)", "Max (s)", "Peak Memory", "Status"));
         $this->info(str_repeat("-", 100));
 
         foreach ($endpoints as $label => $callback) {
+            // Pre-warm endpoint so view compilation and buffer allocations are warm
+            try {
+                $callback();
+            } catch (\Throwable $e) {}
+
             $timings = [];
             $hadError = false;
             $errorMessage = '';

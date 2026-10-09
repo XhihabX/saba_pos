@@ -1,0 +1,90 @@
+
+==========================================================================================
+ 🚀 ENTERPRISE POS PERFORMANCE & QUERY EXPLAIN BENCHMARK
+ Database: sabapos_benchmark | Engine: MYSQL | Memory Cap: 256MB
+==========================================================================================
+
+==========================================================================================
+ 📊 REAL BENCHMARK ROW COUNTS & ENGINE TELEMETRY
+ Engine: MYSQL (v8.4.9) | Target: < 2.0s Max Duration, < 256 MB Peak Memory
+ Tenants: 1 | Stores: 3 | Products: 20,000 | Customers: 5,000
+ Orders: 500,005 | OrderItems: 1,500,005 | OrderPayments: 500,005 | Stocks: 20,001
+==========================================================================================
+
+Endpoint Operation | Min (s) | Med (s) | Max (s) | Peak Memory | Status
+----------------------------------------------------------------------------------------------------
+1. POS Load (/pos) | 0.765s | 0.823s | 1.712s | 34.00 MB | PASS
+2. Product Search (/pos/products/search) | 0.045s | 0.052s | 0.093s | 34.00 MB | PASS
+3. Customer Search (/pos/customers/search) | 0.049s | 0.051s | 0.099s | 34.00 MB | PASS
+4. Sales Checkout (/pos/checkout) | 0.059s | 0.072s | 0.169s | 38.00 MB | PASS
+5. Dashboard (/merchant/dashboard) | 5.040s | 5.507s | 6.323s | 38.00 MB | FAIL
+6. Sales Report (/merchant/orders) | 7.489s | 7.778s | 8.408s | 44.00 MB | FAIL
+7. VAT Report (/reports/vat) | 9.541s | 11.103s | 23.468s | 44.00 MB | FAIL
+8. Profit & Loss (/reports/profit-loss) | 44.207s | 48.103s | 52.071s | 44.00 MB | FAIL
+9. Stock Report (/reports/stock) | 0.719s | 0.835s | 1.073s | 44.00 MB | PASS
+10. CSV Export (/reports/sales/export-csv) | 0.000s | 0.000s | 0.001s | 44.00 MB | PASS
+----------------------------------------------------------------------------------------------------
+OVERALL BENCHMARK VERDICT: FAIL
+==========================================================================================
+
+==========================================================================================
+ 🔍 EXPLAIN ANALYSIS ON TOP 5 SLOWEST QUERIES
+==========================================================================================
+
+[Slow Query #1] Execution Time: 19875.14 ms
+SQL: select SUM(order_items.quantity * COALESCE(NULLIF(order_items.cost_price, 0), products.purchase_cost, 0)) as total_cogs from `order_items` inner join `orders` on `order_items`.`order_id` = `orders`.`id` and `orders`.`tenant_id` = ? and `orders`.`created_at` between ? and ? inner join `products` on `order_items`.`product_id` = `products`.`id` where `order_items`.`tenant_id` = ? and `order_items`.`tenant_id` = ? limit 1
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+| id | select_type | table | type | possible_keys | key | rows | Extra |
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+| 1 | SIMPLE | orders | ref | PRIMARY,orders_tenant_created_at_idx,orders_tenant_created_idx,orders_tenant_store_created_idx,orders_tenant_created_perf_idx,orders_tenant_created_perf_v2_idx | orders_tenant_store_created_idx | 247780 | Using where; Using index |
+| 1 | SIMPLE | order_items | ref | order_items_product_id_foreign,order_items_tenant_id_index,order_items_order_id_idx,order_items_order_product_idx,order_items_tenant_ord_prod_perf_idx,order_items_tenant_ord_prod_perf_v2_idx | order_items_tenant_ord_prod_perf_v2_idx | 4 | Using index |
+| 1 | SIMPLE | products | eq_ref | PRIMARY | PRIMARY | 1 | |
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+ ✓ EXPLAIN Status: Indexes utilized effectively.
+
+[Slow Query #2] Execution Time: 18125.30 ms
+SQL: select SUM(order_items.quantity * COALESCE(NULLIF(order_items.cost_price, 0), products.purchase_cost, 0)) as total_cogs from `order_items` inner join `orders` on `order_items`.`order_id` = `orders`.`id` and `orders`.`tenant_id` = ? and `orders`.`created_at` between ? and ? inner join `products` on `order_items`.`product_id` = `products`.`id` where `order_items`.`tenant_id` = ? and `order_items`.`tenant_id` = ? limit 1
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+| id | select_type | table | type | possible_keys | key | rows | Extra |
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+| 1 | SIMPLE | orders | ref | PRIMARY,orders_tenant_created_at_idx,orders_tenant_created_idx,orders_tenant_store_created_idx,orders_tenant_created_perf_idx,orders_tenant_created_perf_v2_idx | orders_tenant_store_created_idx | 247780 | Using where; Using index |
+| 1 | SIMPLE | order_items | ref | order_items_product_id_foreign,order_items_tenant_id_index,order_items_order_id_idx,order_items_order_product_idx,order_items_tenant_ord_prod_perf_idx,order_items_tenant_ord_prod_perf_v2_idx | order_items_tenant_ord_prod_perf_v2_idx | 4 | Using index |
+| 1 | SIMPLE | products | eq_ref | PRIMARY | PRIMARY | 1 | |
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+ ✓ EXPLAIN Status: Indexes utilized effectively.
+
+[Slow Query #3] Execution Time: 17303.64 ms
+SQL: select SUM(order_items.quantity * COALESCE(NULLIF(order_items.cost_price, 0), products.purchase_cost, 0)) as total_cogs from `order_items` inner join `orders` on `order_items`.`order_id` = `orders`.`id` and `orders`.`tenant_id` = ? and `orders`.`created_at` between ? and ? inner join `products` on `order_items`.`product_id` = `products`.`id` where `order_items`.`tenant_id` = ? and `order_items`.`tenant_id` = ? limit 1
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+| id | select_type | table | type | possible_keys | key | rows | Extra |
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+| 1 | SIMPLE | orders | ref | PRIMARY,orders_tenant_created_at_idx,orders_tenant_created_idx,orders_tenant_store_created_idx,orders_tenant_created_perf_idx,orders_tenant_created_perf_v2_idx | orders_tenant_store_created_idx | 247780 | Using where; Using index |
+| 1 | SIMPLE | order_items | ref | order_items_product_id_foreign,order_items_tenant_id_index,order_items_order_id_idx,order_items_order_product_idx,order_items_tenant_ord_prod_perf_idx,order_items_tenant_ord_prod_perf_v2_idx | order_items_tenant_ord_prod_perf_v2_idx | 4 | Using index |
+| 1 | SIMPLE | products | eq_ref | PRIMARY | PRIMARY | 1 | |
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+ ✓ EXPLAIN Status: Indexes utilized effectively.
+
+[Slow Query #4] Execution Time: 16639.16 ms
+SQL: select SUM(order_items.quantity * COALESCE(NULLIF(order_items.cost_price, 0), products.purchase_cost, 0)) as total_cogs from `order_items` inner join `orders` on `order_items`.`order_id` = `orders`.`id` and `orders`.`tenant_id` = ? and `orders`.`created_at` between ? and ? inner join `products` on `order_items`.`product_id` = `products`.`id` where `order_items`.`tenant_id` = ? and `order_items`.`tenant_id` = ? limit 1
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+| id | select_type | table | type | possible_keys | key | rows | Extra |
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+| 1 | SIMPLE | orders | ref | PRIMARY,orders_tenant_created_at_idx,orders_tenant_created_idx,orders_tenant_store_created_idx,orders_tenant_created_perf_idx,orders_tenant_created_perf_v2_idx | orders_tenant_store_created_idx | 247780 | Using where; Using index |
+| 1 | SIMPLE | order_items | ref | order_items_product_id_foreign,order_items_tenant_id_index,order_items_order_id_idx,order_items_order_product_idx,order_items_tenant_ord_prod_perf_idx,order_items_tenant_ord_prod_perf_v2_idx | order_items_tenant_ord_prod_perf_v2_idx | 4 | Using index |
+| 1 | SIMPLE | products | eq_ref | PRIMARY | PRIMARY | 1 | |
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+ ✓ EXPLAIN Status: Indexes utilized effectively.
+
+[Slow Query #5] Execution Time: 16403.30 ms
+SQL: select SUM(order_items.quantity * COALESCE(NULLIF(order_items.cost_price, 0), products.purchase_cost, 0)) as total_cogs from `order_items` inner join `orders` on `order_items`.`order_id` = `orders`.`id` and `orders`.`tenant_id` = ? and `orders`.`created_at` between ? and ? inner join `products` on `order_items`.`product_id` = `products`.`id` where `order_items`.`tenant_id` = ? and `order_items`.`tenant_id` = ? limit 1
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+| id | select_type | table | type | possible_keys | key | rows | Extra |
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+| 1 | SIMPLE | orders | ref | PRIMARY,orders_tenant_created_at_idx,orders_tenant_created_idx,orders_tenant_store_created_idx,orders_tenant_created_perf_idx,orders_tenant_created_perf_v2_idx | orders_tenant_store_created_idx | 247780 | Using where; Using index |
+| 1 | SIMPLE | order_items | ref | order_items_product_id_foreign,order_items_tenant_id_index,order_items_order_id_idx,order_items_order_product_idx,order_items_tenant_ord_prod_perf_idx,order_items_tenant_ord_prod_perf_v2_idx | order_items_tenant_ord_prod_perf_v2_idx | 4 | Using index |
+| 1 | SIMPLE | products | eq_ref | PRIMARY | PRIMARY | 1 | |
++----+-------------+-------------+--------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+-----------------------------------------+--------+--------------------------+
+ ✓ EXPLAIN Status: Indexes utilized effectively.
+
+==========================================================================================
+

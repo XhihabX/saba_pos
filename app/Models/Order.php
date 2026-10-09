@@ -21,6 +21,7 @@ class Order extends Model
         'discount_amount',
         'tax_amount',
         'grand_total',
+        'cogs',
         'paid_amount',
         'change_return',
         'payment_status',

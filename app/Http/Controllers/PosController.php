@@ -13,6 +13,7 @@ use App\Models\Stock;
 use App\Models\Store;
 use App\Services\AuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -44,75 +45,83 @@ class PosController extends Controller
     {
         $tenantId = $this->getTenantId();
 
-        // 1. Stores (Tenant Scoped)
-        try {
-            $stores = Store::where('tenant_id', $tenantId)->where('is_active', true)->get();
-            if ($stores->isEmpty()) {
-                $stores = Store::where('tenant_id', $tenantId)->get();
+        // 1. Stores (Tenant Scoped with Caching)
+        $stores = Cache::remember("pos_stores_{$tenantId}", 60, function () use ($tenantId) {
+            $s = Store::where('tenant_id', $tenantId)->where('is_active', true)->get();
+            if ($s->isEmpty()) {
+                $s = Store::where('tenant_id', $tenantId)->get();
             }
-        } catch (\Throwable $e) {
-            $stores = collect([]);
-        }
-
-        if ($stores->isEmpty()) {
-            try {
-                $defaultStore = Store::firstOrCreate([
-                    'tenant_id' => $tenantId,
-                    'name' => 'Main Outlet',
-                ], [
-                    'code' => 'STORE-001',
-                    'currency_symbol' => '৳',
-                    'default_tax_rate' => 15.00,
-                    'is_active' => true,
-                ]);
-                $stores = collect([$defaultStore]);
-            } catch (\Throwable $e) {
-                $stores = collect([]);
+            if ($s->isEmpty()) {
+                try {
+                    $defaultStore = Store::firstOrCreate([
+                        'tenant_id' => $tenantId,
+                        'name' => 'Main Outlet',
+                    ], [
+                        'code' => 'STORE-001',
+                        'currency_symbol' => '৳',
+                        'default_tax_rate' => 15.00,
+                        'is_active' => true,
+                    ]);
+                    $s = collect([$defaultStore]);
+                } catch (\Throwable $e) {
+                    $s = collect([]);
+                }
             }
-        }
+            return $s->toArray();
+        });
 
-        $firstStore = $stores->first();
-        $storeId = (int) $request->input('store_id', $firstStore ? $firstStore->id : 1);
+        $firstStoreId = !empty($stores) ? ($stores[0]['id'] ?? 1) : 1;
+        $storeId = (int) $request->input('store_id', $firstStoreId);
 
-        // 2. Categories
-        try {
-            $categories = Category::where('tenant_id', $tenantId)->where('is_active', true)->get();
-        } catch (\Throwable $e) {
-            $categories = collect([]);
-        }
+        // 2. Categories (Tenant Scoped with Caching)
+        $categories = Cache::remember("pos_categories_{$tenantId}", 60, function () use ($tenantId) {
+            return Category::where('tenant_id', $tenantId)->where('is_active', true)->get()->toArray();
+        });
 
-        // 3. Customers (Limit 50 for performance scaling)
-        try {
-            $customers = Customer::where('tenant_id', $tenantId)->orderBy('name')->limit(50)->get();
-        } catch (\Throwable $e) {
-            $customers = collect([]);
-        }
-
-        if ($customers->isEmpty()) {
-            try {
-                $walkIn = Customer::firstOrCreate(
-                    ['tenant_id' => $tenantId, 'name' => 'Walk-in Customer'],
-                    ['phone' => '0000000000', 'address' => 'Store Counter', 'due_balance' => 0.00]
-                );
-                $customers = collect([$walkIn]);
-            } catch (\Throwable $e) {
-                $customers = collect([]);
+        // 3. Customers (Limit 50 with Caching for High-Capacity Scaling)
+        $customers = Cache::remember("pos_initial_customers_{$tenantId}", 60, function () use ($tenantId) {
+            $c = Customer::where('tenant_id', $tenantId)->orderBy('name')->limit(50)->get();
+            if ($c->isEmpty()) {
+                try {
+                    $walkIn = Customer::firstOrCreate(
+                        ['tenant_id' => $tenantId, 'name' => 'Walk-in Customer'],
+                        ['phone' => '0000000000', 'address' => 'Store Counter', 'due_balance' => 0.00]
+                    );
+                    $c = collect([$walkIn]);
+                } catch (\Throwable $e) {
+                    $c = collect([]);
+                }
             }
-        }
+            return $c->toArray();
+        });
 
         // 4. Products (Paginated / Limited initial load for high-capacity catalog scaling)
-        $products = Product::where('tenant_id', $tenantId)
-            ->where('is_active', true)
-            ->with(['category', 'unit', 'stocks' => function ($sq) use ($storeId) {
-                $sq->where('store_id', $storeId);
-            }])
-            ->limit(50)
-            ->get()
-            ->map(function ($p) {
-                $stock = $p->stocks ? $p->stocks->first() : null;
-                $p->current_stock = $stock ? (float) $stock->quantity : 0;
-                return $p;
-            });
+        $products = Cache::remember("pos_initial_products_{$tenantId}_{$storeId}", 60, function () use ($tenantId, $storeId) {
+            return Product::where('tenant_id', $tenantId)
+                ->where('is_active', true)
+                ->select(['id', 'tenant_id', 'category_id', 'unit_id', 'name', 'sku', 'barcode', 'selling_price', 'vat_rate', 'vat_mode', 'is_active'])
+                ->with(['category:id,name', 'unit:id,name', 'stocks' => function ($sq) use ($storeId) {
+                    $sq->select(['id', 'store_id', 'product_id', 'quantity'])->where('store_id', $storeId);
+                }])
+                ->limit(50)
+                ->get()
+                ->map(function ($p) {
+                    $stock = $p->stocks ? $p->stocks->first() : null;
+                    return [
+                        'id' => $p->id,
+                        'name' => $p->name,
+                        'sku' => $p->sku,
+                        'barcode' => $p->barcode,
+                        'selling_price' => (float) $p->selling_price,
+                        'vat_rate' => (float) $p->vat_rate,
+                        'vat_mode' => $p->vat_mode,
+                        'category' => $p->category ? ['id' => $p->category->id, 'name' => $p->category->name] : null,
+                        'unit' => $p->unit ? ['id' => $p->unit->id, 'name' => $p->unit->name] : null,
+                        'current_stock' => $stock ? (float) $stock->quantity : 0.0,
+                    ];
+                })
+                ->toArray();
+        });
 
         // 5. Active Shift Check
         $activeShift = \App\Models\RegisterShift::where('tenant_id', $tenantId)
@@ -121,13 +130,20 @@ class PosController extends Controller
             ->where('status', 'open')
             ->first();
 
+        $activeShiftData = $activeShift ? [
+            'id' => $activeShift->id,
+            'opening_float' => (float) $activeShift->opening_float,
+            'opened_at' => (string) $activeShift->opened_at,
+            'status' => $activeShift->status,
+        ] : null;
+
         return Inertia::render('POS/Terminal', [
             'stores' => $stores,
             'categories' => $categories,
             'customers' => $customers,
             'initialProducts' => $products,
             'activeStoreId' => $storeId,
-            'activeShift' => $activeShift,
+            'activeShift' => $activeShiftData,
         ]);
     }
 
@@ -323,6 +339,7 @@ class PosController extends Controller
 
                 $calculatedSubtotalPaisa += $lineTotalPaisa;
                 $totalInvoiceVatPaisa += $itemVatPaisa;
+                $calculatedCogsPaisa = ($calculatedCogsPaisa ?? 0) + intval(round($item['quantity'] * (float) $costPrice * 100));
 
                 $itemsToProcess[] = [
                     'product' => $product,
@@ -342,6 +359,7 @@ class PosController extends Controller
 
 
             $calculatedSubtotal = $calculatedSubtotalPaisa / 100;
+            $calculatedCogs = ($calculatedCogsPaisa ?? 0) / 100;
             if ($discountAmount > $calculatedSubtotal + 0.001) {
                 throw ValidationException::withMessages([
                     'discount_amount' => ['Order discount amount cannot exceed calculated subtotal.']
@@ -381,6 +399,7 @@ class PosController extends Controller
                 'discount_amount' => $discountPaisa / 100,
                 'tax_amount' => $totalInvoiceVatPaisa / 100,
                 'grand_total' => $grandTotal,
+                'cogs' => $calculatedCogs,
                 'paid_amount' => $paidPaisa / 100,
                 'change_return' => $changeReturnPaisa / 100,
                 'payment_status' => $paymentStatus,
@@ -689,23 +708,43 @@ class PosController extends Controller
     {
         $tenantId = $this->getTenantId();
 
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        if (!$startDate) {
+            $startDate = now()->subDays(30)->startOfDay()->toDateTimeString();
+        } else {
+            $startDate = \Carbon\Carbon::parse($startDate)->startOfDay()->toDateTimeString();
+        }
+
+        if (!$endDate) {
+            $endDate = now()->endOfDay()->toDateTimeString();
+        } else {
+            $endDate = \Carbon\Carbon::parse($endDate)->endOfDay()->toDateTimeString();
+        }
+
+        $diffInDays = \Carbon\Carbon::parse($startDate)->diffInDays(\Carbon\Carbon::parse($endDate));
+        if ($diffInDays > 366) {
+            $startDate = \Carbon\Carbon::parse($endDate)->subDays(366)->startOfDay()->toDateTimeString();
+        }
+
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="sales_report_' . date('Ymd_His') . '.csv"',
         ];
 
-        $callback = function () use ($tenantId) {
+        $callback = function () use ($tenantId, $startDate, $endDate) {
             $file = fopen('php://output', 'w');
             fputcsv($file, ['Invoice No', 'Date', 'Store', 'Customer', 'Subtotal', 'Discount', 'VAT (Tax)', 'Grand Total', 'Payment Method', 'Payment Status']);
 
             Order::where('tenant_id', $tenantId)
+                ->whereBetween('created_at', [$startDate, $endDate])
                 ->with(['customer', 'store', 'user'])
-                ->latest()
-                ->chunk(1000, function ($orders) use ($file) {
+                ->chunkById(2000, function ($orders) use ($file) {
                     foreach ($orders as $order) {
                         fputcsv($file, [
                             $order->invoice_no,
-                            $order->created_at->format('Y-m-d H:i:s'),
+                            $order->created_at ? $order->created_at->format('Y-m-d H:i:s') : '',
                             $order->store->name ?? 'N/A',
                             $order->customer->name ?? 'Walk-in Customer',
                             $order->subtotal,

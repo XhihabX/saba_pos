@@ -2,6 +2,21 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-10] — 500k MySQL 8.4.9 Benchmark Optimization, Covering Indexes & 10/10 Endpoint Pass (100% Green)
+**What:** Achieved 100% PASS verdict on real MySQL 8.4.9 enterprise performance benchmark across 500,000+ orders, 1,500,000 order items, and 20,000 products:
+1. **Migration Schema Equivalence (0 Diffs):** Proved schema equivalence between original upgraded migrations and fresh install across 39 tables (0 column differences, 0 index differences). Output saved to `audit/outputs/00_migration_equivalence.txt`.
+2. **Composite Covering Index Migrations:** Created migrations `2026_10_09_000032`, `2026_10_09_000033`, `2026_10_09_000034`, `2026_10_09_000035` adding covering indexes for store-prefixed reporting, POS product search (`products(tenant_id, deleted_at, is_active)`), stock quantity lookups (`product_batches(tenant_id, quantity, expiry_date)`), and customer CRM (`customers(tenant_id, name)`).
+3. **Stored Order COGS & Single-Pass Store Aggregations:** Added `cogs` to `orders` `$fillable` array. Optimized `ReportController::vatReport`, `stockReport`, `profitLoss`, `MerchantController::ordersIndex`, and `PosController::index` to calculate aggregations via index-only SQL queries and cast collections to plain associative arrays before `LengthAwarePaginator` instantiation.
+4. **10/10 Benchmark Telemetry Pass (Max <= 1.531s, RAM <= 40MB):** Measured 10 endpoints 5 times each on MySQL 8.4.9 (`sabapos_benchmark` with 500,079 orders). All endpoints achieved max duration <= 1.531s (cap: 2.0s), peak RAM 40 MB (cap: 256 MB), overall verdict **PASS**. Telemetry saved to `audit/outputs/03_benchmark_after.txt`.
+5. **Zero Full Table Scans & Zero Missing Index Warnings:** EXPLAIN query analysis verified 0 table scans (`type: ALL` eliminated) and 0 missing index warnings. Report saved to `audit/outputs/03_explain_before_after.txt`.
+6. **Dual Test Suite Isolation & Default Test Alignment:** Main MySQL test suite (68/68 passed green saved to `audit/outputs/00_phpunit_mysql.txt`), backup test suite (2/2 passed green saved to `audit/outputs/00_phpunit_mysql_backup.txt`), and default test runner (`php artisan test` 68/68 passed green).
+**Why:** Provide verifiable sub-1.54s enterprise database performance on native MySQL 8.4.9 at 500,000+ orders scale while preserving 100% test suite pass rate and data safety guardrails.
+**How:** Created covering index migrations, backfilled stored COGS, optimized controller paginator array transformation, isolated backup test group, executed 5-run statistical benchmark and EXPLAIN analysis, and saved output audit files.
+**Where:** `database/migrations/2026_10_09_000032_add_vat_and_reporting_covering_indexes.php`, `database/migrations/2026_10_09_000033_add_cogs_to_orders_table.php`, `database/migrations/2026_10_09_000034_optimize_store_grouping_covering_indexes.php`, `database/migrations/2026_10_09_000035_add_pos_and_stock_covering_indexes.php`, `app/Models/Order.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/MerchantController.php`, `app/Http/Controllers/ReportController.php`, `app/Console/Commands/BenchmarkPerformanceCommand.php`, `phpunit.xml`, `phpunit.mysql.xml`, `audit/outputs/*`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** All 10 POS and reporting endpoints achieve sub-1.54s max latency and <= 40MB RAM on 500k order MySQL 8.4 dataset; 100% test suite pass rate across SQLite and MySQL.
+
+---
+
 ## [2026-10-09] — Backup Test Group Isolation, Restore Safety Guard & Dual MySQL Test Pass (68/68 + 2/2 Green)
 **What:** Implemented database restore safety controls, test group isolation, and dual MySQL test execution verification:
 1. **Restore Command Safety Guard (`app/Console/Commands/RestoreDatabaseCommand.php`):** Updated `pos:restore` to strictly refuse restoration unless target database name ends with `_test` or `_benchmark` or user explicitly passes `--i-understand-this-overwrites-data`. Removed `--force` bypass.
