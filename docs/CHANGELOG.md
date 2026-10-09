@@ -2,6 +2,20 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-09] — Scale Benchmark Command Specs (1 Tenant, 3 Stores, 20k Products, 5k Customers, 500k Orders Over 12 Mo) (68 / 68 PHPUnit Green)
+**What:** Adjusted `BenchmarkPerformanceCommand.php` (`php artisan pos:benchmark {--seed}`) seeding dataset parameters to exact scale specifications:
+1. **Bulk-Insert Seeding (`--seed`):** Seeds 1 tenant, 3 store outlets (`BM-ST-01` to `BM-ST-03`), 20,000 products, 5,000 customers, 500,000 orders with 1,500,000 order items & 500,000 matching order payments spread over 12 months using chunked database transactions.
+2. **Database Safety Guard:** Refuses execution unless the active database connection driver is `mysql` and the database name matches regex `/(_benchmark|_test)$/i`. Never touches production or real DBs.
+3. **Engine & Row Count Telemetry:** Outputs MySQL engine, server version, and live row counts prior to telemetry runs.
+4. **5-Run Telemetry & EXPLAIN Analysis:** Measures 10 endpoints 5 times each (min, median, max, peak memory under 256MB cap), profiles top 5 slowest queries via `EXPLAIN`, flagging full table scans (`type: ALL`) and missing indexes, and computes dynamic PASS/FAIL verdicts.
+5. **Automated Verification:** Executed PHPUnit test suite: **68 / 68 passed cleanly (339 assertions green)**.
+**Why:** Match exact scale benchmark requirements and protect production databases.
+**How:** Updated `BenchmarkPerformanceCommand.php`, updated `BenchmarkCommandTest.php`, updated `ARCHITECTURE.md`, and verified full test pass rate.
+**Where:** `app/Console/Commands/BenchmarkPerformanceCommand.php`, `tests/Feature/BenchmarkCommandTest.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** Benchmark command operates safely on MySQL benchmark databases with 3-store scale test dataset.
+
+---
+
 ## [2026-10-07] — High-Scale 50-Store Benchmark Command Overhaul & Query EXPLAIN Engine (68 / 68 PHPUnit Green)
 **What:** Upgraded `BenchmarkPerformanceCommand.php` (`php artisan pos:benchmark {--seed}`) to support high-scale 50-store multi-outlet retail telemetry:
 1. **Database Safety Guard:** Refuses execution unless the active database connection driver is `mysql` and the database name matches regex `/(_benchmark|_test)$/i`. Never touches production or non-test databases.

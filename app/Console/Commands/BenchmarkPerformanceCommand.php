@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Hash;
 class BenchmarkPerformanceCommand extends Command
 {
     protected $signature = 'pos:benchmark {--seed} {--seed-only} {--run-only}';
-    protected $description = 'Seed scale test data (50 stores, 20k products, 5k customers, 500k orders over 1 yr) and measure real page timing & EXPLAIN query telemetry';
+    protected $description = 'Seed scale test data (1 tenant, 3 stores, 20k products, 5k customers, 500k orders over 1 yr) and measure real page timing & EXPLAIN query telemetry';
 
     public function handle()
     {
@@ -56,9 +56,9 @@ class BenchmarkPerformanceCommand extends Command
             'expires_at' => now()->addYear(),
         ]);
 
-        // Ensure 50 Stores exist
+        // Ensure 3 Stores exist
         $stores = [];
-        for ($s = 1; $s <= 50; $s++) {
+        for ($s = 1; $s <= 3; $s++) {
             $code = sprintf('BM-ST-%02d', $s);
             $stores[] = Store::firstOrCreate(['tenant_id' => $tenant->id, 'code' => $code], [
                 'name' => "Benchmark Outlet Branch {$s}",
@@ -127,7 +127,7 @@ class BenchmarkPerformanceCommand extends Command
                     }
                     DB::table('products')->insert($productRows);
 
-                    // Fetch inserted product IDs for stock seeding across the 50 stores
+                    // Fetch inserted product IDs for stock seeding across the 3 stores
                     $insertedProducts = Product::where('tenant_id', $tenant->id)
                         ->orderBy('id', 'desc')
                         ->limit($count)
@@ -179,11 +179,11 @@ class BenchmarkPerformanceCommand extends Command
             $this->info("✓ 5,000 Customers seeded.");
         }
 
-        // 3. Seed 500,000 Orders with 1,500,000 Order Items and Order Payments over 12 months across 50 Stores
+        // 3. Seed 500,000 Orders with 1,500,000 Order Items and Order Payments over 12 months across 3 Stores
         $currentOrders = Order::where('tenant_id', $tenant->id)->count();
         if ($currentOrders < 500000) {
             $targetOrders = 500000 - $currentOrders;
-            $this->info("--> Seeding 500,000 orders + 1,500,000 items + payments spread over 12 months across 50 stores...");
+            $this->info("--> Seeding 500,000 orders + 1,500,000 items + payments spread over 12 months across 3 stores...");
             $batchSize = 5000;
             $sampleProducts = Product::where('tenant_id', $tenant->id)->limit(100)->pluck('id')->toArray();
             if (empty($sampleProducts)) {
@@ -268,7 +268,7 @@ class BenchmarkPerformanceCommand extends Command
                     $this->info(sprintf("  ... Progress: %d / %d orders inserted.", min($i + $batchSize, $targetOrders), $targetOrders));
                 }
             }
-            $this->info("✓ 500,000 Orders, 1,500,000 OrderItems & OrderPayments seeded across 50 stores.");
+            $this->info("✓ 500,000 Orders, 1,500,000 OrderItems & OrderPayments seeded across 3 stores.");
         }
     }
 
