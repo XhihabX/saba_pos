@@ -1,0 +1,50 @@
+================================================================================
+ EXPLAIN ANALYZE OUTPUT FOR UNCACHED SLOW QUERIES VS DAILY SALES SUMMARY
+================================================================================
+
+--------------------------------------------------------------------------------
+Uncached Order Payments Grouped by Payment Method (Raw order_payments table scan: ~500k rows)
+SQL: EXPLAIN ANALYZE SELECT payment_method, SUM(amount) FROM order_payments WHERE tenant_id = 1 GROUP BY payment_method
+--------------------------------------------------------------------------------
+-> Table scan on <temporary>  (actual time=5205..5205 rows=3 loops=1)
+    -> Aggregate using temporary table  (actual time=5205..5205 rows=3 loops=1)
+        -> Index lookup on order_payments using order_payments_tenant_id_index (tenant_id=1)  (cost=30858 rows=228770) (actual time=2.04..4038 rows=500196 loops=1)
+
+
+--------------------------------------------------------------------------------
+Uncached Orders Aggregation (Raw orders table scan: ~500k rows)
+SQL: EXPLAIN ANALYZE SELECT COUNT(*), SUM(subtotal), SUM(tax_amount), SUM(grand_total) FROM orders WHERE tenant_id = 1 AND created_at BETWEEN '2025-01-01 00:00:00' AND '2026-10-10 23:59:59'
+--------------------------------------------------------------------------------
+-> Aggregate: count(0), sum(orders.subtotal), sum(orders.tax_amount), sum(orders.grand_total)  (cost=9818..9818 rows=1) (actual time=3317..3317 rows=1 loops=1)
+    -> Filter: ((orders.tenant_id = 1) and (orders.created_at between '2025-01-01 00:00:00' and '2026-10-10 23:59:59'))  (cost=0.257..7066 rows=27520) (actual time=0.0397..2884 rows=500196 loops=1)
+        -> Covering index skip scan on orders using orders_store_created_v5_idx over tenant_id = 1, '2025-01-01 00:00:00' <= created_at <= '2026-10-10 23:59:59'  (cost=0.257..7066 rows=27520) (actual time=0.0322..1290 rows=500196 loops=1)
+
+
+--------------------------------------------------------------------------------
+Optimized Daily Sales Summary Payment Totals (Summary table: ~1,098 rows)
+SQL: EXPLAIN ANALYZE SELECT SUM(cash_total), SUM(card_total), SUM(bkash_total), SUM(nagad_total), SUM(rocket_total), SUM(upay_total), SUM(due_total), SUM(other_total) FROM daily_sales_summaries WHERE tenant_id = 1
+--------------------------------------------------------------------------------
+-> Aggregate: sum(daily_sales_summaries.cash_total), sum(daily_sales_summaries.card_total), sum(daily_sales_summaries.bkash_total), sum(daily_sales_summaries.nagad_total), sum(daily_sales_summaries.rocket_total), sum(daily_sales_summaries.upay_total), sum(daily_sales_summaries.due_total), sum(daily_sales_summaries.other_total)  (cost=232 rows=1) (actual time=9..9 rows=1 loops=1)
+    -> Filter: (daily_sales_summaries.tenant_id = 1)  (cost=122 rows=1098) (actual time=1.04..6.48 rows=1098 loops=1)
+        -> Table scan on daily_sales_summaries  (cost=122 rows=1098) (actual time=1.04..6.2 rows=1098 loops=1)
+
+
+--------------------------------------------------------------------------------
+Optimized Daily Sales Summary Financial Aggregates (Summary table: ~1,098 rows)
+SQL: EXPLAIN ANALYZE SELECT SUM(orders_count), SUM(subtotal), SUM(tax_amount), SUM(grand_total), SUM(cogs), SUM(refunds) FROM daily_sales_summaries WHERE tenant_id = 1 AND date BETWEEN '2025-01-01' AND '2026-10-10'
+--------------------------------------------------------------------------------
+-> Aggregate: sum(daily_sales_summaries.orders_count), sum(daily_sales_summaries.subtotal), sum(daily_sales_summaries.tax_amount), sum(daily_sales_summaries.grand_total), sum(daily_sales_summaries.cogs), sum(daily_sales_summaries.refunds)  (cost=125 rows=1) (actual time=5.81..5.81 rows=1 loops=1)
+    -> Filter: ((daily_sales_summaries.tenant_id = 1) and (daily_sales_summaries.`date` between '2025-01-01' and '2026-10-10'))  (cost=113 rows=122) (actual time=0.14..4.16 rows=1098 loops=1)
+        -> Table scan on daily_sales_summaries  (cost=113 rows=1098) (actual time=0.134..1.87 rows=1098 loops=1)
+
+
+--------------------------------------------------------------------------------
+Stock Report Totals
+SQL: EXPLAIN ANALYZE SELECT SUM(stocks.quantity * products.purchase_cost) as total_cost_val, SUM(stocks.quantity * products.selling_price) as total_retail_val FROM stocks JOIN products ON stocks.product_id = products.id WHERE stocks.tenant_id = 1
+--------------------------------------------------------------------------------
+-> Aggregate: sum((stocks.quantity * products.purchase_cost)), sum((stocks.quantity * products.selling_price))  (cost=13059 rows=1) (actual time=243..243 rows=1 loops=1)
+    -> Nested loop inner join  (cost=12054 rows=10048) (actual time=1.95..210 rows=20001 loops=1)
+        -> Covering index lookup on stocks using stocks_tenant_prod_qty_v7_idx (tenant_id=1)  (cost=1044 rows=10048) (actual time=0.788..33.3 rows=20001 loops=1)
+        -> Single-row index lookup on products using PRIMARY (id=stocks.product_id)  (cost=0.996 rows=1) (actual time=0.00834..0.00842 rows=1 loops=20001)
+
+

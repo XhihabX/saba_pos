@@ -536,7 +536,24 @@ class PosController extends Controller
                 }
             }
 
+            // Record Daily Sales Summary
+            $paymentsMap = [];
+            foreach ($order->payments as $pmt) {
+                $paymentsMap[$pmt->payment_method] = ($paymentsMap[$pmt->payment_method] ?? 0) + (float) $pmt->amount;
+            }
+            \App\Models\DailySalesSummary::recordSale(
+                $tenantId,
+                $store->id,
+                now()->toDateString(),
+                (float) $calculatedSubtotal,
+                (float) ($totalInvoiceVatPaisa / 100),
+                (float) $grandTotal,
+                (float) $calculatedCogs,
+                $paymentsMap
+            );
+
             $order->load(['items', 'customer', 'store', 'payments', 'user']);
+
 
             AuditLogger::log(
                 'pos_checkout',
@@ -737,16 +754,32 @@ class PosController extends Controller
             $file = fopen('php://output', 'w');
             fputcsv($file, ['Invoice No', 'Date', 'Store', 'Customer', 'Subtotal', 'Discount', 'VAT (Tax)', 'Grand Total', 'Payment Method', 'Payment Status']);
 
-            Order::where('tenant_id', $tenantId)
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->with(['customer', 'store', 'user'])
-                ->chunkById(2000, function ($orders) use ($file) {
+            DB::table('orders')
+                ->where('orders.tenant_id', $tenantId)
+                ->whereBetween('orders.created_at', [$startDate, $endDate])
+                ->leftJoin('stores', 'orders.store_id', '=', 'stores.id')
+                ->leftJoin('customers', 'orders.customer_id', '=', 'customers.id')
+                ->select([
+                    'orders.id',
+                    'orders.invoice_no',
+                    'orders.created_at',
+                    'stores.name as store_name',
+                    'customers.name as customer_name',
+                    'orders.subtotal',
+                    'orders.discount_amount',
+                    'orders.tax_amount',
+                    'orders.grand_total',
+                    'orders.payment_method',
+                    'orders.payment_status',
+                ])
+                ->orderBy('orders.id')
+                ->chunk(5000, function ($orders) use ($file) {
                     foreach ($orders as $order) {
                         fputcsv($file, [
                             $order->invoice_no,
-                            $order->created_at ? $order->created_at->format('Y-m-d H:i:s') : '',
-                            $order->store->name ?? 'N/A',
-                            $order->customer->name ?? 'Walk-in Customer',
+                            $order->created_at,
+                            $order->store_name ?? 'N/A',
+                            $order->customer_name ?? 'Walk-in Customer',
                             $order->subtotal,
                             $order->discount_amount,
                             $order->tax_amount,

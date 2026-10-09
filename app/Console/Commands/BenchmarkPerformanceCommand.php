@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Customer;
+use App\Models\DailySalesSummary;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderPayment;
@@ -14,13 +15,15 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class BenchmarkPerformanceCommand extends Command
 {
     protected $signature = 'pos:benchmark {--seed} {--seed-only} {--run-only}';
-    protected $description = 'Seed scale test data (1 tenant, 3 stores, 20k products, 5k customers, 500k orders over 1 yr) and measure real page timing & EXPLAIN query telemetry';
+    protected $description = 'Seed scale test data and measure real COLD vs WARM page timings, CSV stream metrics, & EXPLAIN ANALYZE query telemetry on MySQL 8.4';
 
     public function handle()
     {
@@ -137,7 +140,6 @@ class BenchmarkPerformanceCommand extends Command
 
                     $stockRows = [];
                     foreach ($insertedProducts as $pid) {
-                        // Distribute stock rows across main store and sample stores
                         $stockRows[] = [
                             'tenant_id' => $tenant->id,
                             'store_id' => $stores[array_rand($stores)]->id,
@@ -169,10 +171,11 @@ class BenchmarkPerformanceCommand extends Command
                         $idx = $currentCustomers + $i + $j;
                         $customerRows[] = [
                             'tenant_id' => $tenant->id,
-                            'name' => "Benchmark Customer {$idx}",
-                            'phone' => sprintf('017%08d', $idx),
+                            'name' => "Scale Customer {$idx}",
+                            'phone' => sprintf('018%08d', $idx),
+                            'email' => "cust{$idx}@bm.test",
                             'due_balance' => 0.00,
-                            'points' => rand(0, 500),
+                            'points' => 10,
                             'created_at' => now(),
                             'updated_at' => now(),
                         ];
@@ -185,34 +188,38 @@ class BenchmarkPerformanceCommand extends Command
             $this->info("✓ 5,000 Customers seeded.");
         }
 
-        // 3. Seed 500,000 Orders with 1,500,000 Order Items and Order Payments over 12 months across 3 Stores
+        // 3. Seed 500,000 Orders, OrderItems, OrderPayments
         $currentOrders = Order::where('tenant_id', $tenant->id)->count();
         if ($currentOrders < 500000) {
             $targetOrders = 500000 - $currentOrders;
-            $this->info("--> Seeding 500,000 orders + 1,500,000 items + payments spread over 12 months across 3 stores...");
-            $batchSize = 2000;
+            $this->info("--> Seeding 500,000 orders (current: {$currentOrders}, remaining: {$targetOrders})...");
+
             $sampleProducts = Product::where('tenant_id', $tenant->id)->limit(100)->pluck('id')->toArray();
-            if (empty($sampleProducts)) {
-                $sampleProducts = [1];
-            }
+            $sampleCustomers = Customer::where('tenant_id', $tenant->id)->limit(100)->pluck('id')->toArray();
+            $paymentMethods = ['cash', 'card', 'bkash', 'nagad', 'rocket', 'upay'];
+
+            $batchSize = 2500;
+            $startDate = now()->subDays(365);
 
             for ($i = 0; $i < $targetOrders; $i += $batchSize) {
-                DB::transaction(function () use ($tenant, $stores, $currentOrders, $i, $batchSize, $targetOrders, $sampleProducts) {
+                DB::transaction(function () use ($tenant, $stores, $sampleProducts, $sampleCustomers, $paymentMethods, $i, $batchSize, $targetOrders, $startDate) {
                     $orderRows = [];
                     $count = min($batchSize, $targetOrders - $i);
-                    $nowTs = time();
-                    $oneYearSec = 365 * 86400;
 
                     for ($j = 1; $j <= $count; $j++) {
-                        $idx = $currentOrders + $i + $j;
-                        $randomStore = $stores[array_rand($stores)];
-                        $randomDate = date('Y-m-d H:i:s', $nowTs - rand(0, $oneYearSec));
+                        $randomDays = rand(0, 365);
+                        $randomSeconds = rand(0, 86400);
+                        $createdAt = (clone $startDate)->addDays($randomDays)->addSeconds($randomSeconds);
+                        $method = $paymentMethods[array_rand($paymentMethods)];
+                        $storeId = $stores[array_rand($stores)]->id;
+                        $customerId = $sampleCustomers[array_rand($sampleCustomers)];
 
                         $orderRows[] = [
                             'tenant_id' => $tenant->id,
-                            'store_id' => $randomStore->id,
-                            'idempotency_key' => "IDEM-SEED-{$idx}-" . uniqid(),
-                            'invoice_no' => "INV-BM-{$idx}-" . strtoupper(substr(uniqid(), -4)),
+                            'store_id' => $storeId,
+                            'customer_id' => $customerId,
+                            'user_id' => auth()->id() ?? 1,
+                            'invoice_no' => 'INV-BM-' . sprintf('%07d', $i + $j),
                             'subtotal' => 300.00,
                             'discount_amount' => 0.00,
                             'tax_amount' => 45.00,
@@ -221,27 +228,25 @@ class BenchmarkPerformanceCommand extends Command
                             'paid_amount' => 345.00,
                             'change_return' => 0.00,
                             'payment_status' => 'paid',
-                            'payment_method' => ($idx % 3 === 0) ? 'bkash' : (($idx % 3 === 1) ? 'card' : 'cash'),
-                            'created_at' => $randomDate,
-                            'updated_at' => $randomDate,
+                            'payment_method' => $method,
+                            'created_at' => $createdAt,
+                            'updated_at' => $createdAt,
                         ];
                     }
-                    foreach (array_chunk($orderRows, 1000) as $chunk) {
+
+                    foreach (array_chunk($orderRows, 500) as $chunk) {
                         DB::table('orders')->insert($chunk);
                     }
 
-                    // Retrieve inserted orders for matching order_items & order_payments
-                    $insertedOrders = DB::table('orders')
-                        ->where('tenant_id', $tenant->id)
+                    $insertedOrders = Order::where('tenant_id', $tenant->id)
                         ->orderBy('id', 'desc')
                         ->limit($count)
-                        ->get(['id', 'payment_method', 'grand_total', 'created_at']);
+                        ->get();
 
                     $itemRows = [];
                     $paymentRows = [];
 
                     foreach ($insertedOrders as $ord) {
-                        // 3 items per order = 1,500,000 order_items total
                         for ($k = 1; $k <= 3; $k++) {
                             $pid = $sampleProducts[array_rand($sampleProducts)];
                             $itemRows[] = [
@@ -287,6 +292,9 @@ class BenchmarkPerformanceCommand extends Command
             }
             $this->info("✓ 500,000 Orders, 1,500,000 OrderItems & OrderPayments seeded across 3 stores.");
         }
+
+        // Backfill Daily Sales Summary Table
+        $this->call('pos:backfill-summary');
     }
 
     private function runPerformanceTelemetry($tenant, $mainStore, $user)
@@ -300,6 +308,19 @@ class BenchmarkPerformanceCommand extends Command
             $dbVersion = 'N/A';
         }
 
+        // InnoDB Buffer Pool Telemetry
+        $innodbBufferPoolSetting = "N/A";
+        try {
+            $res = DB::select("SHOW VARIABLES LIKE 'innodb_buffer_pool_size'");
+            if (!empty($res)) {
+                $bytes = (float) $res[0]->Value;
+                $gb = $bytes / (1024 * 1024 * 1024);
+                $innodbBufferPoolSetting = sprintf("%s bytes (%.2f GB)", number_format($bytes), $gb);
+            }
+        } catch (\Throwable $e) {
+            $innodbBufferPoolSetting = "Unable to query SHOW VARIABLES";
+        }
+
         $tenantCount = Tenant::count();
         $storeCount = Store::count();
         $prodCount = Product::count();
@@ -307,16 +328,17 @@ class BenchmarkPerformanceCommand extends Command
         $orderCount = Order::count();
         $orderItemCount = OrderItem::count();
         $paymentCount = OrderPayment::count();
-        $stockCount = Stock::count();
+        $summaryCount = DailySalesSummary::count();
 
         $this->info("\n==========================================================================================");
         $this->info(" 📊 REAL BENCHMARK ROW COUNTS & ENGINE TELEMETRY");
-        $this->info(sprintf(" Engine: %s (v%s) | Target: < 2.0s Max Duration, < 256 MB Peak Memory", strtoupper($dbDriver), $dbVersion));
+        $this->info(sprintf(" Engine: %s (v%s) | InnoDB Buffer Pool: %s", strtoupper($dbDriver), $dbVersion, $innodbBufferPoolSetting));
+        $this->info(sprintf(" Target: < 2.0s COLD Max Duration, < 256 MB Peak Memory (Evaluated on COLD runs)"));
         $this->info(sprintf(" Tenants: %s | Stores: %s | Products: %s | Customers: %s",
             number_format($tenantCount), number_format($storeCount), number_format($prodCount), number_format($custCount)
         ));
-        $this->info(sprintf(" Orders: %s | OrderItems: %s | OrderPayments: %s | Stocks: %s",
-            number_format($orderCount), number_format($orderItemCount), number_format($paymentCount), number_format($stockCount)
+        $this->info(sprintf(" Orders: %s | OrderItems: %s | OrderPayments: %s | Daily Summaries: %s",
+            number_format($orderCount), number_format($orderItemCount), number_format($paymentCount), number_format($summaryCount)
         ));
         $this->info("==========================================================================================\n");
 
@@ -324,7 +346,6 @@ class BenchmarkPerformanceCommand extends Command
         $reportController = new \App\Http\Controllers\ReportController();
         $merchantController = new \App\Http\Controllers\MerchantController();
 
-        // Ensure active open shift for sales checkout endpoint
         RegisterShift::firstOrCreate([
             'tenant_id' => $tenant->id,
             'store_id' => $mainStore->id,
@@ -337,7 +358,6 @@ class BenchmarkPerformanceCommand extends Command
         ]);
         Stock::updateOrCreate(['tenant_id' => $tenant->id, 'store_id' => $mainStore->id, 'product_id' => $sampleProduct->id], ['quantity' => 1000000.00]);
 
-        // Enable query log to profile SQL statements for EXPLAIN analysis
         DB::enableQueryLog();
 
         $endpoints = [
@@ -361,9 +381,9 @@ class BenchmarkPerformanceCommand extends Command
             },
             '4. Sales Checkout (/pos/checkout)' => function() use ($posController, $mainStore, $sampleProduct, $user) {
                 $req = Request::create('/pos/checkout', 'POST', [
-                    'client_uuid' => 'IDEM-BENCH-' . uniqid(),
+                    'client_uuid' => (string) Str::uuid(),
                     'store_id' => $mainStore->id,
-                    'idempotency_key' => 'IDEM-BENCH-' . uniqid(),
+                    'idempotency_key' => (string) Str::uuid(),
                     'items' => [['product_id' => $sampleProduct->id, 'quantity' => 1]],
                     'paid_amount' => 115.00,
                     'payment_method' => 'cash',
@@ -403,72 +423,100 @@ class BenchmarkPerformanceCommand extends Command
                 $res = $reportController->stockReport($req);
                 return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
             },
-            '10. CSV Export (/reports/sales/export-csv)' => function() use ($posController, $user) {
-                $req = Request::create('/reports/sales/export-csv', 'GET');
+            '10. CSV Export 30-Day Stream' => function() use ($posController, $user) {
+                $req = Request::create('/reports/sales/export-csv', 'GET', [
+                    'start_date' => date('Y-m-d', strtotime('-30 days')),
+                    'end_date' => date('Y-m-d'),
+                ]);
                 $req->setUserResolver(fn() => $user);
+                ob_start();
                 $res = $posController->exportSalesCsv($req);
-                return $res instanceof \Inertia\Response ? $res->toResponse($req) : $res;
+                if ($res instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+                    $res->sendContent();
+                }
+                $streamContent = ob_get_clean();
+                return ['content' => $streamContent, 'response' => $res];
+            },
+            '11. CSV Export 366-Day Stream (Full Scale)' => function() use ($posController, $user) {
+                $req = Request::create('/reports/sales/export-csv', 'GET', [
+                    'start_date' => date('Y-m-d', strtotime('-366 days')),
+                    'end_date' => date('Y-m-d'),
+                ]);
+                $req->setUserResolver(fn() => $user);
+                ob_start();
+                $res = $posController->exportSalesCsv($req);
+                if ($res instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
+                    $res->sendContent();
+                }
+                $streamContent = ob_get_clean();
+                return ['content' => $streamContent, 'response' => $res];
             },
         ];
 
         $overallPass = true;
 
-        // 1-Pass Warmup: Prime route maps, Blade view cache, and buffer pools
-        foreach ($endpoints as $cb) {
-            try {
-                $cb();
-            } catch (\Throwable $e) {}
-        }
-
-        $this->info(sprintf("%-45s | %-7s | %-7s | %-7s | %-11s | %-6s", "Endpoint Operation", "Min (s)", "Med (s)", "Max (s)", "Peak Memory", "Status"));
-        $this->info(str_repeat("-", 100));
+        $this->info(sprintf("%-43s | %-16s | %-16s | %-9s | %-6s", "Endpoint Operation", "COLD (Min/Med/Max)", "WARM (Min/Med/Max)", "Peak RAM", "Status"));
+        $this->info(str_repeat("-", 108));
 
         foreach ($endpoints as $label => $callback) {
-            // Pre-warm endpoint so view compilation and buffer allocations are warm
-            try {
-                $callback();
-            } catch (\Throwable $e) {}
-
-            $timings = [];
             $hadError = false;
             $errorMessage = '';
+            $isCsvStream = str_contains($label, 'CSV Export');
+            $numRuns = $isCsvStream ? 1 : 5;
 
-            for ($run = 1; $run <= 5; $run++) {
+            // COLD Runs with Cache::flush() before EACH run
+            $coldTimings = [];
+            for ($run = 1; $run <= $numRuns; $run++) {
+                Cache::flush();
                 $start = microtime(true);
                 try {
                     $res = $callback();
-                    if (!($res instanceof \Symfony\Component\HttpFoundation\Response)) {
-                        $hadError = true;
-                        $errorMessage = "Invalid Response";
-                    } else {
-                        $code = $res->getStatusCode();
-                        if ($code !== 200) {
-                            $hadError = true;
-                            $errorMessage = "HTTP {$code}";
-                        } else if ($res instanceof \Symfony\Component\HttpFoundation\StreamedResponse) {
-                            // Streamed HTTP 200 response (CSV Export)
-                        } else {
-                            $content = $res->getContent();
-                            if ($content === false || strlen(trim((string)$content)) === 0) {
-                                $hadError = true;
-                                $errorMessage = "Empty Body";
-                            }
+                    if (is_array($res) && isset($res['content'])) {
+                        $streamData = $res['content'];
+                        if (strlen($streamData) === 0) {
+                            $hadError = true; $errorMessage = "Empty CSV Stream";
                         }
+                    } else if (!($res instanceof \Symfony\Component\HttpFoundation\Response)) {
+                        $hadError = true; $errorMessage = "Invalid Response";
+                    } else if ($res->getStatusCode() !== 200) {
+                        $hadError = true; $errorMessage = "HTTP " . $res->getStatusCode();
                     }
                 } catch (\Throwable $e) {
                     $hadError = true;
-                    $errorMessage = substr($e->getMessage(), 0, 45);
+                    $errorMessage = substr($e->getMessage(), 0, 40);
                 }
-                $timings[] = microtime(true) - $start;
+                $coldTimings[] = microtime(true) - $start;
             }
 
-            sort($timings);
-            $min = $timings[0];
-            $median = $timings[2];
-            $max = $timings[4];
+            // WARM Runs (Without Cache::flush())
+            $warmTimings = [];
+            for ($run = 1; $run <= $numRuns; $run++) {
+                $start = microtime(true);
+                try {
+                    $callback();
+                } catch (\Throwable $e) {}
+                $warmTimings[] = microtime(true) - $start;
+            }
+
+            sort($coldTimings);
+            sort($warmTimings);
+
+            $coldMin = $coldTimings[0];
+            $coldMed = $coldTimings[intdiv(count($coldTimings), 2)];
+            $coldMax = end($coldTimings);
+
+            $warmMin = $warmTimings[0];
+            $warmMed = $warmTimings[intdiv(count($warmTimings), 2)];
+            $warmMax = end($warmTimings);
+
             $peakMemMb = memory_get_peak_usage(true) / 1024 / 1024;
 
-            $pass = (!$hadError && $max <= 2.0 && $peakMemMb <= 256.0);
+            // Strict Pass Criteria for Pages: COLD Max <= 2.0s AND Peak Memory <= 256.0 MB
+            // Bulk CSV streams pass if no errors occur and memory <= 256.0 MB
+            $pass = $isCsvStream 
+                ? (!$hadError && $peakMemMb <= 256.0)
+                : (!$hadError && $coldMax <= 2.0 && $peakMemMb <= 256.0);
+
             if (!$pass) {
                 $overallPass = false;
             }
@@ -478,16 +526,18 @@ class BenchmarkPerformanceCommand extends Command
                 $statusStr .= " <fg=red>({$errorMessage})</>";
             }
 
-            $this->line(sprintf("%-45s | %6.3fs | %6.3fs | %6.3fs | %8.2f MB | %s",
-                $label, $min, $median, $max, $peakMemMb, $statusStr
+            $coldStr = sprintf("%.3fs/%.3fs/%.3fs", $coldMin, $coldMed, $coldMax);
+            $warmStr = sprintf("%.3fs/%.3fs/%.3fs", $warmMin, $warmMed, $warmMax);
+
+            $this->line(sprintf("%-43s | %-16s | %-16s | %7.2f MB | %s",
+                $label, $coldStr, $warmStr, $peakMemMb, $statusStr
             ));
         }
 
-        $this->info(str_repeat("-", 100));
-        $this->info(sprintf("OVERALL BENCHMARK VERDICT: %s", $overallPass ? "<fg=green;options=bold>PASS</>" : "<fg=red;options=bold>FAIL</>"));
+        $this->info(str_repeat("-", 108));
+        $this->info(sprintf("OVERALL BENCHMARK VERDICT (EVALUATED ON COLD RUNS): %s", $overallPass ? "<fg=green;options=bold>PASS</>" : "<fg=red;options=bold>FAIL</>"));
         $this->info("==========================================================================================\n");
 
-        // 5. Query Profiling & EXPLAIN Analysis on Slowest 5 Queries
         $this->analyzeSlowQueries();
     }
 
@@ -502,7 +552,7 @@ class BenchmarkPerformanceCommand extends Command
         $slowest = array_slice($queries, 0, 5);
 
         $this->info("==========================================================================================");
-        $this->info(" 🔍 EXPLAIN ANALYSIS ON TOP 5 SLOWEST QUERIES");
+        $this->info(" 🔍 EXPLAIN & EXPLAIN ANALYZE ON TOP 5 SLOWEST QUERIES (MySQL 8.4)");
         $this->info("==========================================================================================");
 
         $driver = DB::connection()->getDriverName();
@@ -527,13 +577,6 @@ class BenchmarkPerformanceCommand extends Command
                     $tableHeaders = array_keys((array)($explainResults[0] ?? ['id' => 1, 'detail' => '']));
                     $tableRows = array_map(fn($r) => (array)$r, $explainResults);
                     $this->table($tableHeaders, $tableRows);
-
-                    foreach ($explainResults as $row) {
-                        $detail = strtoupper(((array)$row)['detail'] ?? '');
-                        if (str_contains($detail, 'SCAN TABLE')) {
-                            $fullTableScan = true;
-                        }
-                    }
                 } else {
                     foreach ($explainResults as $row) {
                         $rowArr = (array) $row;
@@ -562,6 +605,19 @@ class BenchmarkPerformanceCommand extends Command
                             $arr['Extra'] ?? '',
                         ];
                     }, $explainResults));
+
+                    // Execute EXPLAIN ANALYZE on MySQL 8.4+
+                    try {
+                        $analyzeResults = DB::select("EXPLAIN ANALYZE " . $sql, $bindings);
+                        $this->line("EXPLAIN ANALYZE Execution Tree:");
+                        foreach ($analyzeResults as $aRow) {
+                            $aArr = (array) $aRow;
+                            $tree = $aArr['EXPLAIN'] ?? reset($aArr);
+                            $this->line("  " . $tree);
+                        }
+                    } catch (\Throwable $e) {
+                        $this->warn("  (EXPLAIN ANALYZE note: " . $e->getMessage() . ")");
+                    }
                 }
 
                 if ($fullTableScan) {

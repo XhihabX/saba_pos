@@ -170,6 +170,14 @@ class ReturnController extends Controller
                 $activeShift->increment('total_refunds', $validated['refund_amount']);
             }
 
+            // Record in Daily Sales Summary
+            \App\Models\DailySalesSummary::recordReturn(
+                $tenantId,
+                $storeId,
+                now()->toDateString(),
+                (float) $validated['refund_amount']
+            );
+
             return redirect()->back()->with('success', 'Return & Cash Refund processed successfully!');
         });
     }

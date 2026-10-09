@@ -1,0 +1,32 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('stocks', function (Blueprint $table) {
+            $table->index(['tenant_id', 'product_id', 'quantity'], 'stocks_tenant_prod_qty_v7_idx');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::disableForeignKeyConstraints();
+        try {
+            Schema::table('stocks', function (Blueprint $table) {
+                $table->dropIndex('stocks_tenant_prod_qty_v7_idx');
+            });
+        } catch (\Throwable $e) {}
+        Schema::enableForeignKeyConstraints();
+    }
+};

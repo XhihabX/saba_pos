@@ -29,48 +29,52 @@ class ReportController extends Controller
     public function profitLoss(Request $request)
     {
         $tenantId = $this->getTenantId();
-        $startDate = $request->input('start_date', date('Y-m-01'));
+        $startDate = $request->input('start_date', date('Y-01-01'));
         $endDate = $request->input('end_date', date('Y-m-d'));
 
-        $cacheKey = "profit_loss_{$tenantId}_{$startDate}_{$endDate}";
-        $data = Cache::remember($cacheKey, 60, function () use ($tenantId, $startDate, $endDate) {
-            // 1. Total Gross Revenue (Tenant Scoped SQL Aggregation via index hint)
-            $totalSales = (float) (DB::table('orders')
-                ->useIndex('orders_reporting_v3_idx')
+        // Query DailySalesSummary table (Pre-aggregated daily store metrics)
+        $summary = DB::table('daily_sales_summaries')
+            ->where('tenant_id', $tenantId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->selectRaw('
+                SUM(grand_total) as total_sales,
+                SUM(cogs) as total_cogs,
+                SUM(refunds) as total_refunds,
+                SUM(cash_total) as cash_total,
+                SUM(card_total) as card_total,
+                SUM(bkash_total) as bkash_total,
+                SUM(nagad_total) as nagad_total,
+                SUM(rocket_total) as rocket_total,
+                SUM(upay_total) as upay_total,
+                SUM(due_total) as due_total,
+                SUM(other_total) as other_total
+            ')
+            ->first();
+
+        $grossSales = (float) ($summary->total_sales ?? 0.00);
+        $totalRefunds = (float) ($summary->total_refunds ?? 0.00);
+        $totalSales = max(0, $grossSales - $totalRefunds);
+        $cogs = (float) ($summary->total_cogs ?? 0.00);
+
+        // Fallback for COGS if summary table is empty / not backfilled
+        if ($cogs <= 0.0 && $totalSales > 0) {
+            $cogs = (float) (DB::table('orders')
                 ->where('tenant_id', $tenantId)
                 ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-                ->sum('grand_total') ?? 0.00);
-
-        // 2. Cost of Goods Sold (COGS) using stored orders.cogs with fallback to order_items aggregation
-        $cogs = (float) (DB::table('orders')
-            ->useIndex('orders_reporting_v4_idx')
-            ->where('tenant_id', $tenantId)
-            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->sum('cogs') ?? 0.00);
-
-        if ($cogs <= 0.0) {
-            $cogs = (float) (OrderItem::where('order_items.tenant_id', $tenantId)
-                ->join('orders', function($join) use ($tenantId, $startDate, $endDate) {
-                    $join->on('order_items.order_id', '=', 'orders.id')
-                         ->where('orders.tenant_id', '=', $tenantId)
-                         ->whereBetween('orders.created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
-                })
-                ->selectRaw('SUM(order_items.quantity * order_items.cost_price) as total_cogs')
-                ->value('total_cogs') ?? 0.00);
+                ->sum('cogs') ?? 0.00);
         }
 
-        // 3. Gross Profit = Sales - COGS
+        // Gross Profit = Net Sales - COGS
         $grossProfit = $totalSales - $cogs;
 
-        // 4. Operating Expenses (Strict Tenant Scoped SQL Aggregation)
+        // Operating Expenses (Strict Tenant Scoped SQL Aggregation)
         $totalExpenses = (float) (Expense::where('tenant_id', $tenantId)
             ->whereBetween('date', [$startDate, $endDate])
             ->sum('amount') ?? 0.00);
 
-        // 5. Net Profit = Gross Profit - Expenses
+        // Net Profit = Gross Profit - Expenses
         $netProfit = $grossProfit - $totalExpenses;
 
-        // 6. Sales Breakdown by Category via single-pass index-only aggregation
         $salesByCategory = collect([
             [
                 'category' => 'All Categories',
@@ -79,54 +83,53 @@ class ReportController extends Controller
             ]
         ]);
 
-        // 7. Sales Breakdown by Payment Method via direct order_payments created_at Aggregation with index hint
-        $salesByPayment = DB::table('order_payments')
-            ->useIndex('order_payments_created_reporting_v3_idx')
-            ->where('tenant_id', $tenantId)
-            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->selectRaw('payment_method, SUM(amount) as total')
-            ->groupBy('payment_method')
-            ->get()
-            ->map(fn($row) => [
-                'method' => ucfirst(str_replace('_', ' ', $row->payment_method)),
-                'total' => (float) $row->total,
-            ]);
+        // Sales Breakdown by Payment Method via summary table
+        $salesByPayment = collect([
+            ['method' => 'Cash', 'total' => (float) ($summary->cash_total ?? 0.00)],
+            ['method' => 'Card', 'total' => (float) ($summary->card_total ?? 0.00)],
+            ['method' => 'bKash', 'total' => (float) ($summary->bkash_total ?? 0.00)],
+            ['method' => 'Nagad', 'total' => (float) ($summary->nagad_total ?? 0.00)],
+            ['method' => 'Rocket', 'total' => (float) ($summary->rocket_total ?? 0.00)],
+            ['method' => 'Upay', 'total' => (float) ($summary->upay_total ?? 0.00)],
+            ['method' => 'Due / Credit', 'total' => (float) ($summary->due_total ?? 0.00)],
+            ['method' => 'Other', 'total' => (float) ($summary->other_total ?? 0.00)],
+        ])->filter(fn($item) => $item['total'] > 0)->values();
 
-        // 8. Sales Breakdown by Cashier Staff via index-only SQL aggregation with index hint
-        $userStats = DB::table('orders')
-            ->useIndex('orders_reporting_v3_idx')
-            ->where('tenant_id', $tenantId)
-            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->selectRaw('user_id, COUNT(*) as order_count, SUM(grand_total) as total_sales')
-            ->groupBy('user_id')
-            ->get();
+        // Sales Breakdown by Cashier Staff (Driven via direct index range query per user)
+        $users = \App\Models\User::where('tenant_id', $tenantId)->get(['id', 'name']);
+        $salesByCashier = collect();
 
-        $usersMap = \App\Models\User::where('tenant_id', $tenantId)->get()->keyBy('id');
+        foreach ($users as $u) {
+            $stat = DB::table('orders')
+                ->useIndex('orders_cashier_reporting_v6_idx')
+                ->where('tenant_id', $tenantId)
+                ->where('user_id', $u->id)
+                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                ->selectRaw('COUNT(*) as order_count, SUM(grand_total) as total_sales')
+                ->first();
 
-        $salesByCashier = $userStats->map(function ($row) use ($usersMap) {
-            $user = $usersMap->get($row->user_id);
-            return [
-                'cashier' => $user->name ?? 'System Staff',
-                'order_count' => (int) $row->order_count,
-                'total_sales' => (float) $row->total_sales,
-            ];
-        });
+            $salesCount = (int) ($stat->order_count ?? 0);
+            if ($salesCount > 0) {
+                $salesByCashier->push([
+                    'cashier' => $u->name ?? 'System Staff',
+                    'order_count' => $salesCount,
+                    'total_sales' => (float) ($stat->total_sales ?? 0.00),
+                ]);
+            }
+        }
 
-            return [
-                'startDate' => $startDate,
-                'endDate' => $endDate,
-                'totalSales' => (float) $totalSales,
-                'cogs' => (float) $cogs,
-                'grossProfit' => (float) $grossProfit,
-                'totalExpenses' => (float) $totalExpenses,
-                'netProfit' => (float) $netProfit,
-                'salesByCategory' => $salesByCategory,
-                'salesByPayment' => $salesByPayment,
-                'salesByCashier' => $salesByCashier,
-            ];
-        });
-
-        return Inertia::render('Reports/ProfitLoss', $data);
+        return Inertia::render('Reports/ProfitLoss', [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'totalSales' => (float) $totalSales,
+            'cogs' => (float) $cogs,
+            'grossProfit' => (float) $grossProfit,
+            'totalExpenses' => (float) $totalExpenses,
+            'netProfit' => (float) $netProfit,
+            'salesByCategory' => $salesByCategory,
+            'salesByPayment' => $salesByPayment,
+            'salesByCashier' => $salesByCashier,
+        ]);
     }
 
     public function vatReport(Request $request)
@@ -135,43 +138,43 @@ class ReportController extends Controller
         $startDate = $request->input('start_date', date('Y-01-01'));
         $endDate = $request->input('end_date', date('Y-m-d'));
 
-        $vatCacheKey = "vat_report_aggregates_{$tenantId}_{$startDate}_{$endDate}";
-        $storeStatsData = Cache::remember($vatCacheKey, 60, function () use ($tenantId, $startDate, $endDate) {
-            return DB::table('orders')
-                ->useIndex('orders_store_created_v5_idx')
+        // Query DailySalesSummary table (Real-time, zero report caching)
+        $storeStatsData = DB::table('daily_sales_summaries')
+            ->where('tenant_id', $tenantId)
+            ->whereBetween('date', [$startDate, $endDate])
+            ->selectRaw('store_id, SUM(orders_count) as order_count, SUM(subtotal) as net_amount, SUM(tax_amount) as vat_collected, SUM(grand_total) as gross_total, SUM(refunds) as refunds')
+            ->groupBy('store_id')
+            ->get()
+            ->map(fn($r) => (array) $r)
+            ->toArray();
+
+        // Fallback to orders table if summary table has not been populated
+        if (empty($storeStatsData)) {
+            $storeStatsData = DB::table('orders')
                 ->where('tenant_id', $tenantId)
                 ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-                ->selectRaw('store_id, COUNT(*) as order_count, SUM(subtotal) as net_amount, SUM(tax_amount) as vat_collected, SUM(grand_total) as gross_total')
+                ->selectRaw('store_id, COUNT(*) as order_count, SUM(subtotal) as net_amount, SUM(tax_amount) as vat_collected, SUM(grand_total) as gross_total, 0.00 as refunds')
                 ->groupBy('store_id')
                 ->get()
                 ->map(fn($r) => (array) $r)
                 ->toArray();
-        });
+        }
 
         $storeStats = collect($storeStatsData);
         $grossSales = (float) $storeStats->sum('gross_total');
         $grossVatCollected = (float) $storeStats->sum('vat_collected');
         $grossSubtotal = (float) $storeStats->sum('net_amount');
-
-        $returns = \App\Models\ProductReturn::where('tenant_id', $tenantId)
-            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
-            ->get();
-
-        $returnedVat = 0.00;
-        $returnedSubtotal = 0.00;
-        $returnedRefundTotal = (float) $returns->sum('refund_amount');
-
-        foreach ($returns as $ret) {
-            $orderItem = OrderItem::where('order_id', $ret->order_id)
-                ->where('product_id', $ret->product_id)
-                ->first();
-
-            if ($orderItem && (float) $orderItem->quantity > 0) {
-                $ratio = (float) $ret->quantity / (float) $orderItem->quantity;
-                $returnedVat += round((float) ($orderItem->vat_amount ?? 0) * $ratio, 2);
-                $returnedSubtotal += round((float) ($orderItem->total ?? 0) * $ratio, 2);
-            }
+        $returnedRefundTotal = (float) $storeStats->sum('refunds');
+        if ($returnedRefundTotal <= 0) {
+            $returnedRefundTotal = (float) DB::table('product_returns')
+                ->where('tenant_id', $tenantId)
+                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                ->sum('refund_amount');
         }
+
+        // Estimate proportional VAT returned (15% average VAT component of refunds)
+        $returnedVat = round($returnedRefundTotal * 0.130435, 2); // 15/115 for 15% inclusive
+        $returnedSubtotal = max(0, $returnedRefundTotal - $returnedVat);
 
         $netVat = max(0, $grossVatCollected - $returnedVat);
         $netSubtotal = max(0, $grossSubtotal - $returnedSubtotal);
