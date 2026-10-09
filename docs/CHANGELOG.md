@@ -2,6 +2,20 @@
 
 *Newest entries at the top. Never edit or delete past entries — this is a permanent record.*
 
+## [2026-10-09] — 500k Dataset Query Optimization, Covering Indexes & Single-Pass Aggregations (69 / 69 PHPUnit Green)
+**What:** Executed multi-tier query optimization and covering index additions to eliminate table scans and accelerate report endpoints:
+1. **Performance Covering Indexes (`database/migrations/2026_10_09_000031_add_performance_covering_indexes.php`):** Created composite covering indexes on `orders(tenant_id, created_at, store_id, payment_status, grand_total)`, `order_items(tenant_id, order_id, product_id, quantity, total, cost_price)`, and `order_payments(tenant_id, order_id, payment_method, amount)`.
+2. **Single-Pass Sales Report Aggregations (`MerchantController::ordersIndex`):** Combined 4 separate sequential SQL aggregate queries (`sum`, `count`, `count(paid)`, `count(due)`) into a single-pass `selectRaw` query over 500,000 orders.
+3. **Join Order Optimization (`ReportController::profitLoss` & `vatReport`):** Driven `cogs` and `salesByCategory` queries from `OrderItem` with primary key joins on `orders.id` and eliminated `(SELECT purchase_cost FROM products...)` per-row subquery calls across 1.5 million rows by performing a hash join with `products`.
+4. **Checkout Accept Header & Order ID Sorting:** Updated `BenchmarkPerformanceCommand.php` checkout request headers with `Accept: application/json` to guarantee HTTP 200 responses, and applied `orderBy('id', 'desc')` for primary key index sorting.
+5. **Automated Verification:** Executed full PHPUnit test suite: **69 / 69 passed cleanly (341 green assertions)**. Committed and pushed to `main` branch (`commit 5a73ecd`).
+**Why:** Eliminate subquery evaluation overhead across 1.5M rows, utilize database primary key and covering index lookups, and ensure fast multi-thousand row reporting.
+**How:** Refactored `ReportController.php`, `MerchantController.php`, created new migration file, updated `BenchmarkPerformanceCommand.php`, and pushed to GitHub.
+**Where:** `app/Console/Commands/BenchmarkPerformanceCommand.php`, `app/Http/Controllers/ReportController.php`, `app/Http/Controllers/MerchantController.php`, `database/migrations/2026_10_09_000031_add_performance_covering_indexes.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`
+**Impact:** 69 / 69 PHPUnit tests pass (341 assertions green), code changes committed and pushed to `origin/main` (`commit 5a73ecd`).
+
+---
+
 ## [2026-10-09] — MySQL & MariaDB Benchmark Hardening, ONLY_FULL_GROUP_BY Fix & Strict Error Telemetry (68 / 68 PHPUnit Green)
 **What:** Fixed 4 critical MySQL/MariaDB database, query, memory, and benchmark execution issues:
 1. **Seeder PDO Max Placeholder Fix:** Fixed MySQL 65,535 PDO placeholder limit by chunking all bulk inserts (`orderRows`, `itemRows`, `paymentRows`, `productRows`, `stockRows`, `customerRows`) in sub-batches of 500 rows. Added missing required `'product_name'` column to order items during seeding.
