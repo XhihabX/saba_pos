@@ -9,14 +9,14 @@ use App\Models\RegisterShift;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class DailySalesSummaryIntegrityTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     public function test_sales_checkout_and_product_returns_atomically_update_summary_table()
     {
