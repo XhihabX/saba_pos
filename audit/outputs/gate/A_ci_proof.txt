@@ -1,0 +1,17 @@
+CI TRUST PROOF REPORT
+====================
+
+A.1 CI Configuration:
+- File: .github/workflows/tests.yml
+- Added `shell: bash` (pipefail) explicitly to every test step.
+- Added Node.js asset compilation (npm ci && npm run build) to generate Vite manifest for Inertia testing.
+- Target Engine in CI: MySQL 8.4 service container.
+
+A.2 Pipeline Proofs:
+RED CI Run (Deliberately Failing Test Commit e9ee13d):
+URL: https://github.com/XhihabX/saba_pos/actions/runs/38039505249
+Conclusion: FAILURE (Detected intentional assertion failure in CiProofFailingTest.php)
+
+GREEN CI Run (Reverted and Hardened Pipeline Commit 3872a6f):
+URL: https://github.com/XhihabX/saba_pos/actions/runs/38042936453
+Conclusion: SUCCESS (All 73 main tests and 2 backup tests pass on MySQL 8.4 engine)

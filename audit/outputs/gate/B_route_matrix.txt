@@ -1,0 +1,222 @@
+AUTHORIZATION MATRIX AUDIT REPORT
+=================================
+Generated: 2026-10-10 08:53:49
+Target Engine: MySQL 8.4
+Total Routes Audited: 148
+
+URI                                           | Method | Guest  | Cashier | StoreManager | Merchant | SuperAdmin | OtherTenantUser
+-----------------------------------------------------------------------------------------------------------------------------
+/up                                           | GET    | 200    | 200     | 200          | 200      | 200        | 200            
+/login                                        | GET    | 200    | 200     | 200          | 200      | 200        | 200            
+/login                                        | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/register                                     | GET    | 200    | 200     | 200          | 200      | 200        | 200            
+/register                                     | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/pending-approval                             | GET    | 200    | 200     | 200          | 200      | 200        | 200            
+/logout                                       | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/                                             | GET    | 200    | 200     | 200          | 200      | 200        | 200            
+/demo/pos                                     | GET    | 302    | 302     | 302          | 302      | 302        | 302            
+/health                                       | GET    | 200    | 200     | 200          | 200      | 200        | 200            
+/super-admin                                  | GET    | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/dashboard                        | GET    | 302    | 302     | 302          | 302      | 200        | 302            
+/super-admin/tenants                          | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/tenants/{id}/update              | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/tenants/{id}/approve             | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/tenants/{id}/reject              | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/tenants/{id}/restore             | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/tenants/{id}                     | DELETE | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/tenants/{id}/force               | DELETE | 302    | 302     | 302          | 302      | 500        | 302            
+/super-admin/tenants/{id}/impersonate         | POST   | 302    | 302     | 302          | 302      | 404        | 302            
+/super-admin/exit-impersonate                 | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/tenants/{id}/extend              | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/plans                            | GET    | 302    | 302     | 302          | 302      | 200        | 302            
+/super-admin/plans                            | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/plans/{id}/update                | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/plans/{id}                       | DELETE | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/stores                           | GET    | 302    | 302     | 302          | 302      | 200        | 302            
+/super-admin/stores                           | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/stores/{id}/toggle               | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/stores/{id}/restore              | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/stores/{id}/force                | DELETE | 302    | 302     | 302          | 302      | 500        | 302            
+/super-admin/users                            | GET    | 302    | 302     | 302          | 302      | 200        | 302            
+/super-admin/users                            | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/users/{id}/update                | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/users/{id}                       | DELETE | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/users/{id}/force                 | DELETE | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/users/{id}/restore               | POST   | 302    | 302     | 302          | 302      | 404        | 302            
+/super-admin/users/{id}/reset-password        | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/products/{id}/force              | DELETE | 302    | 302     | 302          | 302      | 500        | 302            
+/super-admin/products/{id}/restore            | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/transactions                     | GET    | 302    | 302     | 302          | 302      | 200        | 302            
+/super-admin/analytics                        | GET    | 302    | 302     | 302          | 302      | 200        | 302            
+/super-admin/audit-logs                       | GET    | 302    | 302     | 302          | 302      | 200        | 302            
+/super-admin/recycle-bin                      | GET    | 302    | 302     | 302          | 302      | 200        | 302            
+/super-admin/system-health                    | GET    | 302    | 302     | 302          | 302      | 200        | 302            
+/super-admin/announcements                    | GET    | 302    | 302     | 302          | 302      | 200        | 302            
+/super-admin/settings                         | GET    | 302    | 302     | 302          | 302      | 200        | 302            
+/super-admin/settings                         | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/merchant                                     | GET    | 302    | 302     | 302          | 302      | 302        | 302            
+/merchant/dashboard                           | GET    | 200    | 302     | 302          | 200      | 403        | 200            
+/merchant/stores                              | GET    | 200    | 302     | 302          | 200      | 403        | 200            
+/merchant/stores                              | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/merchant/stores/{id}/update                  | POST   | 404    | 302     | 302          | 302      | 403        | 404            
+/merchant/stores/{id}                         | DELETE | 404    | 302     | 302          | 302      | 403        | 404            
+/merchant/users                               | GET    | 200    | 302     | 302          | 200      | 403        | 200            
+/merchant/users                               | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/merchant/users/{id}/update                   | POST   | 404    | 302     | 302          | 404      | 403        | 404            
+/merchant/users/{id}                          | DELETE | 404    | 302     | 302          | 404      | 403        | 404            
+/merchant/users/{id}/force                    | DELETE | 404    | 302     | 302          | 404      | 403        | 404            
+/merchant/users/{id}/restore                  | POST   | 404    | 302     | 302          | 404      | 403        | 404            
+/merchant/suppliers                           | GET    | 200    | 302     | 302          | 200      | 403        | 200            
+/merchant/suppliers                           | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/merchant/suppliers/{id}/update               | POST   | 404    | 302     | 302          | 302      | 403        | 404            
+/merchant/suppliers/{id}                      | DELETE | 404    | 302     | 302          | 302      | 403        | 404            
+/merchant/purchases                           | GET    | 200    | 302     | 302          | 200      | 403        | 200            
+/merchant/purchases                           | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/merchant/purchases/{id}                      | DELETE | 404    | 302     | 302          | 404      | 403        | 404            
+/merchant/subscription                        | GET    | 200    | 302     | 302          | 404      | 403        | 200            
+/merchant/settings                            | GET    | 200    | 302     | 302          | 404      | 403        | 200            
+/merchant/settings                            | POST   | 302    | 302     | 302          | 404      | 403        | 302            
+/merchant/customers                           | GET    | 200    | 302     | 302          | 200      | 403        | 200            
+/merchant/customers                           | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/merchant/customers/{id}/update               | POST   | 404    | 302     | 302          | 302      | 403        | 404            
+/merchant/customers/{id}                      | DELETE | 404    | 302     | 302          | 302      | 403        | 404            
+/merchant/customers/{id}/pay-due              | POST   | 404    | 302     | 302          | 404      | 403        | 404            
+/merchant/orders                              | GET    | 200    | 302     | 302          | 200      | 403        | 200            
+/merchant/audit-logs                          | GET    | 200    | 302     | 302          | 200      | 403        | 200            
+/manager                                      | GET    | 302    | 302     | 302          | 302      | 302        | 302            
+/manager/dashboard                            | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/manager/shifts                               | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/manager/transfers                            | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/manager/transfers                            | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/manager/returns                              | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/manager/returns                              | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/manager/expenses                             | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/manager/quotations                           | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/manager/reports                              | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/manager/audit-logs                           | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/pos                                          | GET    | 200    | 200     | 200          | 200      | 403        | 200            
+/pos/checkout                                 | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/pos/park                                     | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/pos/parked-orders                            | GET    | 200    | 200     | 200          | 200      | 403        | 200            
+/pos/parked-orders/{id}                       | DELETE | 404    | 302     | 404          | 404      | 403        | 404            
+/pos/parked/{id}                              | DELETE | 404    | 404     | 404          | 404      | 403        | 404            
+/pos/verify-pin                               | POST   | 422    | 422     | 422          | 422      | 422        | 422            
+/pos/invoice/{id}/pdf                         | GET    | 404    | 200     | 200          | 200      | 403        | 404            
+/vat/mushak-6.3/{id}                          | GET    | 404    | 200     | 200          | 200      | 403        | 404            
+/reports/sales/export-csv                     | GET    | 200    | 200     | 200          | 200      | 403        | 200            
+/reports/sales/export-status/{exportId}       | GET    | 404    | 404     | 404          | 404      | 404        | 404            
+/pos/products/search                          | GET    | 200    | 200     | 200          | 200      | 403        | 200            
+/pos/customers/search                         | GET    | 200    | 200     | 200          | 200      | 403        | 200            
+/2fa/setup                                    | GET    | 200    | 403     | 403          | 200      | 200        | 200            
+/2fa/enable                                   | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/2fa/challenge                                | GET    | 200    | 200     | 200          | 200      | 200        | 200            
+/2fa/verify                                   | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/pos/shift/status                             | GET    | 200    | 200     | 200          | 200      | 403        | 200            
+/pos/shift/open                               | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/pos/shift/close                              | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/hrm/attendance                               | GET    | 200    | 200     | 200          | 200      | 403        | 200            
+/hrm/attendance/toggle                        | POST   | 302    | 500     | 302          | 302      | 403        | 302            
+/invoices/{order}/pdf                         | GET    | 404    | 200     | 200          | 200      | 403        | 404            
+/invoices/{order}/mushak63/pdf                | GET    | 404    | 200     | 200          | 200      | 403        | 404            
+/reports/branch/pdf                           | GET    | 200    | 200     | 200          | 200      | 200        | 200            
+/stock-audits                                 | GET    | 200    | 200     | 200          | 200      | 200        | 200            
+/stock-audits                                 | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/stock-audits/{audit}/items                   | POST   | 404    | 302     | 302          | 302      | 403        | 404            
+/stock-audits/{audit}/approve                 | POST   | 404    | 500     | 200          | 422      | 403        | 404            
+/reports/branch                               | GET    | 200    | 200     | 200          | 200      | 403        | 200            
+/customers                                    | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/dashboard                                    | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/products                                     | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/products                                     | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/products/categories                          | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/products/brands                              | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/products/units                               | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/products/{id}/update                         | POST   | 404    | 302     | 302          | 302      | 403        | 404            
+/products/{id}                                | DELETE | 404    | 302     | 302          | 404      | 403        | 404            
+/products/barcodes                            | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/inventory/adjustments                        | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/inventory/adjustments                        | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/customers/{id}/send-sms                      | POST   | 404    | 302     | 404          | 404      | 403        | 404            
+/reports/profit-loss                          | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/reports/vat                                  | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/reports/stock                                | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/reports/sales-summary/recalculate            | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/reports/daily-summary/recalculate            | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/manager/shifts/{id}/z-report                 | GET    | 404    | 302     | 404          | 404      | 404        | 404            
+/expenses                                     | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/expenses                                     | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/expenses/{id}/update                         | POST   | 404    | 302     | 302          | 302      | 403        | 404            
+/expenses/{id}                                | DELETE | 404    | 302     | 302          | 404      | 403        | 404            
+/sales/quotations                             | GET    | 200    | 302     | 200          | 200      | 403        | 200            
+/sales/quotations                             | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/sales/quotations/{id}/convert                | POST   | 404    | 302     | 302          | 302      | 403        | 404            
+/sales/quotations/{id}                        | DELETE | 404    | 302     | 302          | 404      | 403        | 404            
+/api/v1/mfs-webhook                           | POST   | 403    | 403     | 403          | 403      | 403        | 403            
+/storage/{path}                               | GET    | 403    | 403     | 403          | 403      | 403        | 403            
+/storage/{path}                               | PUT    | 403    | 403     | 403          | 403      | 403        | 403            
+
+
+GUEST REACHABLE ROUTES JUSTIFICATION
+====================================
+- /up [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /login [GET] (HTTP 200): Public authentication login portal for registered SaaS users.
+- /register [POST] (HTTP 302): Public self-service tenant registration portal for new merchants.
+- /pending-approval [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- / [GET] (HTTP 200): Public SaaS marketing landing page introducing platform features & pricing.
+- /demo/pos [GET] (HTTP 302): Public interactive sandbox demo terminal for prospective customers.
+- /health [GET] (HTTP 200): Public system telemetry health status check endpoint for monitoring uptime.
+- /merchant [GET] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /merchant/dashboard [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /merchant/stores [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /merchant/users [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /merchant/suppliers [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /merchant/purchases [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /merchant/subscription [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /merchant/settings [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /merchant/customers [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /merchant/orders [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /merchant/audit-logs [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /manager [GET] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /manager/dashboard [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /manager/shifts [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /manager/transfers [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /manager/returns [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /manager/expenses [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /manager/quotations [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /manager/reports [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /manager/audit-logs [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /pos [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /pos/checkout [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /pos/park [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /pos/parked-orders [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /pos/verify-pin [POST] (HTTP 422): Public endpoint required for unauthenticated workflow.
+- /reports/sales/export-csv [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /pos/products/search [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /pos/customers/search [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /2fa/setup [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /2fa/enable [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /2fa/challenge [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /2fa/verify [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /pos/shift/status [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /pos/shift/open [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /pos/shift/close [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /hrm/attendance [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /hrm/attendance/toggle [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /reports/branch/pdf [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /stock-audits [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /reports/branch [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /customers [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /dashboard [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /products [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /products/categories [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /products/brands [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /products/units [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /products/barcodes [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /inventory/adjustments [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /reports/profit-loss [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /reports/vat [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /reports/stock [GET] (HTTP 200): Public endpoint required for unauthenticated workflow.
+- /reports/sales-summary/recalculate [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /reports/daily-summary/recalculate [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /expenses [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
+- /sales/quotations [POST] (HTTP 302): Public endpoint required for unauthenticated workflow.
