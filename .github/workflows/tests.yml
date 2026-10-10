@@ -110,7 +110,7 @@ jobs:
 
       - name: Execute Main Test Suite on MySQL 8.4
         shell: bash
-        run: ./vendor/bin/phpunit -c phpunit.mysql.xml --exclude-group backup 2>&1 | tee test_main.log
+        run: php vendor/phpunit/phpunit/phpunit -c phpunit.mysql.xml --exclude-group backup 2>&1 | tee test_main.log
 
       - name: Print Failure Log
         if: failure()
@@ -119,4 +119,4 @@ jobs:
 
       - name: Execute Backup Test Suite on MySQL 8.4
         shell: bash
-        run: ./vendor/bin/phpunit -c phpunit.mysql.xml --group backup
+        run: php vendor/phpunit/phpunit/phpunit -c phpunit.mysql.xml --group backup
