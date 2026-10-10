@@ -82,6 +82,17 @@ jobs:
         shell: bash
         run: php artisan key:generate
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install NPM Dependencies & Build Assets
+        shell: bash
+        run: |
+          npm ci
+          npm run build
+
       - name: Directory Permissions
         shell: bash
         run: chmod -R 775 storage bootstrap/cache
