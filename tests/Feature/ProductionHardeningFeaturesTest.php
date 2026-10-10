@@ -207,7 +207,10 @@ class ProductionHardeningFeaturesTest extends TestCase
 
         $latestBackup = collect($backupFiles)->sortByDesc(fn($f) => $f->getMTime())->first()->getFilename();
 
-        $exitCodeRestore = Artisan::call('pos:restore', ['filename' => $latestBackup]);
+        $exitCodeRestore = Artisan::call('pos:restore', [
+            'filename' => $latestBackup,
+            '--i-understand-this-overwrites-data' => true,
+        ]);
         $this->assertEquals(0, $exitCodeRestore);
     }
 }

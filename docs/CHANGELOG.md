@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-10-10] — MySQL 8.4 CI Pipeline Matrix & Database Restore Safety Guard Hardening
+
+**What:** Updated CI pipeline to execute full test suite against MySQL 8.4 service container using `phpunit.mysql.xml` and removed testing environment safety bypass in database restoration command:
+1. **MySQL 8.4 CI Test Suite Pipeline (`.github/workflows/tests.yml`):** Configured `.github/workflows/tests.yml` with dual parallel jobs: `sanity-check` (`composer install` on PHP 8.3 and `php artisan about`) and `laravel-tests` executing migrations on MySQL (`sabapos_test`) and running PHPUnit tests against MySQL 8.4 service container using `phpunit.mysql.xml` (main suite `--exclude-group backup` and backup group `--group backup` in separate steps). Main suite execution on SQLite is excluded in CI.
+2. **Database Restore Command Safety Guard (`RestoreDatabaseCommand.php`):** Removed `app()->environment('testing')` bypass from `RestoreDatabaseCommand.php`. Restoration refuses execution on any database not named `*_benchmark` or `*_test` unless `--i-understand-this-overwrites-data` flag is passed explicitly.
+3. **Explicit Restore Flag in Test Suite (`DatabaseBackupRestoreTest.php`, `ProductionHardeningFeaturesTest.php`):** Updated all `Artisan::call('pos:restore', ...)` invocations in `DatabaseBackupRestoreTest.php` and `ProductionHardeningFeaturesTest.php` to pass `'--i-understand-this-overwrites-data' => true`.
+4. **Local MySQL Test Verification (`phpunit.mysql.xml`):** Verified 100% green pass on local MySQL database: Main test suite (**73 / 73 tests passed, 385 assertions**) and Backup test group (**2 / 2 tests passed, 9 assertions**).
+
+**Why:** Enforce production database engine parity (MySQL 8.4) in CI/CD automation and prevent accidental database overwrites even when running in testing environments without explicit confirmation flags.
+**How:** Updated `.github/workflows/tests.yml`, `RestoreDatabaseCommand.php`, `DatabaseBackupRestoreTest.php`, `ProductionHardeningFeaturesTest.php`, `docs/ARCHITECTURE.md`, and `docs/CHANGELOG.md`.
+**Where:** `.github/workflows/tests.yml`, `app/Console/Commands/RestoreDatabaseCommand.php`, `tests/Feature/DatabaseBackupRestoreTest.php`, `tests/Feature/ProductionHardeningFeaturesTest.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** Automated CI workflow runs against production MySQL 8.4 database engine; restore command cannot silently overwrite databases without `--i-understand-this-overwrites-data` flag; 100% test suite pass rate.
+
+---
+
 ## [2026-10-10] — Persistent Database Discrepancy Alerts, Merchant Dashboard Warning Banner & Queued CSV Export Benchmark
 
 **What:** Implemented persistent database table for daily sales summary drift alerts, merchant dashboard warning banner, tenant owner email notifications, and real queue worker CSV export benchmark:

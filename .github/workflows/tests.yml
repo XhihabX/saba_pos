@@ -7,7 +7,34 @@ on:
     branches: [ main, master ]
 
 jobs:
+  sanity-check:
+    name: Environment & Sanity Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, dom, fileinfo, mysql, gd
+          coverage: none
+
+      - name: Copy .env
+        run: php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+      - name: Install Dependencies
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Generate Key
+        run: php artisan key:generate
+
+      - name: Run Artisan About Check
+        run: php artisan about
+
   laravel-tests:
+    name: MySQL 8.4 Test Suite
     runs-on: ubuntu-latest
 
     services:
@@ -52,8 +79,8 @@ jobs:
           DB_PASSWORD: ''
         run: php artisan migrate --force
 
-      - name: Execute Tests via PHPUnit
-        env:
-          DB_CONNECTION: sqlite
-          DB_DATABASE: ':memory:'
-        run: php artisan test
+      - name: Execute Main Test Suite on MySQL 8.4
+        run: php artisan test -c phpunit.mysql.xml --exclude-group backup
+
+      - name: Execute Backup Test Suite on MySQL 8.4
+        run: php artisan test -c phpunit.mysql.xml --group backup

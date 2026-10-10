@@ -61,7 +61,10 @@ class DatabaseBackupRestoreTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'backuprestored@example.com']);
 
         // 5. Run restore command using the generated backup archive
-        $exitCodeRestore = Artisan::call('pos:restore', ['filename' => $filename]);
+        $exitCodeRestore = Artisan::call('pos:restore', [
+            'filename' => $filename,
+            '--i-understand-this-overwrites-data' => true,
+        ]);
         $this->assertEquals(0, $exitCodeRestore);
 
         // 6. Verify restored record exists in database
