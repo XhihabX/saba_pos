@@ -118,6 +118,8 @@ jobs:
         if: failure()
         shell: bash
         run: |
+          echo "=== TEST MAIN FAILURE LOG ==="
+          cat test_main.log
           echo "## ❌ Test Failure Summary" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           tail -n 150 test_main.log >> $GITHUB_STEP_SUMMARY
