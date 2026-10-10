@@ -38,7 +38,7 @@ class RestoreDatabaseCommand extends Command
         $driver = config('database.default', 'sqlite');
         $dbName = config("database.connections.{$driver}.database");
         $dbBaseName = pathinfo((string)$dbName, PATHINFO_FILENAME);
-        $isTestDb = (bool) preg_match('/(_benchmark|_test)$/i', $dbBaseName);
+        $isTestDb = (bool) preg_match('/(_benchmark|_test)$/i', $dbBaseName) || $dbName === ':memory:' || app()->environment('testing');
 
         if (!$isTestDb && !$this->option('i-understand-this-overwrites-data')) {
             $this->error("\n[SAFETY ERROR] Database restoration safety violation!");
