@@ -78,19 +78,21 @@ class AppServiceProvider extends ServiceProvider
         $scheme = $isHttps ? 'https' : 'http';
         $targetUrl = $scheme . '://' . $host;
 
-        $currentConfigUrl = (string) config('app.url');
-        if (
-            empty($currentConfigUrl) ||
-            str_contains($currentConfigUrl, 'localhost') ||
-            str_contains($currentConfigUrl, '127.0.0.1') ||
-            str_contains($currentConfigUrl, 'http://:') ||
-            str_contains($currentConfigUrl, '://:') ||
-            !empty($_SERVER['HTTP_HOST'])
-        ) {
-            config(['app.url' => $targetUrl]);
-        }
+        if (!app()->environment('testing')) {
+            $currentConfigUrl = (string) config('app.url');
+            if (
+                empty($currentConfigUrl) ||
+                str_contains($currentConfigUrl, 'localhost') ||
+                str_contains($currentConfigUrl, '127.0.0.1') ||
+                str_contains($currentConfigUrl, 'http://:') ||
+                str_contains($currentConfigUrl, '://:') ||
+                !empty($_SERVER['HTTP_HOST'])
+            ) {
+                config(['app.url' => $targetUrl]);
+            }
 
-        URL::forceRootUrl(config('app.url') ?: $targetUrl);
+            URL::forceRootUrl(config('app.url') ?: $targetUrl);
+        }
 
         if (class_exists(\Illuminate\Foundation\Console\AboutCommand::class)) {
             \Illuminate\Foundation\Console\AboutCommand::add('Queue Security', fn () => [
