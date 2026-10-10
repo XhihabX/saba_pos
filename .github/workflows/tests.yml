@@ -99,11 +99,11 @@ jobs:
 
       - name: Execute Main Test Suite on MySQL 8.4
         shell: bash
-        run: set -o pipefail; php artisan test -c phpunit.mysql.xml --exclude-group backup 2>&1 | tee test_main.log
+        run: set -o pipefail; ./vendor/bin/phpunit -c phpunit.mysql.xml --exclude-group backup 2>&1 | tee test_main.log
 
       - name: Execute Backup Test Suite on MySQL 8.4
         shell: bash
-        run: set -o pipefail; php artisan test -c phpunit.mysql.xml --group backup 2>&1 | tee test_backup.log
+        run: set -o pipefail; ./vendor/bin/phpunit -c phpunit.mysql.xml --group backup 2>&1 | tee test_backup.log
 
       - name: Log Test Output to Step Summary on Failure
         if: failure()
