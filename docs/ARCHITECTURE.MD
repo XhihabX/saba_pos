@@ -172,10 +172,10 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Depends on:** `AuditLog`, `Tenant`, `Store`, `User`, `Auth`.
 - **Last updated:** 2026-10-06
 
-### 21. Hybrid CSV Export Engine (Inline Streamed vs Background Queued Jobs)
-- **What it does:** Hybrid CSV export architecture supporting instant inline HTTP streaming for small date ranges (<= 20,000 rows) and async background queued job processing (`ExportSalesCsvJob`) writing files to storage with download links and status polling page (`/reports/sales/export-status/{exportId}`) for large exports (> 20,000 rows).
+### 21. Hybrid High-Performance CSV Export Engine & Queued Job
+- **What it does:** High-performance hybrid CSV export architecture supporting instant inline HTTP streaming for small date ranges (<= 20,000 rows) and background queued job processing (`ExportSalesCsvJob`) with a 30-minute timeout ($1800s$), 1-attempt retry cap, and failure handler writing files to storage with download links and status polling page (`/reports/sales/export-status/{exportId}`) for large exports (> 20,000 rows).
 - **Where it lives:** `app/Http/Controllers/PosController.php`, `app/Jobs/ExportSalesCsvJob.php`, `routes/web.php`
-- **Key design decisions:** Uses `chunkById(5000, ..., 'orders.id', 'id')` for $O(N)$ indexed batch pagination during CSV generation, achieving high stream throughput (~600+ KB/s) without memory bloat (Peak RAM <= 64-172MB). `force_stream=1` override parameter allows benchmark telemetry commands to stream large datasets for throughput testing.
+- **Key design decisions:** Rewritten without Eloquent ORM overhead using a single optimized SQL query joining `orders`, `stores`, `users`, and `customers`. Uses single-pass `cursor()` streaming, delivering 30-day exports (40,938 rows) in **7.33 seconds** and 366-day exports (500,331 rows) in **116.7 seconds** while maintaining ultra-low peak RAM (26-80 MB).
 - **Depends on:** `ExportSalesCsvJob`, `PosController`, `Storage`, `Cache`.
 - **Last updated:** 2026-10-10
 
@@ -193,27 +193,23 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
   3. Hardened `PosController::verifyPin` using `ThrottleFailedPinAttempts` middleware (`throttle.pin`) tracking failed attempts per `user_id` + IP key (`pos-pin-failed:{user}:{ip}`), returning HTTP 429 lockout after 5 failed attempts/min without locking out successful entries.
   4. Enforced strict HTTP 403 authorization for orphan users without a `tenant_id` across all controllers, eliminating default tenant auto-assignment. Removed `?? Store::first()` fallbacks in sales checkout and product returns, returning HTTP 422 validation errors for invalid store IDs.
   5. Refactored `/api/v1/mfs-webhook` in `MfsWebhookController.php` to reject with HTTP 503 if no secret is configured (per-tenant or env). Removed all `app()->environment('testing')` bypasses; timestamp drift validation (>300s) is strictly enforced in all environments.
-  6. Enforced production defaults (`APP_ENV=production`, `APP_DEBUG=false` in `.env.production.example` and confirmed `.env` git exclusion).
+  6. Enforced production defaults (`APP_ENV=production`, `APP_DEBUG=false`, `QUEUE_CONNECTION=database` in `.env.production.example` and confirmed `.env` git exclusion).
 - **Where it lives:** `routes/web.php`, `app/Http/Middleware/ThrottleFailedPinAttempts.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/Api/MfsWebhookController.php`, `app/Services/EfdBridgeService.php`, `config/services.php`, `tests/Feature/PinThrottleTest.php`, `tests/Feature/MfsWebhookHardeningTest.php`.
 - **Key design decisions:** Pure cryptographic HMAC validation without test environment bypasses; zero auto-fallback tenant or store resolution; failed-attempt rate-limiting middleware.
 - **Depends on:** `PosController`, `MfsWebhookController`, `ReturnController`, `EfdBridgeService`, `ThrottleFailedPinAttempts`.
-- **Last updated:** 2026-10-07
+- **Last updated:** 2026-10-10
 
-### 24. Hardened POS Checkout & Product Returns Concurrency Engine
+### 24. Hardened POS Checkout & Stock Exhaustion Concurrency Engine
 - **What it does:** Complete concurrency and financial safety overhaul for checkout, stock transfers, and product returns:
   1. Eliminated 100 phantom stock auto-creation (missing stock row defaults strictly to `0.00` quantity).
   2. Created migration `2026_10_07_000021_default_allow_negative_stock_to_false.php` setting `stores.allow_negative_stock` default to `false` and backfilling existing store rows.
   3. Enclosed stock checks and deductions inside DB transactions using `lockForUpdate()` on `Product`, `Stock`, `ProductBatch`, and `StockTransfer`.
   4. Enforced unique `orders.idempotency_key` checking inside transactions via `lockForUpdate()`, returning existing orders for duplicate submissions.
-  5. Enforced server-side validation: payment tender sum equals `paid_amount`, line discount <= line gross, order discount <= subtotal, and supervisor PIN required for discounts above threshold.
-  6. Verified MFS payments (`bkash`, `nagad`, `rocket`, `upay`) against unclaimed `MfsTransaction` rows for the tenant with matching amounts, marking them `claimed` with `lockForUpdate()`.
-  7. Conducted monetary math in integer paisa / cents with single VAT rounding per invoice.
-  8. Hardened returns: validated item presence in order, capped quantity <= sold minus already returned (supporting decimals), capped refund <= item paid price, restocked batches, reduced customer due/loyalty points, and recorded refunds in shift `total_refunds`.
-  9. Factored cash sales, cash refunds, cash due payments, and change returns in shift `closeShift` `expected_cash` calculations.
-- **Where it lives:** `database/migrations/2026_10_07_000021_default_allow_negative_stock_to_false.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/ShiftController.php`, `app/Http/Controllers/StockTransferController.php`, `tests/Feature/StockIntegrityConcurrencyTest.php`.
+  5. Tested with 20 parallel processes selling the LAST 5 units of a product simultaneously on MySQL: exactly 5 checkouts succeeded, 15 checkouts were rejected with stock validation error, final stock reached exactly `0.00` (NEVER negative!), zero sales were lost or double counted, and zero deadlocks occurred.
+- **Where it lives:** `database/migrations/2026_10_07_000021_default_allow_negative_stock_to_false.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/ShiftController.php`, `app/Http/Controllers/StockTransferController.php`, `tests/Feature/StockIntegrityConcurrencyTest.php`, `audit/outputs/06_concurrency_test_output.txt`.
 - **Key design decisions:** DB row locking prevents concurrency race conditions; integer paisa math eliminates float inaccuracy; strict MFS transaction claiming prevents payment spoofing.
 - **Depends on:** `Order`, `OrderItem`, `Stock`, `ProductBatch`, `MfsTransaction`, `RegisterShift`, `ProductReturn`.
-- **Last updated:** 2026-10-07
+- **Last updated:** 2026-10-10
 
 ### 25. Configurable Store & Product VAT Rates, Stored Itemized Tax & NBR Compliance Engine
 - **What it does:** Configurable multi-tier VAT and NBR statutory tax engine:
@@ -268,30 +264,27 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Depends on:** `barryvdh/laravel-dompdf`, `ProductVariant`, `StockAudit`, `StockAuditItem`, `BackupDatabaseCommand`, `RestoreDatabaseCommand`.
 - **Last updated:** 2026-10-10
 
-### 29. Production Operations, Telemetry Health & CI/CD Hardening Engine
-- **What it does:** Provides production monitoring, automated CI/CD pipelines, and zero-bypass test enforcement:
-  1. **Middleware & Exception Handling Integrity:** Rewrote test suite ensuring zero occurrences of `withoutMiddleware()` or `withoutExceptionHandling()`. All 55 test cases run through authentication, subscription guards, tenant scoping, 2FA, and framework exception handlers.
-  2. **Comprehensive Workflow Coverage:** Added [`ComprehensiveWorkflowCoverageTest.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/tests/Feature/ComprehensiveWorkflowCoverageTest.php) testing split payments, supervisor PIN verification, return stock restoration, register shift float reconciliation, Z-reports, inter-store stock transfers, and manual stock adjustments.
-  3. **GitHub Actions CI/CD Pipeline:** Created [`.github/workflows/tests.yml`](file:///Users/macbookairm1/Downloads/Saba%20POS/.github/workflows/tests.yml) automating linting, SQLite migrations, PHPUnit test suite execution, and Vite asset compilation on every push and pull request.
+### 29. Production Operations, Telemetry Health, Queue Guards & CI/CD Hardening Engine
+- **What it does:** Provides production monitoring, automated CI/CD pipelines, queue guards, and zero-bypass test enforcement:
+  1. **Queue Connection Startup Guard:** Configured `QUEUE_CONNECTION=database` in `.env.production.example` and `DEPLOY.md`. Added startup warning checks in `HealthController.php` (`/health`) and `AppServiceProvider.php` (`php artisan about`) warning when `QUEUE_CONNECTION=sync` in production.
+  2. **Middleware & Exception Handling Integrity:** Rewrote test suite ensuring zero occurrences of `withoutMiddleware()` or `withoutExceptionHandling()`. All 73 test cases run through authentication, subscription guards, tenant scoping, 2FA, and framework exception handlers.
+  3. **GitHub Actions CI/CD Pipeline:** Created [`.github/workflows/tests.yml`](file:///Users/macbookairm1/Downloads/Saba%20POS/.github/workflows/tests.yml) automating linting, SQLite migrations, PHPUnit test suite execution, and Vite asset compilation on every push and pull request. Verified 100% green pass on GitHub Actions (Run #2 for commit `ddd05b6`).
   4. **System Telemetry Health Check Endpoint:** Created [`HealthController.php`](file:///Users/macbookairm1/Downloads/Saba%20POS/app/Http/Controllers/HealthController.php) (`/health`) reporting JSON status for database connectivity latency, cache driver operational status, asynchronous queue driver configuration, storage directory write permissions, PHP memory usage, and response times.
   5. **Daily Log Rotation & Production Drivers:** Configured `config/logging.php` with `daily` stack logging channel (`storage/logs/laravel-YYYY-MM-DD.log`). Set `database` or `redis` as default queue and cache drivers.
-  6. **Production Deployment Manual (`DEPLOY.md`):** Created [`DEPLOY.md`](file:///Users/macbookairm1/Downloads/Saba%20POS/DEPLOY.md) detailing production environment variables, cPanel cron setups, supervisor queue daemons, step-by-step deployment steps, rollback instructions, and emergency disaster recovery protocols.
-  7. **Repository Cleanup:** Deleted temporary files (`chat.md`, `PRODUCTION_READINESS_REPORT.md`) and verified zero secrets in git commit history.
-- **Where it lives:** `app/Http/Controllers/HealthController.php`, `.github/workflows/tests.yml`, `DEPLOY.md`, `config/logging.php`, `config/queue.php`, `config/cache.php`, `routes/web.php`, `tests/Feature/ComprehensiveWorkflowCoverageTest.php`, `docs/ARCHITECTURE.MD`, `docs/CHANGELOG.md`.
+  6. **Production Deployment Manual (`DEPLOY.md`):** Created [`DEPLOY.md`](file:///Users/macbookairm1/Downloads/Saba%20POS/DEPLOY.md) detailing production environment variables, cPanel cron setups, supervisor queue daemons (`--timeout=1800`), step-by-step deployment steps, rollback instructions, and emergency disaster recovery protocols.
+- **Where it lives:** `app/Http/Controllers/HealthController.php`, `app/Providers/AppServiceProvider.php`, `.github/workflows/tests.yml`, `DEPLOY.md`, `config/logging.php`, `config/queue.php`, `config/cache.php`, `routes/web.php`.
 - **Key design decisions:** 100% middleware and exception handling enforcement guarantees that tests mirror real web request execution. Health endpoint provides immediate uptime telemetry for monitoring tools.
-- **Depends on:** `HealthController`, `ComprehensiveWorkflowCoverageTest`, `DEPLOY.md`, GitHub Actions.
-### 30. Pre-Aggregated Daily Sales Summary Engine & Cold Benchmark Telemetry
-- **What it does:** High-performance pre-aggregated financial summary architecture and cold cache benchmark telemetry:
-  1. **Pre-Aggregated Summary Table (`daily_sales_summaries`):** Migration `2026_10_10_000036_create_daily_sales_summaries_table.php` (`DailySalesSummary` model) tracking daily totals per tenant, store, and date: `orders_count`, `subtotal`, `tax_amount`, `grand_total`, `cogs`, `refunds`, and per-payment-method totals (`cash_total`, `card_total`, `bkash_total`, `nagad_total`, `rocket_total`, `upay_total`, `due_total`, `other_total`). Unique index on `(tenant_id, store_id, date)` with cross-database upserts (`ON DUPLICATE KEY UPDATE` for MySQL, `ON CONFLICT` for SQLite).
-  2. **Atomic Transaction Hooks & Historical Backfill:** Hooked atomic upserts into checkout (`PosController::checkout`) and return (`ReturnController::store`) DB transactions. Created backfill CLI command `BackfillDailySalesSummaryCommand` (`pos:backfill-daily-sales-summary`) which backfilled 1,098 daily summary records for 500k historical orders.
-  3. **Real-Time Financial Accuracy (Zero Report Caching):** Removed 60s report cache from VAT (`/reports/vat`) and Profit & Loss (`/reports/profit-loss`) to guarantee 100% real-time financial reporting accuracy.
-  4. **Covering Indexes & Query Optimizations:** Added `orders(tenant_id, user_id, created_at, grand_total)` covering index (`orders_cashier_reporting_v6_idx`) and `stocks(tenant_id, product_id, quantity)` index (`stocks_tenant_prod_qty_v7_idx`). Refactored cashier breakdown in `profitLoss` to execute direct index range queries per cashier user, dropping Profit & Loss COLD latency from 11.1s down to **0.024s (24 ms)** and Dashboard COLD latency from 1.64s to **0.041s (41 ms)**.
-  5. **Integrity Test Suite (`DailySalesSummaryIntegrityTest.php`):** Tests asserting exact mathematical equality between `daily_sales_summaries` table and direct order aggregates after checkout sales and product returns.
-  6. **Telemetry & Cold Benchmark Verification:** Benchmark telemetry reports MySQL engine version (`v8.4.9`) and `innodb_buffer_pool_size`. Cache flushed (`Cache::flush()`) before every timed run to strictly evaluate PASS verdicts on COLD runs. CSV export streaming endpoints read full stream (`ob_start()` + `sendContent()`), processing 500k rows in ~31.5s while staying strictly within 64 MB RAM.
-- **Where it lives:** `database/migrations/2026_10_10_000036_create_daily_sales_summaries_table.php`, `database/migrations/2026_10_10_000037_add_cashier_reporting_covering_index.php`, `database/migrations/2026_10_10_000038_add_cashier_date_covering_index.php`, `database/migrations/2026_10_10_000039_add_stock_totals_covering_index.php`, `app/Models/DailySalesSummary.php`, `app/Console/Commands/BackfillDailySalesSummaryCommand.php`, `app/Console/Commands/BenchmarkPerformanceCommand.php`, `app/Http/Controllers/ReportController.php`, `app/Http/Controllers/MerchantController.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ReturnController.php`, `tests/Feature/DailySalesSummaryIntegrityTest.php`, `audit/outputs/03_benchmark_cold_after.txt`, `audit/outputs/04_explain_analyze_uncached.txt`.
-- **Key design decisions:** Pre-aggregating sales during DB checkout transactions eliminates massive 500k-row table scans for financial reports and dashboards. Executing queries on `daily_sales_summaries` (~1,098 rows) instead of `orders` (~500k rows) yields a 1000x speedup while remaining 100% real-time and un-cached.
-- **Depends on:** `DailySalesSummary`, `PosController`, `ReturnController`, `ReportController`, `MerchantController`, `BackfillDailySalesSummaryCommand`.
-- **Last updated:** 2026-10-10
+- **Depends on:** `HealthController`, `AppServiceProvider`, `DEPLOY.md`, GitHub Actions.
+
+### 30. Pre-Aggregated Daily Sales Summary Engine, Audit Logging & Admin Recalculate Action
+- **What it does:** High-performance pre-aggregated financial summary architecture, discrepancy drift logging, admin alerts, and 1-click recalculation workflow:
+  1. **Pre-Aggregated Summary Table (`daily_sales_summaries`):** Migration `2026_10_10_000036_create_daily_sales_summaries_table.php` (`DailySalesSummary` model) tracking daily totals per tenant, store, and date: `orders_count`, `subtotal`, `tax_amount`, `grand_total`, `cogs`, `refunds`, and per-payment-method totals.
+  2. **Discrepancy Drift Audit & Admin Alerts:** Updated `VerifyDailySalesSummaryCommand.php` (`pos:verify-daily-summaries`) to log every discrepancy via `Log::error()` (tenant, store, date, expected vs actual) and publish admin alerts to `Cache::put('daily_sales_summary_discrepancy_alerts', ...)`. Automated scheduled runs do NOT execute `--fix` silently.
+  3. **Admin Manual Recalculation Endpoint:** Added `POST /reports/sales-summary/recalculate` (`ReportController::recalculateDailySummary`) allowing merchant/super-admin users to recalculate flagged dates with 1 click using `DailySalesSummary::recalculateDay()`.
+  4. **Corrupted Summary Row Integrity Test:** Created test in `DailySalesSummaryIntegrityTest.php` asserting that corrupted summary rows are detected, logged, published as admin alerts, repaired via manual endpoint trigger, and verified clean.
+- **Where it lives:** `app/Models/DailySalesSummary.php`, `app/Console/Commands/VerifyDailySalesSummaryCommand.php`, `app/Http/Controllers/ReportController.php`, `routes/web.php`, `routes/console.php`, `tests/Feature/DailySalesSummaryIntegrityTest.php`.
+- **Key design decisions:** Pre-aggregating sales during DB checkout transactions eliminates massive 500k-row table scans; logging and alerting summary drift without auto-fix preserves financial audit trails and provides admin oversight.
+- **Depends on:** `DailySalesSummary`, `VerifyDailySalesSummaryCommand`, `ReportController`, `DailySalesSummaryIntegrityTest`.
 
 
 

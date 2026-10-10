@@ -1,30 +1,25 @@
 ================================================================================
- 🚀 PARALLEL CHECKOUT CONCURRENCY TEST (20 PARALLEL PROCESSES)
+ 🚀 PARALLEL CHECKOUT CONCURRENCY & STOCK EXHAUSTION TEST (20 PARALLEL PROCESSES)
  Database: sabapos_benchmark | Engine: MYSQL
 ================================================================================
 
---> Initial State [Date: 2026-10-10]:
-    Summary Orders Count: 18
-    Summary Grand Total:  ৳2,070.00
+--> Initial Product Stock Level: 5 units (LAST UNITS AVAILABLE)
+--> Launching 20 parallel worker processes attempting to purchase 1 unit each...
 
---> Launching 20 parallel worker processes against MySQL...
-✓ All 20 parallel processes finished in 11.503 seconds.
+✓ All 20 parallel processes finished in 27.826 seconds.
 
 --------------------------------------------------------------------------------
  CONCURRENCY RESULTS & TELEMETRY SUMMARY
 --------------------------------------------------------------------------------
  Total Processes Executed: 20
- Total Elapsed Duration:   11.503 seconds
- Successful Checkouts:     20 / 20
- Failed Checkouts:         0
+ Total Elapsed Duration:   27.826 seconds
+ Successful Checkouts:     5 / 20 (Exact match with 5 units stock!)
+ Rejected Checkouts:       15 / 20 (Insufficient stock validation)
+ Final Product Stock:      0 (Proves stock NEVER went negative!)
+ Recorded Sales Orders:    5 (Zero lost sales, zero double counting)
  Database Deadlocks:       0
 --------------------------------------------------------------------------------
 
---> Post-Concurrency Summary Table Verification:
-    Expected Orders Increase: +20 | Actual Summary Increase: +20
-    Expected Grand Increase:  +৳2300.00 | Actual Summary Increase: +৳2300.00
-    Direct Orders Table Count: 38 | Daily Summary Count: 38
-    Direct Orders Table Grand: ৳4370.00 | Daily Summary Grand: ৳4370.00
 ================================================================================
- 🎯 CONCURRENCY VERDICT: 100% PASS (Zero Deadlocks, Zero Failures, Summary Equals Direct Aggregates)
+ 🎯 CONCURRENCY VERDICT: 100% PASS (Stock never went negative, 5 sales fulfilled, 0 deadlocks)
 ================================================================================

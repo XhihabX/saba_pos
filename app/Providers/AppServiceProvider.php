@@ -91,6 +91,15 @@ class AppServiceProvider extends ServiceProvider
         }
 
         URL::forceRootUrl(config('app.url') ?: $targetUrl);
+
+        if (class_exists(\Illuminate\Foundation\Console\AboutCommand::class)) {
+            \Illuminate\Foundation\Console\AboutCommand::add('Queue Security', fn () => [
+                'Driver' => config('queue.default'),
+                'Status' => (config('app.env') === 'production' && config('queue.default') === 'sync')
+                    ? '⚠️ WARNING: QUEUE_CONNECTION=sync in production'
+                    : 'OK (Async Queue Driver Active)',
+            ]);
+        }
     }
 }
 

@@ -8,11 +8,13 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 class ExportSalesCsvJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public int $timeout = 1800;
+    public int $tries = 1;
 
     public int $tenantId;
     public string $startDate;
@@ -43,18 +45,20 @@ class ExportSalesCsvJob implements ShouldQueue
         }
 
         $file = fopen($filePath, 'w');
-        fputcsv($file, ['Invoice No', 'Date', 'Store', 'Customer', 'Subtotal', 'Discount', 'VAT (Tax)', 'Grand Total', 'Payment Method', 'Payment Status']);
+        fputcsv($file, ['Invoice No', 'Date', 'Store', 'Cashier', 'Customer', 'Subtotal', 'Discount', 'VAT (Tax)', 'Grand Total', 'Payment Method', 'Payment Status']);
 
-        DB::table('orders')
+        $cursor = DB::table('orders')
             ->where('orders.tenant_id', $this->tenantId)
             ->whereBetween('orders.created_at', [$this->startDate, $this->endDate])
             ->leftJoin('stores', 'orders.store_id', '=', 'stores.id')
+            ->leftJoin('users', 'orders.user_id', '=', 'users.id')
             ->leftJoin('customers', 'orders.customer_id', '=', 'customers.id')
             ->select([
                 'orders.id',
                 'orders.invoice_no',
                 'orders.created_at',
                 'stores.name as store_name',
+                'users.name as cashier_name',
                 'customers.name as customer_name',
                 'orders.subtotal',
                 'orders.discount_amount',
@@ -63,31 +67,44 @@ class ExportSalesCsvJob implements ShouldQueue
                 'orders.payment_method',
                 'orders.payment_status',
             ])
-            ->chunkById(5000, function ($orders) use ($file) {
-                foreach ($orders as $order) {
-                    fputcsv($file, [
-                        $order->invoice_no,
-                        $order->created_at,
-                        $order->store_name ?? 'N/A',
-                        $order->customer_name ?? 'Walk-in Customer',
-                        $order->subtotal,
-                        $order->discount_amount,
-                        $order->tax_amount,
-                        $order->grand_total,
-                        $order->payment_method,
-                        $order->payment_status,
-                    ]);
-                }
-            }, 'orders.id', 'id');
+            ->orderBy('orders.id', 'asc')
+            ->cursor();
+
+        foreach ($cursor as $order) {
+            fputcsv($file, [
+                $order->invoice_no,
+                $order->created_at,
+                $order->store_name ?? 'N/A',
+                $order->cashier_name ?? 'N/A',
+                $order->customer_name ?? 'Walk-in Customer',
+                $order->subtotal,
+                $order->discount_amount,
+                $order->tax_amount,
+                $order->grand_total,
+                $order->payment_method,
+                $order->payment_status,
+            ]);
+        }
 
         fclose($file);
 
-        // Record completion in cache or status store
         cache()->put("export_status_{$this->exportId}", [
             'status' => 'completed',
             'file_name' => basename($filePath),
             'download_url' => asset("storage/{$fileName}"),
             'completed_at' => now()->toDateTimeString(),
+        ], 86400);
+    }
+
+    /**
+     * Handle job failure.
+     */
+    public function failed(\Throwable $exception): void
+    {
+        cache()->put("export_status_{$this->exportId}", [
+            'status' => 'failed',
+            'error' => $exception->getMessage(),
+            'failed_at' => now()->toDateTimeString(),
         ], 86400);
     }
 }

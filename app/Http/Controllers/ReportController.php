@@ -367,5 +367,35 @@ class ReportController extends Controller
             'branchData' => $branchData,
         ]);
     }
+
+    public function recalculateDailySummary(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+        $validated = $request->validate([
+            'store_id' => 'required|integer',
+            'date' => 'required|date_format:Y-m-d',
+        ]);
+
+        $storeId = (int) $validated['store_id'];
+        $date = $validated['date'];
+
+        \App\Models\DailySalesSummary::recalculateDay($tenantId, $storeId, $date);
+
+        $alerts = Cache::get('daily_sales_summary_discrepancy_alerts', []);
+        $updatedAlerts = array_values(array_filter($alerts, function ($item) use ($tenantId, $storeId, $date) {
+            return !($item['tenant_id'] == $tenantId && $item['store_id'] == $storeId && $item['date'] == $date);
+        }));
+
+        if (empty($updatedAlerts)) {
+            Cache::forget('daily_sales_summary_discrepancy_alerts');
+        } else {
+            Cache::put('daily_sales_summary_discrepancy_alerts', $updatedAlerts, 86400 * 7);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Daily sales summary recalculated successfully for store #{$storeId} on date {$date}.",
+        ]);
+    }
 }
 

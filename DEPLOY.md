@@ -122,14 +122,14 @@ Run Laravel scheduler every minute to process automated backups and cleanups.
 
 #### Option 1: cPanel Cron Worker (Runs every 5 minutes)
 ```bash
-*/5 * * * * /usr/local/bin/php /home/username/public_html/artisan queue:work --stop-when-empty --tries=3 --timeout=90 >> /dev/null 2>&1
+*/5 * * * * /usr/local/bin/php /home/username/public_html/artisan queue:work --stop-when-empty --tries=1 --timeout=1800 >> /dev/null 2>&1
 ```
 
 #### Option 2: Linux Supervisor Process Daemon (`/etc/supervisor/conf.d/sabapos-worker.conf`)
 ```ini
 [program:sabapos-worker]
 process_name=%(program_name)s_%(process_num)02d
-command=php /var/www/sabapos/artisan queue:work database --sleep=3 --tries=3 --max-time=3600
+command=php /var/www/sabapos/artisan queue:work database --sleep=3 --tries=1 --timeout=1800 --max-time=3600
 autostart=true
 autorestart=true
 stopasgroup=true

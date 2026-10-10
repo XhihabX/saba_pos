@@ -4,7 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\DailySalesSummary;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class VerifyDailySalesSummaryCommand extends Command
 {
@@ -31,6 +33,7 @@ class VerifyDailySalesSummaryCommand extends Command
 
         $discrepanciesCount = 0;
         $fixedCount = 0;
+        $discrepancyAlerts = [];
 
         foreach ($allDates as $row) {
             $tenantId = (int)$row->tenant_id;
@@ -95,6 +98,42 @@ class VerifyDailySalesSummaryCommand extends Command
 
             if ($differs) {
                 $discrepanciesCount++;
+
+                Log::error("DAILY_SUMMARY_DRIFT_DISCREPANCY: Discrepancy detected for tenant #{$tenantId}, store #{$storeId}, date {$date}", [
+                    'tenant_id' => $tenantId,
+                    'store_id' => $storeId,
+                    'date' => $date,
+                    'expected' => [
+                        'count' => $expectedCount,
+                        'subtotal' => $expectedSubtotal,
+                        'tax' => $expectedTax,
+                        'grand_total' => $expectedGrand,
+                        'cogs' => $expectedCogs,
+                        'refunds' => $expectedRefunds,
+                    ],
+                    'actual' => [
+                        'count' => $actualCount,
+                        'subtotal' => $actualSubtotal,
+                        'tax' => $actualTax,
+                        'grand_total' => $actualGrand,
+                        'cogs' => $actualCogs,
+                        'refunds' => $actualRefunds,
+                    ],
+                ]);
+
+                $discrepancyAlerts[] = [
+                    'tenant_id' => $tenantId,
+                    'store_id' => $storeId,
+                    'date' => $date,
+                    'expected_count' => $expectedCount,
+                    'actual_count' => $actualCount,
+                    'expected_grand' => $expectedGrand,
+                    'actual_grand' => $actualGrand,
+                    'expected_refunds' => $expectedRefunds,
+                    'actual_refunds' => $actualRefunds,
+                    'detected_at' => now()->toDateTimeString(),
+                ];
+
                 $this->warn(sprintf(
                     "⚠️ DRIFT DISCREPANCY DETECTED [Tenant #%d | Store #%d | Date: %s]:",
                     $tenantId, $storeId, $date
@@ -111,6 +150,12 @@ class VerifyDailySalesSummaryCommand extends Command
             }
         }
 
+        if ($discrepanciesCount > 0 && !$shouldFix) {
+            Cache::put('daily_sales_summary_discrepancy_alerts', $discrepancyAlerts, 86400 * 7);
+        } elseif ($discrepanciesCount === 0 || $shouldFix) {
+            Cache::forget('daily_sales_summary_discrepancy_alerts');
+        }
+
         $this->info("==========================================================================================");
         if ($discrepanciesCount === 0) {
             $this->info(" ✅ AUDIT VERDICT: 100% SUMMARY INTEGRITY (Zero drift across all tenant/store/day rows).");
@@ -122,7 +167,7 @@ class VerifyDailySalesSummaryCommand extends Command
             return 0;
         }
 
-        $this->error(sprintf(" ❌ AUDIT FAILURE: Found %d summary discrepancies. Run with --fix to resolve.", $discrepanciesCount));
+        $this->error(sprintf(" ❌ AUDIT FAILURE: Found %d summary discrepancies. Logged to system and published admin alert.", $discrepanciesCount));
         return 1;
     }
 }

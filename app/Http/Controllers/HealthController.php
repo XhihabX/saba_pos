@@ -54,10 +54,14 @@ class HealthController extends Controller
 
         // 3. Queue Configuration Check
         $queueDriver = config('queue.default');
+        $isProduction = config('app.env') === 'production';
+        $isSyncInProd = $isProduction && $queueDriver === 'sync';
         $checks['queue'] = [
-            'status' => in_array($queueDriver, ['database', 'redis', 'sqs']) ? 'healthy' : 'warning',
+            'status' => $isSyncInProd ? 'warning' : (in_array($queueDriver, ['database', 'redis', 'sqs']) ? 'healthy' : 'warning'),
             'driver' => $queueDriver,
-            'note' => ($queueDriver === 'sync') ? 'Sync queue connection in use. Use database or redis in production.' : 'Asynchronous production queue driver active.',
+            'note' => $isSyncInProd
+                ? 'CRITICAL WARNING: QUEUE_CONNECTION=sync in production environment! Set QUEUE_CONNECTION=database in .env'
+                : (($queueDriver === 'sync') ? 'Sync queue connection in use. Use database or redis in production.' : 'Asynchronous production queue driver active.'),
         ];
 
         // 4. Storage Write Permission Check

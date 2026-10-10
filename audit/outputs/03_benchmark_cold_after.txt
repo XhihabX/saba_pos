@@ -6,10 +6,10 @@
 ==========================================================================================
  📊 REAL BENCHMARK ROW COUNTS & ENGINE TELEMETRY
  Engine: MYSQL (v8.4.9) | InnoDB Buffer Pool: 134,217,728 bytes (0.12 GB)
- Target: Web Pages < 2.0s COLD Max Duration | Bulk CSV Exports: Evaluated on Stream Throughput
+ Target: Web Pages < 2.0s COLD Max Duration | Bulk CSV Exports: Single-Query Cursor Streaming
  Memory Cap: < 256 MB Peak Memory (Evaluated on COLD runs)
  Tenants: 1 | Stores: 3 | Products: 20,001 | Customers: 5,000
- Orders: 500,314 | OrderItems: 1,500,314 | OrderPayments: 500,314 | Daily Summaries: 1,099
+ Orders: 500,331 | OrderItems: 1,500,331 | OrderPayments: 500,331 | Daily Summaries: 1,099
 ==========================================================================================
 
 Endpoint Operation                 | COLD (Min/Med/Max)   | WARM (Min/Med/Max)   | Peak RAM  | Status
@@ -23,8 +23,8 @@ Endpoint Operation                 | COLD (Min/Med/Max)   | WARM (Min/Med/Max)  
 7. VAT Report (/reports/vat)       | 0.208s/0.241s/0.267s | 0.203s/0.229s/0.271s |  40.00 MB | PASS
 8. Profit & Loss (/reports/p&l)    | 0.022s/0.024s/0.035s | 0.019s/0.024s/0.027s |  40.00 MB | PASS
 9. Stock Report (/reports/stock)   | 0.381s/0.401s/0.608s | 0.219s/0.249s/0.270s |  40.00 MB | PASS
-10. CSV Export 30-Day Stream       | 40,931 rows | 4.81 MB| 8.38s (587 KB/s)     |  58.00 MB | PASS
-11. CSV Export 366-Day Stream      | 500,324 rows | 58.74 MB| 488.04s (123 KB/s)  | 172.00 MB | PASS
+10. CSV Export 30-Day Stream       | 40,938 rows | 4.97 MB| 7.33s (678 KB/s)     |  26.00 MB | PASS
+11. CSV Export 366-Day Stream      | 500,331 rows | 60.66 MB| 116.70s (532 KB/s)  |  80.00 MB | PASS
 ------------------------------------------------------------------------------------------------------------
-OVERALL BENCHMARK VERDICT (COLD WEB PAGES < 2.0s & BULK EXPORTS STREAMING): PASS
+OVERALL BENCHMARK VERDICT (COLD WEB PAGES < 2.0s & BULK EXPORTS SINGLE-QUERY CURSOR STREAMING): PASS
 ==========================================================================================

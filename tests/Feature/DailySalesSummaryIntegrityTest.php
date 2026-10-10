@@ -292,4 +292,73 @@ class DailySalesSummaryIntegrityTest extends TestCase
         $this->assertEquals(230.00, (float)$syncedSummary->grand_total);
         $this->assertEquals(200.00, (float)$syncedSummary->subtotal);
     }
+
+    public function test_corrupted_summary_row_is_detected_logged_and_alerted()
+    {
+        $tenant = Tenant::create(['name' => 'Corrupt Test Tenant', 'code' => 'CORRUPT-01', 'email' => 'corrupt@example.com', 'subscription_status' => 'active', 'expires_at' => now()->addYear()]);
+        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Corrupt Store', 'code' => 'CORRUPT-ST', 'is_active' => true]);
+        $user = User::create(['tenant_id' => $tenant->id, 'name' => 'Merchant Admin', 'email' => 'merchantadmin@example.com', 'password' => bcrypt('password123'), 'role' => 'merchant', 'is_approved' => true]);
+
+        $today = date('Y-m-d');
+
+        Order::create([
+            'tenant_id' => $tenant->id,
+            'store_id' => $store->id,
+            'invoice_no' => 'INV-CORRUPT-01',
+            'subtotal' => 100.00,
+            'discount_amount' => 0.00,
+            'tax_amount' => 15.00,
+            'grand_total' => 115.00,
+            'cogs' => 60.00,
+            'paid_amount' => 115.00,
+            'payment_status' => 'paid',
+            'payment_method' => 'cash',
+            'created_at' => "{$today} 10:00:00",
+            'updated_at' => "{$today} 10:00:00",
+        ]);
+
+        // Deliberately corrupt summary table row
+        DailySalesSummary::create([
+            'tenant_id' => $tenant->id,
+            'store_id' => $store->id,
+            'date' => $today,
+            'orders_count' => 1,
+            'subtotal' => 100.00,
+            'tax_amount' => 15.00,
+            'grand_total' => 99999.00, // Corrupted grand total
+            'cogs' => 60.00,
+        ]);
+
+        // 1. Scheduled verify command without --fix detects corruption, logs error & stores alert in Cache
+        $this->artisan('pos:verify-daily-summaries')
+            ->assertExitCode(1);
+
+        $alerts = \Illuminate\Support\Facades\Cache::get('daily_sales_summary_discrepancy_alerts');
+        $this->assertNotEmpty($alerts);
+        $this->assertEquals($tenant->id, $alerts[0]['tenant_id']);
+        $this->assertEquals($store->id, $alerts[0]['store_id']);
+        $this->assertEquals($today, $alerts[0]['date']);
+        $this->assertEquals(115.00, $alerts[0]['expected_grand']);
+        $this->assertEquals(99999.00, $alerts[0]['actual_grand']);
+
+        // 2. Admin triggers manual recalculate endpoint ("Fix" action)
+        $fixResponse = $this->actingAs($user)->postJson('/reports/sales-summary/recalculate', [
+            'store_id' => $store->id,
+            'date' => $today,
+        ]);
+
+        $fixResponse->assertStatus(200)
+            ->assertJson(['success' => true]);
+
+        // 3. Verify summary row is repaired & alert is cleared
+        $repairedSummary = DailySalesSummary::where('tenant_id', $tenant->id)->where('store_id', $store->id)->where('date', $today)->first();
+        $this->assertEquals(115.00, (float)$repairedSummary->grand_total);
+
+        $clearedAlerts = \Illuminate\Support\Facades\Cache::get('daily_sales_summary_discrepancy_alerts');
+        $this->assertNull($clearedAlerts);
+
+        // 4. Verification command now passes cleanly
+        $this->artisan('pos:verify-daily-summaries')
+            ->assertExitCode(0);
+    }
 }
