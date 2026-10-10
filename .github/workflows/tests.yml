@@ -95,7 +95,7 @@ jobs:
         run: php artisan migrate --force
 
       - name: Execute Main Test Suite on MySQL 8.4
-        run: php artisan test -c phpunit.mysql.xml --exclude-group backup
+        run: vendor/bin/phpunit -c phpunit.mysql.xml --exclude-group backup
 
       - name: Execute Backup Test Suite on MySQL 8.4
-        run: php artisan test -c phpunit.mysql.xml --group backup
+        run: vendor/bin/phpunit -c phpunit.mysql.xml --group backup
