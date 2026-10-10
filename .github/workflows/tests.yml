@@ -10,9 +10,6 @@ jobs:
   sanity-check:
     name: Environment & Sanity Check
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
 
     steps:
       - uses: actions/checkout@v4
@@ -25,23 +22,24 @@ jobs:
           coverage: none
 
       - name: Copy .env
+        shell: bash
         run: php -r "file_exists('.env') || copy('.env.example', '.env');"
 
       - name: Install Dependencies
+        shell: bash
         run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Generate Key
+        shell: bash
         run: php artisan key:generate
 
       - name: Run Artisan About Check
+        shell: bash
         run: php artisan about
 
   laravel-tests:
     name: MySQL 8.4 Test Suite
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
 
     env:
       DB_CONNECTION: mysql
@@ -73,18 +71,23 @@ jobs:
           coverage: none
 
       - name: Copy .env
+        shell: bash
         run: php -r "file_exists('.env') || copy('.env.example', '.env');"
 
       - name: Install Dependencies
+        shell: bash
         run: composer install --prefer-dist --no-progress --no-interaction
 
       - name: Generate Key
+        shell: bash
         run: php artisan key:generate
 
       - name: Directory Permissions
+        shell: bash
         run: chmod -R 775 storage bootstrap/cache
 
       - name: Run Migrations on MySQL
+        shell: bash
         env:
           DB_CONNECTION: mysql
           DB_HOST: 127.0.0.1
@@ -95,7 +98,9 @@ jobs:
         run: php artisan migrate --force
 
       - name: Execute Main Test Suite on MySQL 8.4
+        shell: bash
         run: vendor/bin/phpunit -c phpunit.mysql.xml --exclude-group backup
 
       - name: Execute Backup Test Suite on MySQL 8.4
+        shell: bash
         run: vendor/bin/phpunit -c phpunit.mysql.xml --group backup
