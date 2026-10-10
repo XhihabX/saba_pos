@@ -4,11 +4,31 @@ namespace Tests\Feature;
 
 use Tests\TestCase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 
 class BenchmarkCommandTest extends TestCase
 {
+    protected string $originalDriver;
+    protected string $originalDb;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->originalDriver = config('database.default', 'mysql');
+        $this->originalDb = config("database.connections.{$this->originalDriver}.database", 'sabapos_test');
+    }
+
+    protected function tearDown(): void
+    {
+        DB::purge();
+        config(['database.default' => $this->originalDriver]);
+        config(["database.connections.{$this->originalDriver}.database" => $this->originalDb]);
+        parent::tearDown();
+    }
+
     public function test_benchmark_command_refuses_to_run_on_sqlite_driver(): void
     {
+        DB::purge();
         config(['database.default' => 'sqlite']);
 
         $exitCode = Artisan::call('pos:benchmark');
@@ -21,6 +41,7 @@ class BenchmarkCommandTest extends TestCase
 
     public function test_benchmark_command_refuses_to_run_on_non_benchmark_database_name(): void
     {
+        DB::purge();
         config(['database.default' => 'mysql']);
         config(['database.connections.mysql.database' => 'production_db']);
 
