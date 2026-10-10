@@ -112,6 +112,13 @@ jobs:
         shell: bash
         run: ./vendor/bin/phpunit -c phpunit.mysql.xml --exclude-group backup
 
+      - name: Dump Failure Logs
+        if: failure()
+        shell: bash
+        run: |
+          echo "=== LARAVEL LOG ==="
+          cat storage/logs/laravel.log 2>/dev/null || echo "No laravel.log"
+
       - name: Execute Backup Test Suite on MySQL 8.4
         shell: bash
         run: ./vendor/bin/phpunit -c phpunit.mysql.xml --group backup
