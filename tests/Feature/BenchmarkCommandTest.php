@@ -22,7 +22,8 @@ class BenchmarkCommandTest extends TestCase
     {
         config(['database.default' => $this->originalDriver]);
         config(["database.connections.{$this->originalDriver}.database" => $this->originalDb]);
-        DB::purge();
+        DB::purge('mysql');
+        DB::purge('sqlite');
         parent::tearDown();
     }
 
