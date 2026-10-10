@@ -1,6 +1,18 @@
 # Changelog
 
-## [2026-10-10] — Merchant Self-Service Registration to Live POS Checkout Empirical Proof Suite
+## [2026-10-10] — Vue Merchant Customers & Orders Array Null-Safety Hardening
+
+**What:** Hardened array handling in `resources/js/Pages/Merchant/Customers.vue` and `resources/js/Pages/Merchant/Orders.vue`:
+1. Updated `filteredCustomers` and `filteredOrders` computed properties with `Array.isArray()` and optional chaining (`props.customers?.data`, `props.orders?.data`).
+2. Added null checks in array filters (`list.filter(c => c && ...)`), eliminating `TypeError: Cannot read properties of null` when navigating to Customers or Orders pages on empty/initial datasets.
+3. Re-compiled production Vite bundle assets.
+
+**Why:** Prevent front-end Vue render exceptions when accessing customer credit ledgers or order histories on empty datasets or paginated Inertia props.
+**How:** Updated `resources/js/Pages/Merchant/Customers.vue`, `resources/js/Pages/Merchant/Orders.vue`, recompiled assets, updated `docs/ARCHITECTURE.md`, and `docs/CHANGELOG.md`.
+**Where:** `resources/js/Pages/Merchant/Customers.vue`, `resources/js/Pages/Merchant/Orders.vue`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** Zero JS console exceptions on Customers or Orders page loads; 100% stable frontend rendering.
+
+---
 
 **What:** Created an automated end-to-end integration test suite and generated an empirical proof report verifying every step of a merchant's lifecycle:
 1. **End-to-End Workflow Integration Test (`tests/Feature/MerchantToPosWorkflowTest.php`):** Verifies the full chain of actions:

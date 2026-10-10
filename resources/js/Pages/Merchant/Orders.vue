@@ -236,16 +236,18 @@ const statusFilter = ref('ALL');
 const selectedOrder = ref(null);
 
 const filteredOrders = computed(() => {
-  let list = props.orders;
+  let list = Array.isArray(props.orders) ? props.orders : (props.orders?.data || []);
   if (statusFilter.value !== 'ALL') {
-    list = list.filter(o => (o.payment_status || 'PAID').toUpperCase() === statusFilter.value);
+    list = list.filter(o => o && (o.payment_status || 'PAID').toUpperCase() === statusFilter.value);
   }
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
     list = list.filter(o => 
-      (o.invoice_number && o.invoice_number.toLowerCase().includes(q)) ||
-      (o.customer?.name && o.customer.name.toLowerCase().includes(q)) ||
-      (o.store?.name && o.store.name.toLowerCase().includes(q))
+      o && (
+        (o.invoice_number && o.invoice_number.toLowerCase().includes(q)) ||
+        (o.customer?.name && o.customer.name.toLowerCase().includes(q)) ||
+        (o.store?.name && o.store.name.toLowerCase().includes(q))
+      )
     );
   }
   return list;

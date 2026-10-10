@@ -284,11 +284,14 @@ const form = ref({
 });
 
 const filteredCustomers = computed(() => {
-  if (!searchQuery.value) return props.customers;
+  const list = Array.isArray(props.customers) ? props.customers : (props.customers?.data || []);
+  if (!searchQuery.value) return list;
   const q = searchQuery.value.toLowerCase();
-  return props.customers.filter(c => 
-    (c.name && c.name.toLowerCase().includes(q)) ||
-    (c.phone && c.phone.toLowerCase().includes(q))
+  return list.filter(c => 
+    c && (
+      (c.name && c.name.toLowerCase().includes(q)) ||
+      (c.phone && c.phone.toLowerCase().includes(q))
+    )
   );
 });
 
