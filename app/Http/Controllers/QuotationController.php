@@ -3,10 +3,15 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\Order;
+use App\Models\OrderItem;
+use App\Models\OrderPayment;
 use App\Models\Product;
 use App\Models\Quotation;
+use App\Models\Stock;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -15,12 +20,13 @@ class QuotationController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -58,7 +64,7 @@ class QuotationController extends Controller
         ]);
 
         $user = auth()->user();
-        $qNo = 'QT-' . strtoupper(substr(uniqid(), -6));
+        $qNo = 'QT-'.strtoupper(substr(uniqid(), -6));
         $storeId = $user->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
 
         Quotation::create([
@@ -90,7 +96,7 @@ class QuotationController extends Controller
 
         $items = json_decode($quotation->items_json, true) ?: [];
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($quotation, $items, $tenantId) {
+        return DB::transaction(function () use ($quotation, $items, $tenantId) {
             // Validate stock availability before conversion
             foreach ($items as $item) {
                 $productId = $item['product_id'] ?? null;
@@ -98,22 +104,22 @@ class QuotationController extends Controller
                 if ($productId) {
                     $product = Product::where('id', $productId)->where('tenant_id', $tenantId)->first();
                     if ($product) {
-                        $stock = \App\Models\Stock::where('store_id', $quotation->store_id)
+                        $stock = Stock::where('store_id', $quotation->store_id)
                             ->where('product_id', $product->id)
                             ->first();
                         $available = $stock ? $stock->quantity : 0;
                         if ($available < $qty) {
                             throw ValidationException::withMessages([
-                                'stock' => ["Cannot convert quotation: Insufficient stock for '{$product->name}'. Available: {$available}, Requested: {$qty}."]
+                                'stock' => ["Cannot convert quotation: Insufficient stock for '{$product->name}'. Available: {$available}, Requested: {$qty}."],
                             ]);
                         }
                     }
                 }
             }
 
-            $invoiceNo = 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+            $invoiceNo = 'INV-'.date('Ymd').'-'.strtoupper(substr(uniqid(), -5));
 
-            $order = \App\Models\Order::create([
+            $order = Order::create([
                 'tenant_id' => $tenantId,
                 'invoice_no' => $invoiceNo,
                 'store_id' => $quotation->store_id,
@@ -127,7 +133,7 @@ class QuotationController extends Controller
                 'change_return' => 0,
                 'payment_status' => 'paid',
                 'payment_method' => 'cash',
-                'notes' => 'Converted from Quotation ' . $quotation->quotation_no,
+                'notes' => 'Converted from Quotation '.$quotation->quotation_no,
             ]);
 
             foreach ($items as $item) {
@@ -135,7 +141,7 @@ class QuotationController extends Controller
                 if ($productId) {
                     $product = Product::where('id', $productId)->where('tenant_id', $tenantId)->first();
                     if ($product) {
-                        \App\Models\OrderItem::create([
+                        OrderItem::create([
                             'order_id' => $order->id,
                             'product_id' => $product->id,
                             'product_name' => $product->name,
@@ -146,7 +152,7 @@ class QuotationController extends Controller
                         ]);
 
                         // Deduct stock
-                        $stock = \App\Models\Stock::firstOrCreate(
+                        $stock = Stock::firstOrCreate(
                             ['store_id' => $quotation->store_id, 'product_id' => $product->id],
                             ['quantity' => 0]
                         );
@@ -155,7 +161,7 @@ class QuotationController extends Controller
                 }
             }
 
-            \App\Models\OrderPayment::create([
+            OrderPayment::create([
                 'order_id' => $order->id,
                 'payment_method' => 'cash',
                 'amount' => $quotation->grand_total,

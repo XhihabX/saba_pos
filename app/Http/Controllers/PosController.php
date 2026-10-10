@@ -2,16 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ExportSalesCsvJob;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\DailySalesSummary;
+use App\Models\MfsTransaction;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderPayment;
 use App\Models\ParkedOrder;
 use App\Models\Product;
+use App\Models\ProductBatch;
+use App\Models\ProductVariant;
+use App\Models\RegisterShift;
 use App\Models\Stock;
 use App\Models\Store;
 use App\Services\AuditLogger;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -24,12 +31,13 @@ class PosController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -38,6 +46,7 @@ class PosController extends Controller
         if (auth()->check()) {
             return redirect()->route('pos.index');
         }
+
         return redirect()->route('login')->with('info', 'Please log in with your cashier or merchant credentials to access the POS Workstation.');
     }
 
@@ -67,10 +76,11 @@ class PosController extends Controller
                     $s = collect([]);
                 }
             }
+
             return $s->toArray();
         });
 
-        $firstStoreId = !empty($stores) ? ($stores[0]['id'] ?? 1) : 1;
+        $firstStoreId = ! empty($stores) ? ($stores[0]['id'] ?? 1) : 1;
         $storeId = (int) $request->input('store_id', $firstStoreId);
 
         // 2. Categories (Tenant Scoped with Caching)
@@ -92,6 +102,7 @@ class PosController extends Controller
                     $c = collect([]);
                 }
             }
+
             return $c->toArray();
         });
 
@@ -107,6 +118,7 @@ class PosController extends Controller
                 ->get()
                 ->map(function ($p) {
                     $stock = $p->stocks ? $p->stocks->first() : null;
+
                     return [
                         'id' => $p->id,
                         'name' => $p->name,
@@ -124,7 +136,7 @@ class PosController extends Controller
         });
 
         // 5. Active Shift Check
-        $activeShift = \App\Models\RegisterShift::where('tenant_id', $tenantId)
+        $activeShift = RegisterShift::where('tenant_id', $tenantId)
             ->where('user_id', auth()->id())
             ->where('store_id', $storeId)
             ->where('status', 'open')
@@ -170,28 +182,27 @@ class PosController extends Controller
             'supervisor_pin' => 'nullable|string',
         ]);
 
-
         $store = Store::where('id', $validated['store_id'])->where('tenant_id', $tenantId)->first();
-        if (!$store) {
+        if (! $store) {
             throw ValidationException::withMessages([
-                'store_id' => ['Selected store outlet is invalid or belongs to another tenant.']
+                'store_id' => ['Selected store outlet is invalid or belongs to another tenant.'],
             ]);
         }
 
         // VAT registered store BIN requirement check
         if ($store->is_vat_registered && empty(trim((string) ($store->bin_number ?? $store->vat_number ?? '')))) {
             throw ValidationException::withMessages([
-                'store_id' => ['Store is flagged as VAT registered but BIN Number is missing. Please configure BIN number in Store Settings before issuing fiscal invoices.']
+                'store_id' => ['Store is flagged as VAT registered but BIN Number is missing. Please configure BIN number in Store Settings before issuing fiscal invoices.'],
             ]);
         }
 
         // Validate tender lines sum to paid amount
         $paidAmount = (float) $validated['paid_amount'];
-        if (!empty($validated['payments'])) {
+        if (! empty($validated['payments'])) {
             $sumPayments = (float) array_sum(array_column($validated['payments'], 'amount'));
             if (abs($sumPayments - $paidAmount) > 0.01) {
                 throw ValidationException::withMessages([
-                    'payments' => ["Sum of payment tender lines (৳" . number_format($sumPayments, 2) . ") does not match total paid amount (৳" . number_format($paidAmount, 2) . ")."]
+                    'payments' => ['Sum of payment tender lines (৳'.number_format($sumPayments, 2).') does not match total paid amount (৳'.number_format($paidAmount, 2).').'],
                 ]);
             }
         }
@@ -204,7 +215,7 @@ class PosController extends Controller
                 $lineDisc = (float) ($item['discount'] ?? 0);
                 if ($lineDisc > $lineGross + 0.001) {
                     throw ValidationException::withMessages([
-                        'discount' => ["Line discount (৳" . number_format($lineDisc, 2) . ") cannot exceed item price (৳" . number_format($lineGross, 2) . ")."]
+                        'discount' => ['Line discount (৳'.number_format($lineDisc, 2).') cannot exceed item price (৳'.number_format($lineGross, 2).').'],
                     ]);
                 }
             }
@@ -214,7 +225,7 @@ class PosController extends Controller
         $discountAmount = (float) ($validated['discount_amount'] ?? 0);
         $hasLineDiscounts = false;
         foreach ($validated['items'] as $item) {
-            if (!empty($item['discount']) && (float) $item['discount'] > 0) {
+            if (! empty($item['discount']) && (float) $item['discount'] > 0) {
                 $hasLineDiscounts = true;
                 break;
             }
@@ -223,30 +234,30 @@ class PosController extends Controller
         if ($discountAmount > 0 || $hasLineDiscounts) {
             $supervisorPin = (string) ($request->input('supervisor_pin') ?? $request->input('pin') ?? '');
             $user = auth()->user();
-            if (empty($supervisorPin) || empty($user->pos_pin) || !Hash::check($supervisorPin, $user->pos_pin)) {
+            if (empty($supervisorPin) || empty($user->pos_pin) || ! Hash::check($supervisorPin, $user->pos_pin)) {
                 throw ValidationException::withMessages([
-                    'discount' => ['A valid supervisor PIN is required to apply cart or line item discounts.']
+                    'discount' => ['A valid supervisor PIN is required to apply cart or line item discounts.'],
                 ]);
             }
         }
 
         // Active register shift requirement
-        $activeShift = \App\Models\RegisterShift::where('tenant_id', $tenantId)
+        $activeShift = RegisterShift::where('tenant_id', $tenantId)
             ->where('user_id', auth()->id())
             ->where('store_id', $store->id)
             ->where('status', 'open')
             ->first();
 
-        if (!$activeShift) {
+        if (! $activeShift) {
             throw ValidationException::withMessages([
-                'shift' => ['An active register shift must be opened before processing sales checkout.']
+                'shift' => ['An active register shift must be opened before processing sales checkout.'],
             ]);
         }
 
         return DB::transaction(function () use ($request, $validated, $tenantId, $store, $paidAmount, $discountAmount) {
             // Idempotency check inside transaction using orders.idempotency_key
             $idempotencyKey = $validated['idempotency_key'] ?? $validated['client_uuid'] ?? null;
-            if (!empty($idempotencyKey)) {
+            if (! empty($idempotencyKey)) {
                 $existing = Order::where('tenant_id', $tenantId)
                     ->where('idempotency_key', $idempotencyKey)
                     ->lockForUpdate()
@@ -263,6 +274,7 @@ class PosController extends Controller
                             'order' => $existing,
                         ], 200);
                     }
+
                     return redirect()->back()->with(['success' => 'Order already processed!', 'receipt' => $existing]);
                 }
             }
@@ -279,8 +291,8 @@ class PosController extends Controller
                     ->firstOrFail();
 
                 $variant = null;
-                if (!empty($item['variant_id'])) {
-                    $variant = \App\Models\ProductVariant::where('id', $item['variant_id'])
+                if (! empty($item['variant_id'])) {
+                    $variant = ProductVariant::where('id', $item['variant_id'])
                         ->where('product_id', $product->id)
                         ->where('tenant_id', $tenantId)
                         ->first();
@@ -295,7 +307,7 @@ class PosController extends Controller
                 }
                 $stock = $stockQuery->lockForUpdate()->first();
 
-                if (!$stock) {
+                if (! $stock) {
                     $stock = Stock::create([
                         'tenant_id' => $tenantId,
                         'store_id' => $store->id,
@@ -308,11 +320,11 @@ class PosController extends Controller
                 $available = (float) $stock->quantity;
                 $allowNegative = (bool) ($store->allow_negative_stock ?? false);
 
-                $itemName = $product->name . ($variant ? " ({$variant->name})" : "");
+                $itemName = $product->name.($variant ? " ({$variant->name})" : '');
 
-                if (!$allowNegative && $available < $item['quantity']) {
+                if (! $allowNegative && $available < $item['quantity']) {
                     throw ValidationException::withMessages([
-                        'cart' => ["Insufficient stock for '{$itemName}'. Available: {$available}, Requested: {$item['quantity']}."]
+                        'cart' => ["Insufficient stock for '{$itemName}'. Available: {$available}, Requested: {$item['quantity']}."],
                     ]);
                 }
 
@@ -357,12 +369,11 @@ class PosController extends Controller
                 ];
             }
 
-
             $calculatedSubtotal = $calculatedSubtotalPaisa / 100;
             $calculatedCogs = ($calculatedCogsPaisa ?? 0) / 100;
             if ($discountAmount > $calculatedSubtotal + 0.001) {
                 throw ValidationException::withMessages([
-                    'discount_amount' => ['Order discount amount cannot exceed calculated subtotal.']
+                    'discount_amount' => ['Order discount amount cannot exceed calculated subtotal.'],
                 ]);
             }
 
@@ -386,7 +397,7 @@ class PosController extends Controller
             $grandTotal = $grandTotalPaisa / 100;
             $paymentStatus = $paidAmount >= $grandTotal ? 'paid' : ($paidAmount > 0 ? 'partial' : 'due');
 
-            $invoiceNo = 'INV-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
+            $invoiceNo = 'INV-'.date('Ymd').'-'.strtoupper(substr(uniqid(), -5));
 
             $order = Order::create([
                 'tenant_id' => $tenantId,
@@ -425,12 +436,11 @@ class PosController extends Controller
                     'total' => $item['line_total'],
                 ]);
 
-
                 // Deduct stock
                 $item['stock']->decrement('quantity', $item['quantity']);
 
                 // FEFO Batch Stock Deduction
-                $batches = \App\Models\ProductBatch::where('tenant_id', $tenantId)
+                $batches = ProductBatch::where('tenant_id', $tenantId)
                     ->where('store_id', $store->id)
                     ->where('product_id', $item['product']->id)
                     ->where('quantity', '>', 0)
@@ -440,7 +450,9 @@ class PosController extends Controller
 
                 $neededQty = (float) $item['quantity'];
                 foreach ($batches as $batch) {
-                    if ($neededQty <= 0) break;
+                    if ($neededQty <= 0) {
+                        break;
+                    }
                     $deduct = min((float) $batch->quantity, $neededQty);
                     $batch->decrement('quantity', $deduct);
                     $neededQty -= $deduct;
@@ -448,7 +460,7 @@ class PosController extends Controller
             }
 
             // Multiple payments & MFS Claiming with row locking
-            if (!empty($validated['payments'])) {
+            if (! empty($validated['payments'])) {
                 foreach ($validated['payments'] as $payment) {
                     OrderPayment::create([
                         'tenant_id' => $tenantId,
@@ -458,23 +470,23 @@ class PosController extends Controller
                         'reference_no' => $payment['reference_no'] ?? null,
                     ]);
 
-                    if (in_array(strtolower($payment['method']), ['bkash', 'nagad', 'rocket', 'upay']) || !empty($payment['reference_no'])) {
+                    if (in_array(strtolower($payment['method']), ['bkash', 'nagad', 'rocket', 'upay']) || ! empty($payment['reference_no'])) {
                         $trxId = strtoupper(trim((string) ($payment['reference_no'] ?? '')));
-                        $mfsTx = \App\Models\MfsTransaction::where('trx_id', $trxId)
+                        $mfsTx = MfsTransaction::where('trx_id', $trxId)
                             ->where('tenant_id', $tenantId)
                             ->where('status', 'unclaimed')
                             ->lockForUpdate()
                             ->first();
 
-                        if (!$mfsTx) {
+                        if (! $mfsTx) {
                             throw ValidationException::withMessages([
-                                'payment' => ["MFS Transaction ID '{$trxId}' does not exist, is already claimed, or belongs to another tenant."]
+                                'payment' => ["MFS Transaction ID '{$trxId}' does not exist, is already claimed, or belongs to another tenant."],
                             ]);
                         }
 
                         if (abs((float) $mfsTx->amount - (float) $payment['amount']) > 0.01) {
                             throw ValidationException::withMessages([
-                                'payment' => ["MFS Transaction ID '{$trxId}' amount (৳{$mfsTx->amount}) does not match payment amount (৳{$payment['amount']})."]
+                                'payment' => ["MFS Transaction ID '{$trxId}' amount (৳{$mfsTx->amount}) does not match payment amount (৳{$payment['amount']})."],
                             ]);
                         }
 
@@ -491,21 +503,21 @@ class PosController extends Controller
 
                 if (in_array(strtolower($validated['payment_method']), ['bkash', 'nagad', 'rocket', 'upay'])) {
                     $trxId = strtoupper(trim((string) ($request->input('reference_no') ?? $request->input('transaction_id') ?? '')));
-                    $mfsTx = \App\Models\MfsTransaction::where('trx_id', $trxId)
+                    $mfsTx = MfsTransaction::where('trx_id', $trxId)
                         ->where('tenant_id', $tenantId)
                         ->where('status', 'unclaimed')
                         ->lockForUpdate()
                         ->first();
 
-                    if (!$mfsTx) {
+                    if (! $mfsTx) {
                         throw ValidationException::withMessages([
-                            'payment' => ["MFS Transaction ID '{$trxId}' does not exist, is already claimed, or belongs to another tenant."]
+                            'payment' => ["MFS Transaction ID '{$trxId}' does not exist, is already claimed, or belongs to another tenant."],
                         ]);
                     }
 
                     if (abs((float) $mfsTx->amount - $paidAmount) > 0.01) {
                         throw ValidationException::withMessages([
-                            'payment' => ["MFS Transaction ID '{$trxId}' amount (৳{$mfsTx->amount}) does not match paid amount (৳{$paidAmount})."]
+                            'payment' => ["MFS Transaction ID '{$trxId}' amount (৳{$mfsTx->amount}) does not match paid amount (৳{$paidAmount})."],
                         ]);
                     }
 
@@ -523,7 +535,7 @@ class PosController extends Controller
                             $creditLimit = (float) ($customer->credit_limit ?? 50000.00);
                             if ($creditLimit > 0 && ((float) $customer->due_balance + $dueAmount) > $creditLimit) {
                                 throw ValidationException::withMessages([
-                                    'credit' => ["Customer credit limit of ৳" . number_format($creditLimit, 2) . " exceeded!"]
+                                    'credit' => ['Customer credit limit of ৳'.number_format($creditLimit, 2).' exceeded!'],
                                 ]);
                             }
                             $customer->increment('due_balance', $dueAmount);
@@ -555,7 +567,7 @@ class PosController extends Controller
             foreach ($order->payments as $pmt) {
                 $paymentsMap[$pmt->payment_method] = ($paymentsMap[$pmt->payment_method] ?? 0) + (float) $pmt->amount;
             }
-            \App\Models\DailySalesSummary::recordSale(
+            DailySalesSummary::recordSale(
                 $tenantId,
                 $store->id,
                 now()->toDateString(),
@@ -594,7 +606,7 @@ class PosController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $refNo = 'HOLD-' . strtoupper(substr(uniqid(), -6));
+        $refNo = 'HOLD-'.strtoupper(substr(uniqid(), -6));
 
         ParkedOrder::create([
             'tenant_id' => $tenantId,
@@ -638,7 +650,7 @@ class PosController extends Controller
             return response()->json(['success' => false, 'message' => 'PIN is required.'], 422);
         }
 
-        if (!empty($user->pos_pin) && Hash::check($pin, $user->pos_pin)) {
+        if (! empty($user->pos_pin) && Hash::check($pin, $user->pos_pin)) {
             return response()->json(['success' => true]);
         }
 
@@ -668,10 +680,10 @@ class PosController extends Controller
 
         $products = Product::where('tenant_id', $tenantId)
             ->where('is_active', true)
-            ->where(function($query) use ($q) {
+            ->where(function ($query) use ($q) {
                 $query->where('name', 'LIKE', "%{$q}%")
-                      ->orWhere('sku', 'LIKE', "%{$q}%")
-                      ->orWhere('barcode', 'LIKE', "%{$q}%");
+                    ->orWhere('sku', 'LIKE', "%{$q}%")
+                    ->orWhere('barcode', 'LIKE', "%{$q}%");
             })
             ->with(['category', 'unit', 'stocks' => function ($sq) use ($storeId) {
                 $sq->where('store_id', $storeId);
@@ -681,6 +693,7 @@ class PosController extends Controller
             ->map(function ($p) {
                 $stock = $p->stocks ? $p->stocks->first() : null;
                 $p->current_stock = $stock ? (float) $stock->quantity : 0;
+
                 return $p;
             });
 
@@ -697,10 +710,10 @@ class PosController extends Controller
         }
 
         $customers = Customer::where('tenant_id', $tenantId)
-            ->where(function($query) use ($q) {
+            ->where(function ($query) use ($q) {
                 $query->where('name', 'LIKE', "%{$q}%")
-                      ->orWhere('phone', 'LIKE', "%{$q}%")
-                      ->orWhere('email', 'LIKE', "%{$q}%");
+                    ->orWhere('phone', 'LIKE', "%{$q}%")
+                    ->orWhere('email', 'LIKE', "%{$q}%");
             })
             ->orderBy('name')
             ->limit(30)
@@ -727,21 +740,21 @@ class PosController extends Controller
         $startDate = $request->input('start_date');
         $endDate = $request->input('end_date');
 
-        if (!$startDate) {
+        if (! $startDate) {
             $startDate = now()->subDays(30)->startOfDay()->toDateTimeString();
         } else {
-            $startDate = \Carbon\Carbon::parse($startDate)->startOfDay()->toDateTimeString();
+            $startDate = Carbon::parse($startDate)->startOfDay()->toDateTimeString();
         }
 
-        if (!$endDate) {
+        if (! $endDate) {
             $endDate = now()->endOfDay()->toDateTimeString();
         } else {
-            $endDate = \Carbon\Carbon::parse($endDate)->endOfDay()->toDateTimeString();
+            $endDate = Carbon::parse($endDate)->endOfDay()->toDateTimeString();
         }
 
-        $diffInDays = \Carbon\Carbon::parse($startDate)->diffInDays(\Carbon\Carbon::parse($endDate));
+        $diffInDays = Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate));
         if ($diffInDays > 366) {
-            $startDate = \Carbon\Carbon::parse($endDate)->subDays(366)->startOfDay()->toDateTimeString();
+            $startDate = Carbon::parse($endDate)->subDays(366)->startOfDay()->toDateTimeString();
         }
 
         $totalMatchingRows = DB::table('orders')
@@ -752,7 +765,7 @@ class PosController extends Controller
         $forceStream = $request->boolean('force_stream') || $request->input('stream') === '1' || $request->boolean('stream');
 
         // Large exports (> 20,000 rows) run as queued background job unless force_stream is true
-        if ($totalMatchingRows > 20000 && !$forceStream) {
+        if ($totalMatchingRows > 20000 && ! $forceStream) {
             $exportId = uniqid('exp_');
             cache()->put("export_status_{$exportId}", [
                 'status' => 'queued',
@@ -760,7 +773,7 @@ class PosController extends Controller
                 'created_at' => now()->toDateTimeString(),
             ], 86400);
 
-            \App\Jobs\ExportSalesCsvJob::dispatch($tenantId, $startDate, $endDate, $exportId);
+            ExportSalesCsvJob::dispatch($tenantId, $startDate, $endDate, $exportId);
 
             if ($request->wantsJson()) {
                 return response()->json([
@@ -778,7 +791,7 @@ class PosController extends Controller
 
         $headers = [
             'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="sales_report_' . date('Ymd_His') . '.csv"',
+            'Content-Disposition' => 'attachment; filename="sales_report_'.date('Ymd_His').'.csv"',
         ];
 
         $callback = function () use ($tenantId, $startDate, $endDate) {
@@ -833,9 +846,10 @@ class PosController extends Controller
     public function checkExportStatus($exportId)
     {
         $status = cache()->get("export_status_{$exportId}");
-        if (!$status) {
+        if (! $status) {
             return response()->json(['success' => false, 'message' => 'Export task not found.'], 404);
         }
+
         return response()->json(['success' => true, 'export' => $status]);
     }
 }

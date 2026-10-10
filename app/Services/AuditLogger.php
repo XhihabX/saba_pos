@@ -13,7 +13,7 @@ class AuditLogger
     public static function log(string $action, string $description, array $payload = [], ?int $storeId = null, ?int $tenantId = null): AuditLog
     {
         $user = Auth::user();
-        
+
         $resolvedTenantId = $tenantId ?? ($user?->tenant_id);
         $resolvedStoreId = $storeId ?? ($user?->store_id);
         $userName = $user?->name ?? 'System Guest';
@@ -27,7 +27,7 @@ class AuditLogger
             'description' => $description,
             'ip_address' => request()->ip(),
             'user_agent' => substr(request()->header('User-Agent') ?? '', 0, 255),
-            'payload' => !empty($payload) ? $payload : null,
+            'payload' => ! empty($payload) ? $payload : null,
         ]);
     }
 }

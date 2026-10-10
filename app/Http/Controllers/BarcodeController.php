@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
-use App\Models\Store;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class BarcodeController extends Controller
@@ -12,12 +10,13 @@ class BarcodeController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 

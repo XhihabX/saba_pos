@@ -13,9 +13,7 @@ class DiscrepancyAlertMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public DiscrepancyAlert $alert)
-    {
-    }
+    public function __construct(public DiscrepancyAlert $alert) {}
 
     public function envelope(): Envelope
     {

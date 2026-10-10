@@ -14,6 +14,7 @@ class TwoFactorService
         for ($i = 0; $i < 16; $i++) {
             $secret .= $b32[random_int(0, 31)];
         }
+
         return $secret;
     }
 
@@ -26,6 +27,7 @@ class TwoFactorService
         for ($i = 0; $i < 8; $i++) {
             $codes[] = strtoupper(substr(bin2hex(random_bytes(5)), 0, 10));
         }
+
         return $codes;
     }
 
@@ -35,7 +37,7 @@ class TwoFactorService
     public function verifyKey(string $secret, string $otp, int $window = 1): bool
     {
         $otp = trim($otp);
-        if (strlen($otp) !== 6 || !ctype_digit($otp)) {
+        if (strlen($otp) !== 6 || ! ctype_digit($otp)) {
             return false;
         }
 
@@ -46,6 +48,7 @@ class TwoFactorService
                 return true;
             }
         }
+
         return false;
     }
 
@@ -55,12 +58,13 @@ class TwoFactorService
     private function calculateOtp(string $secret, int $timeSlice): string
     {
         $secretKey = $this->base32Decode($secret);
-        $time = pack('N*', 0) . pack('N*', $timeSlice);
+        $time = pack('N*', 0).pack('N*', $timeSlice);
         $hmac = hash_hmac('sha1', $time, $secretKey, true);
         $offset = ord(substr($hmac, -1)) & 0x0F;
         $hashpart = substr($hmac, $offset, 4);
         $value = unpack('N', $hashpart)[1] & 0x7FFFFFFF;
         $modulo = $value % 1000000;
+
         return sprintf('%06d', $modulo);
     }
 
@@ -84,6 +88,7 @@ class TwoFactorService
         for ($j = 0; $j + 8 <= strlen($bin); $j += 8) {
             $binary .= chr(bindec(substr($bin, $j, 8)));
         }
+
         return $binary;
     }
 }

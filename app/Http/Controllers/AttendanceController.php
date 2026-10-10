@@ -13,12 +13,13 @@ class AttendanceController extends Controller
     private function getTenantId()
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 

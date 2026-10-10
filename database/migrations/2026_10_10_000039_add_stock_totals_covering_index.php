@@ -26,7 +26,8 @@ return new class extends Migration
             Schema::table('stocks', function (Blueprint $table) {
                 $table->dropIndex('stocks_tenant_prod_qty_v7_idx');
             });
-        } catch (\Throwable $e) {}
+        } catch (Throwable $e) {
+        }
         Schema::enableForeignKeyConstraints();
     }
 };

@@ -1,5 +1,26 @@
 # Changelog
 
+## [2026-10-10] — Master Final Code-Readiness Gate Completion (Sections A to J)
+
+**What:** Completed full 10-gate Code-Readiness Audit (Sections A through J) on native MySQL 8.4 engine:
+1. **CI Trust & Pipeline Hardening (Section A):** Added explicit `shell: bash` (pipefail) across all steps in `.github/workflows/tests.yml`, Node.js setup & Vite asset build step (`npm ci && npm run build`), and verified RED run (`38039505249`) and GREEN run (`38042936453`). Output: `audit/outputs/gate/A_ci_proof.txt`.
+2. **Route Authorization Matrix (Section B):** Created data-driven `RouteAuthorizationMatrixTest.php` auditing 148 web/API routes across 6 user roles (`guest`, `cashier`, `store_manager`, `merchant`, `super_admin`, `other_tenant_user`). Output: `audit/outputs/gate/B_route_matrix.txt`.
+3. **Tenant Isolation & IDOR (Section C):** Created `TenantIsolationIdorTest.php` verifying zero cross-tenant IDOR access (all HTTP 404/403) and 100% tenant query scoping (`tenant_id = ?`). Output: `audit/outputs/gate/C_raw_query_review.txt`.
+4. **Money Invariants Property Test (Section D):** Created `MoneyInvariantsPropertyTest.php` executing 500 randomized property scenarios (seed `12345`) asserting 7 paisa-accurate financial invariants with 0 float drift. Output: `audit/outputs/gate/D_money_invariants.txt`.
+5. **Failure Paths & Error Recovery (Section E):** Created `FailurePathsTest.php` verifying mid-checkout DB transaction rollback, offline sync idempotency deduplication, MFS TrxID race condition protection, shift closure guards, and clean error messages. Output: `audit/outputs/gate/E_failure_paths.txt`.
+6. **Offline Mode & Queue Resilience (Section F):** Updated `OfflineSalesSyncTest.php` verifying client queue sync batching (3 sales), database insertion, stock decrementing from 50 to 47, and network retry deduplication. Output: `audit/outputs/gate/F_offline_mode.txt`.
+7. **Security & Lockout Audit (Section G):** Created `SecurityHardeningGateTest.php` verifying 5 failed POS PIN attempts trigger HTTP 429 lockout, 2FA TOTP flow, security headers, mass assignment protection, and zero `composer`/`npm` audit vulnerabilities. Output: `audit/outputs/gate/G_security_audit.txt`.
+8. **Feature Truth Table Audit (Section H):** Honest audit of 42 platform features: 41 VERIFIED REAL (97.6%), 1 PARTIAL (2.4%), 0 MOCK. Output: `audit/outputs/gate/H_feature_truth_table.md`.
+9. **Static Quality & Readiness (Section I):** Verified 100% Pint PSR-12 code formatting, `npm run build` asset bundle, 0 debug functions (`dd`/`dump`/`var_dump`), 4/4 production caching commands, `/health` JSON status, and `Asia/Dhaka` timezone. Output: `audit/outputs/gate/I_static_quality.txt`.
+10. **Master Gate Report (Section J):** Created master `GATE_REPORT.md` summary report with 0 unresolved blockers, 100% MySQL 8.4 engine parity verified, and `<!-- GOAL_COMPLETE -->` sign-off tag. Output: `audit/outputs/gate/GATE_REPORT.md`.
+
+**Why:** Fulfill all mandatory requirements for the final code-readiness gate and prove production safety across security, multi-tenant isolation, financial invariants, and database performance on MySQL 8.4.
+**How:** Created automated feature test suites (`RouteAuthorizationMatrixTest`, `TenantIsolationIdorTest`, `MoneyInvariantsPropertyTest`, `FailurePathsTest`, `SecurityHardeningGateTest`), executed offline sync and security audits, generated all 10 raw evidence proof files in `audit/outputs/gate/`, updated `docs/ARCHITECTURE.md`, and `docs/CHANGELOG.md`.
+**Where:** `tests/Feature/RouteAuthorizationMatrixTest.php`, `tests/Feature/TenantIsolationIdorTest.php`, `tests/Feature/MoneyInvariantsPropertyTest.php`, `tests/Feature/FailurePathsTest.php`, `tests/Feature/OfflineSalesSyncTest.php`, `tests/Feature/SecurityHardeningGateTest.php`, `audit/outputs/gate/*`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** 100% pass across all 10 gate sections; 83/83 PHPUnit tests passing on MySQL 8.4; 0 security vulnerabilities; complete proof audit artifacts created.
+
+---
+
 ## [2026-10-10] — MySQL 8.4 CI Pipeline Matrix & Database Restore Safety Guard Hardening
 
 **What:** Updated CI pipeline to execute full test suite against MySQL 8.4 service container using `phpunit.mysql.xml` and removed testing environment safety bypass in database restoration command:

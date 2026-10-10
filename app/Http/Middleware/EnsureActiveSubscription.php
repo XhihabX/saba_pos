@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use Carbon\Carbon;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +16,7 @@ class EnsureActiveSubscription
         if ($user && $user->role !== 'super_admin' && $user->tenant) {
             $tenant = $user->tenant;
             $status = $tenant->subscription_status;
-            $isExpired = $tenant->expires_at && \Carbon\Carbon::parse($tenant->expires_at)->isPast();
+            $isExpired = $tenant->expires_at && Carbon::parse($tenant->expires_at)->isPast();
             $currentRoute = $request->route() ? $request->route()->getName() : null;
 
             if ($status === 'pending_approval' || $status === 'rejected') {

@@ -35,7 +35,7 @@ class HealthController extends Controller
 
         // 2. Cache Check
         try {
-            $cacheKey = 'health_check_' . time();
+            $cacheKey = 'health_check_'.time();
             Cache::put($cacheKey, 'ok', 10);
             $cacheVal = Cache::get($cacheKey);
             Cache::forget($cacheKey);
@@ -72,14 +72,14 @@ class HealthController extends Controller
 
         $storageWritable = true;
         foreach ($storagePaths as $key => $path) {
-            if (!File::exists($path) || !is_writable($path)) {
+            if (! File::exists($path) || ! is_writable($path)) {
                 $storageWritable = false;
                 $checks[$key] = ['status' => 'unhealthy', 'path' => $path];
             } else {
                 $checks[$key] = ['status' => 'healthy', 'path' => $path];
             }
         }
-        if (!$storageWritable) {
+        if (! $storageWritable) {
             $status = 503;
         }
 

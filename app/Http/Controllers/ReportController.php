@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\DailySalesSummary;
+use App\Models\DiscrepancyAlert;
 use App\Models\Expense;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Purchase;
+use App\Models\Product;
+use App\Models\ProductBatch;
+use App\Models\Stock;
 use App\Models\Store;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -17,12 +23,13 @@ class ReportController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -60,7 +67,7 @@ class ReportController extends Controller
         if ($cogs <= 0.0 && $totalSales > 0) {
             $cogs = (float) (DB::table('orders')
                 ->where('tenant_id', $tenantId)
-                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                ->whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
                 ->sum('cogs') ?? 0.00);
         }
 
@@ -80,7 +87,7 @@ class ReportController extends Controller
                 'category' => 'All Categories',
                 'qty' => (float) 0.00,
                 'total' => (float) $totalSales,
-            ]
+            ],
         ]);
 
         // Sales Breakdown by Payment Method via summary table
@@ -93,10 +100,10 @@ class ReportController extends Controller
             ['method' => 'Upay', 'total' => (float) ($summary->upay_total ?? 0.00)],
             ['method' => 'Due / Credit', 'total' => (float) ($summary->due_total ?? 0.00)],
             ['method' => 'Other', 'total' => (float) ($summary->other_total ?? 0.00)],
-        ])->filter(fn($item) => $item['total'] > 0)->values();
+        ])->filter(fn ($item) => $item['total'] > 0)->values();
 
         // Sales Breakdown by Cashier Staff (Driven via direct index range query per user)
-        $users = \App\Models\User::where('tenant_id', $tenantId)->get(['id', 'name']);
+        $users = User::where('tenant_id', $tenantId)->get(['id', 'name']);
         $salesByCashier = collect();
 
         foreach ($users as $u) {
@@ -104,7 +111,7 @@ class ReportController extends Controller
                 ->useIndex('orders_cashier_reporting_v6_idx')
                 ->where('tenant_id', $tenantId)
                 ->where('user_id', $u->id)
-                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                ->whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
                 ->selectRaw('COUNT(*) as order_count, SUM(grand_total) as total_sales')
                 ->first();
 
@@ -145,18 +152,18 @@ class ReportController extends Controller
             ->selectRaw('store_id, SUM(orders_count) as order_count, SUM(subtotal) as net_amount, SUM(tax_amount) as vat_collected, SUM(grand_total) as gross_total, SUM(refunds) as refunds')
             ->groupBy('store_id')
             ->get()
-            ->map(fn($r) => (array) $r)
+            ->map(fn ($r) => (array) $r)
             ->toArray();
 
         // Fallback to orders table if summary table has not been populated
         if (empty($storeStatsData)) {
             $storeStatsData = DB::table('orders')
                 ->where('tenant_id', $tenantId)
-                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                ->whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
                 ->selectRaw('store_id, COUNT(*) as order_count, SUM(subtotal) as net_amount, SUM(tax_amount) as vat_collected, SUM(grand_total) as gross_total, 0.00 as refunds')
                 ->groupBy('store_id')
                 ->get()
-                ->map(fn($r) => (array) $r)
+                ->map(fn ($r) => (array) $r)
                 ->toArray();
         }
 
@@ -168,7 +175,7 @@ class ReportController extends Controller
         if ($returnedRefundTotal <= 0) {
             $returnedRefundTotal = (float) DB::table('product_returns')
                 ->where('tenant_id', $tenantId)
-                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+                ->whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
                 ->sum('refund_amount');
         }
 
@@ -184,6 +191,7 @@ class ReportController extends Controller
 
         $vatByStore = $storeStats->map(function ($row) use ($storesMap) {
             $store = $storesMap->get($row['store_id']);
+
             return [
                 'store_name' => $store->name ?? 'Default Outlet',
                 'bin_number' => $store ? ($store->bin_number ?? $store->vat_number ?? '') : '',
@@ -199,7 +207,7 @@ class ReportController extends Controller
         $perPage = 50;
 
         $items = Order::where('tenant_id', $tenantId)
-            ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59'])
+            ->whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
             ->with(['store:id,name,bin_number', 'customer:id,name'])
             ->orderBy('id', 'desc')
             ->skip(($page - 1) * $perPage)
@@ -207,7 +215,7 @@ class ReportController extends Controller
             ->get()
             ->toArray();
 
-        $orders = new \Illuminate\Pagination\LengthAwarePaginator($items, $totalOrderCount, $perPage, $page, [
+        $orders = new LengthAwarePaginator($items, $totalOrderCount, $perPage, $page, [
             'path' => $request->url(),
             'query' => $request->query(),
         ]);
@@ -237,7 +245,7 @@ class ReportController extends Controller
                 ->selectRaw('SUM(stocks.quantity * products.purchase_cost) as total_cost_val, SUM(stocks.quantity * products.selling_price) as total_retail_val')
                 ->first();
 
-            $productsCount = \App\Models\Product::where('tenant_id', $tenantId)->count();
+            $productsCount = Product::where('tenant_id', $tenantId)->count();
 
             return [
                 'total_cost_val' => (float) ($stockTotals['total_cost_val'] ?? 0.00),
@@ -253,23 +261,23 @@ class ReportController extends Controller
         $page = (int) $request->input('page', 1);
         $perPage = 50;
 
-        $productItems = \App\Models\Product::where('tenant_id', $tenantId)
+        $productItems = Product::where('tenant_id', $tenantId)
             ->with(['category:id,name', 'stocks.store:id,name'])
             ->skip(($page - 1) * $perPage)
             ->take($perPage)
             ->get()
             ->toArray();
 
-        $products = new \Illuminate\Pagination\LengthAwarePaginator($productItems, $productsCount, $perPage, $page, [
+        $products = new LengthAwarePaginator($productItems, $productsCount, $perPage, $page, [
             'path' => $request->url(),
             'query' => $request->query(),
         ]);
 
         $batchCount = Cache::remember("stock_batches_count_{$tenantId}", 60, function () use ($tenantId) {
-            return \App\Models\ProductBatch::where('tenant_id', $tenantId)->where('quantity', '>', 0)->count();
+            return ProductBatch::where('tenant_id', $tenantId)->where('quantity', '>', 0)->count();
         });
 
-        $batchItems = \App\Models\ProductBatch::where('tenant_id', $tenantId)
+        $batchItems = ProductBatch::where('tenant_id', $tenantId)
             ->with(['product:id,name', 'store:id,name'])
             ->where('quantity', '>', 0)
             ->orderBy('expiry_date', 'asc')
@@ -278,13 +286,13 @@ class ReportController extends Controller
             ->get()
             ->toArray();
 
-        $batches = new \Illuminate\Pagination\LengthAwarePaginator($batchItems, $batchCount, $perPage, $page, [
+        $batches = new LengthAwarePaginator($batchItems, $batchCount, $perPage, $page, [
             'path' => $request->url(),
             'query' => $request->query(),
         ]);
 
         $expiringSoon = Cache::remember("stock_expiring_soon_{$tenantId}", 60, function () use ($tenantId) {
-            return \App\Models\ProductBatch::where('tenant_id', $tenantId)
+            return ProductBatch::where('tenant_id', $tenantId)
                 ->with(['product:id,name', 'store:id,name'])
                 ->where('quantity', '>', 0)
                 ->where('expiry_date', '<=', now()->addDays(30))
@@ -317,7 +325,7 @@ class ReportController extends Controller
         foreach ($stores as $store) {
             $ordersQuery = Order::where('tenant_id', $tenantId)
                 ->where('store_id', $store->id)
-                ->whereBetween('created_at', [$startDate . ' 00:00:00', $endDate . ' 23:59:59']);
+                ->whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59']);
 
             $totalOrders = (clone $ordersQuery)->count();
             $grossRevenue = (float) ((clone $ordersQuery)->sum('grand_total') ?? 0);
@@ -330,7 +338,7 @@ class ReportController extends Controller
                 ->selectRaw('SUM(quantity * CASE WHEN cost_price > 0 THEN cost_price ELSE (SELECT purchase_cost FROM products WHERE products.id = order_items.product_id) END) as total_cogs')
                 ->value('total_cogs') ?? 0);
 
-            $stockMetrics = \App\Models\Stock::where('store_id', $store->id)
+            $stockMetrics = Stock::where('store_id', $store->id)
                 ->join('products', 'stocks.product_id', '=', 'products.id')
                 ->selectRaw('SUM(stocks.quantity) as total_qty, SUM(stocks.quantity * products.purchase_cost) as total_cost_value')
                 ->first();
@@ -379,10 +387,10 @@ class ReportController extends Controller
         $storeId = (int) $validated['store_id'];
         $date = $validated['date'];
 
-        \App\Models\DailySalesSummary::recalculateDay($tenantId, $storeId, $date);
+        DailySalesSummary::recalculateDay($tenantId, $storeId, $date);
 
         // Resolve persistent database discrepancy alert
-        \App\Models\DiscrepancyAlert::where('tenant_id', $tenantId)
+        DiscrepancyAlert::where('tenant_id', $tenantId)
             ->where('store_id', $storeId)
             ->where('date', $date)
             ->whereNull('resolved_at')
@@ -394,4 +402,3 @@ class ReportController extends Controller
         ]);
     }
 }
-

@@ -33,22 +33,31 @@ return new class extends Migration
         try {
             if (Schema::hasTable('orders')) {
                 Schema::table('orders', function (Blueprint $table) {
-                    try { $table->dropIndex('orders_tenant_created_perf_v2_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('orders_tenant_created_perf_v2_idx');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             if (Schema::hasTable('order_items')) {
                 Schema::table('order_items', function (Blueprint $table) {
-                    try { $table->dropIndex('order_items_tenant_ord_prod_perf_v2_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('order_items_tenant_ord_prod_perf_v2_idx');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             if (Schema::hasTable('order_payments')) {
                 Schema::table('order_payments', function (Blueprint $table) {
-                    try { $table->dropIndex('order_payments_tenant_ord_perf_v2_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('order_payments_tenant_ord_perf_v2_idx');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Ignore rollback index drop errors
         }
         Schema::enableForeignKeyConstraints();

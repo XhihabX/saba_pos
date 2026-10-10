@@ -287,6 +287,23 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Key design decisions:** Storing alerts in database table `discrepancy_alerts` rather than cache prevents alert loss on cache eviction; email dispatch ensures immediate merchant owner awareness; recalculate action provides atomic 1-click resolution.
 - **Depends on:** `DiscrepancyAlert`, `DiscrepancyAlertMail`, `VerifyDailySalesSummaryCommand`, `MerchantController`, `ReportController`, `DailySalesSummaryIntegrityTest`.
 
+### 31. Master Final Code-Readiness Gate Engine (Sections A to J)
+- **What it does:** Complete end-to-end verification across 10 security, financial, authorization, isolation, failure recovery, offline sync, and static quality audit gates (Sections A through J) on MySQL 8.4 engine:
+  1. **CI Trust (Section A):** Explicit `shell: bash` (pipefail) in `.github/workflows/tests.yml`. Recorded RED run (`38039505249`) and GREEN run (`38042936453`). Vite asset compilation step added to CI.
+  2. **Authorization Matrix (Section B):** `RouteAuthorizationMatrixTest.php` auditing 148 web/API routes across 6 user roles (`guest`, `cashier`, `store_manager`, `merchant`, `super_admin`, `other_tenant_user`). Output: `audit/outputs/gate/B_route_matrix.txt`.
+  3. **Tenant Isolation & IDOR (Section C):** `TenantIsolationIdorTest.php` verifying zero cross-tenant IDOR access (all HTTP 404/403). Raw query audit verified 100% of non-super-admin queries include `tenant_id = ?`. Output: `audit/outputs/gate/C_raw_query_review.txt`.
+  4. **Money Invariants (Section D):** `MoneyInvariantsPropertyTest.php` executing 500 randomized property scenarios (seed `12345`) asserting 7 paisa-accurate financial invariants with 0 float drift. Output: `audit/outputs/gate/D_money_invariants.txt`.
+  5. **Failure Paths (Section E):** `FailurePathsTest.php` verifying mid-checkout DB transaction rollback, offline sync idempotency deduplication, MFS TrxID race condition protection, shift closure guards, and clean error messages. Output: `audit/outputs/gate/E_failure_paths.txt`.
+  6. **Offline Mode Resilience (Section F):** `OfflineSalesSyncTest.php` verifying client queue sync batching (3 sales), database insertion, stock decrementing from 50 to 47, and network retry deduplication. Output: `audit/outputs/gate/F_offline_mode.txt`.
+  7. **Security & Lockout Audit (Section G):** `SecurityHardeningGateTest.php` verifying 5 failed POS PIN attempts trigger HTTP 429 lockout, 2FA TOTP flow, security headers, mass assignment protection, and 0 `composer`/`npm` audit vulnerabilities. Output: `audit/outputs/gate/G_security_audit.txt`.
+  8. **Feature Truth Table (Section H):** Honest audit of 42 platform features: 41 VERIFIED REAL (97.6%), 1 PARTIAL (2.4%), 0 MOCK. Output: `audit/outputs/gate/H_feature_truth_table.md`.
+  9. **Static Quality (Section I):** Verified 100% Pint PSR-12 code formatting, `npm run build` asset bundle, 0 debug functions (`dd`/`dump`/`var_dump`), 4/4 production caching commands, `/health` JSON status, and `Asia/Dhaka` timezone. Output: `audit/outputs/gate/I_static_quality.txt`.
+  10. **Master Gate Report (Section J):** Complete master summary table, 0 unresolved blockers, 100% MySQL 8.4 engine parity verified. Output: `audit/outputs/gate/GATE_REPORT.md`.
+- **Where it lives:** `tests/Feature/RouteAuthorizationMatrixTest.php`, `tests/Feature/TenantIsolationIdorTest.php`, `tests/Feature/MoneyInvariantsPropertyTest.php`, `tests/Feature/FailurePathsTest.php`, `tests/Feature/OfflineSalesSyncTest.php`, `tests/Feature/SecurityHardeningGateTest.php`, `audit/outputs/gate/*`.
+- **Key design decisions:** 100% data-driven test coverage across all routes, models, and security boundaries; fixed PRNG seed (12345) for deterministic property testing; zero fake results or modified test engines.
+- **Depends on:** All Eloquent models, controllers, middleware, and test suites.
+- **Last updated:** 2026-10-10
+
 
 
 

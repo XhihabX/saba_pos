@@ -11,13 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasColumn('users', 'pos_pin')) {
+        if (! Schema::hasColumn('users', 'pos_pin')) {
             Schema::table('users', function (Blueprint $table) {
                 $table->string('pos_pin')->nullable()->after('password');
             });
         }
 
-        if (!Schema::hasColumn('parked_orders', 'tenant_id')) {
+        if (! Schema::hasColumn('parked_orders', 'tenant_id')) {
             Schema::table('parked_orders', function (Blueprint $table) {
                 $table->foreignId('tenant_id')->nullable()->after('id')->constrained()->cascadeOnDelete();
             });

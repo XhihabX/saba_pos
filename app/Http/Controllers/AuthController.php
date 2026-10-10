@@ -2,8 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
+use App\Models\SaaSPlan;
+use App\Models\Store;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
 class AuthController extends Controller
@@ -51,7 +58,7 @@ class AuthController extends Controller
         ];
 
         $email = $roleMap[$role] ?? 'merchant@iotpos.com';
-        $user = \App\Models\User::where('email', $email)->first();
+        $user = User::where('email', $email)->first();
 
         if ($user) {
             Auth::login($user);
@@ -59,13 +66,13 @@ class AuthController extends Controller
             request()->session()->forget('url.intended');
 
             if ($user->role === 'super_admin') {
-                return redirect('/super-admin/dashboard')->with('success', "Switched role to Super Admin SaaS Command Center.");
+                return redirect('/super-admin/dashboard')->with('success', 'Switched role to Super Admin SaaS Command Center.');
             } elseif ($user->role === 'merchant') {
-                return redirect('/merchant/dashboard')->with('success', "Switched role to Merchant HQ Portal.");
+                return redirect('/merchant/dashboard')->with('success', 'Switched role to Merchant HQ Portal.');
             } elseif ($user->role === 'store_manager') {
-                return redirect('/manager/dashboard')->with('success', "Switched role to Store Manager Portal.");
+                return redirect('/manager/dashboard')->with('success', 'Switched role to Store Manager Portal.');
             } else {
-                return redirect('/pos')->with('success', "Switched role to Cashier POS Workstation.");
+                return redirect('/pos')->with('success', 'Switched role to Cashier POS Workstation.');
             }
         }
 
@@ -74,7 +81,8 @@ class AuthController extends Controller
 
     public function showRegister(Request $request)
     {
-        $plans = \App\Models\SaaSPlan::where('is_active', true)->get();
+        $plans = SaaSPlan::where('is_active', true)->get();
+
         return Inertia::render('Auth/Register', [
             'selectedPlan' => $request->query('plan', 'growth'),
             'plans' => $plans,
@@ -105,7 +113,7 @@ class AuthController extends Controller
             'transaction_id' => 'required|string|max:100',
         ]);
 
-        return \Illuminate\Support\Facades\DB::transaction(function () use ($validated) {
+        return DB::transaction(function () use ($validated) {
             $planPrices = [
                 'Starter POS' => 1499.00,
                 'Growth Multi-Store' => 3999.00,
@@ -115,11 +123,11 @@ class AuthController extends Controller
                 'enterprise' => 9999.00,
             ];
 
-            $dbPlan = \App\Models\SaaSPlan::where('name', 'LIKE', '%' . $validated['plan_name'] . '%')->first();
+            $dbPlan = SaaSPlan::where('name', 'LIKE', '%'.$validated['plan_name'].'%')->first();
             $mrr = $dbPlan ? (float) $dbPlan->monthly_price : ($planPrices[$validated['plan_name']] ?? 3999.00);
-            $code = 'TENANT-' . strtoupper(substr(uniqid(), -5));
+            $code = 'TENANT-'.strtoupper(substr(uniqid(), -5));
 
-            $tenant = \App\Models\Tenant::create([
+            $tenant = Tenant::create([
                 'name' => $validated['business_name'],
                 'code' => $code,
                 'email' => $validated['email'],
@@ -133,10 +141,10 @@ class AuthController extends Controller
                 'expires_at' => null,
             ]);
 
-            $store = \App\Models\Store::create([
+            $store = Store::create([
                 'tenant_id' => $tenant->id,
-                'name' => $validated['business_name'] . ' Main Outlet',
-                'code' => 'STORE-' . strtoupper(substr(uniqid(), -4)),
+                'name' => $validated['business_name'].' Main Outlet',
+                'code' => 'STORE-'.strtoupper(substr(uniqid(), -4)),
                 'phone' => $validated['phone'] ?? null,
                 'email' => $validated['email'],
                 'currency_symbol' => '৳',
@@ -144,16 +152,16 @@ class AuthController extends Controller
                 'is_active' => true,
             ]);
 
-            $user = \App\Models\User::create([
+            $user = User::create([
                 'tenant_id' => $tenant->id,
                 'store_id' => $store->id,
                 'name' => $validated['owner_name'],
                 'email' => $validated['email'],
-                'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
+                'password' => Hash::make($validated['password']),
                 'role' => 'merchant',
             ]);
 
-            \App\Models\AuditLog::create([
+            AuditLog::create([
                 'tenant_id' => $tenant->id,
                 'user_name' => $user->name,
                 'action' => 'merchant_registered_pending_payment',

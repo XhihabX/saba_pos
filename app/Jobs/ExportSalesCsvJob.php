@@ -14,11 +14,15 @@ class ExportSalesCsvJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 1800;
+
     public int $tries = 1;
 
     public int $tenantId;
+
     public string $startDate;
+
     public string $endDate;
+
     public string $exportId;
 
     /**
@@ -40,7 +44,7 @@ class ExportSalesCsvJob implements ShouldQueue
         $fileName = "exports/sales_report_{$this->tenantId}_{$this->exportId}.csv";
         $filePath = storage_path("app/public/{$fileName}");
 
-        if (!file_exists(dirname($filePath))) {
+        if (! file_exists(dirname($filePath))) {
             mkdir(dirname($filePath), 0755, true);
         }
 

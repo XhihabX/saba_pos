@@ -1,0 +1,18 @@
+MONEY INVARIANTS PROPERTY TEST REPORT
+=====================================
+Generated: 2026-10-10 15:27:41
+Target Engine: MySQL 8.4
+Random Seed: 12345 (Fixed deterministic seed)
+Total Scenarios Executed: 500
+Passed Scenarios: 500 / 500 (100% PASS)
+
+VERIFIED FINANCIAL INVARIANTS (Paisa-Accurate 0.001 tolerance):
+1. Subtotal Invariant: subtotal == sum(item.unit_price * item.quantity) -> PASS
+2. Tax Invariant: total_tax == sum(item.vat_amount) -> PASS
+3. Grand Total Invariant: grand_total == subtotal - discount + total_tax -> PASS
+4. Payment Invariant: sum(payment.amount) == grand_total -> PASS
+5. Customer Due Invariant: customer_due == grand_total - total_paid -> PASS
+6. COGS Invariant: cogs == sum(item.cost_price * item.quantity) -> PASS
+7. Net Profit Invariant: net_profit == grand_total - cogs - tax -> PASS
+
+Verdict: PASS - All 500 randomized property scenarios verified with 0 paisa float drift.

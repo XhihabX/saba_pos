@@ -10,39 +10,39 @@ return new class extends Migration
     {
         // 1. Add compliance fields to stores table
         Schema::table('stores', function (Blueprint $table) {
-            if (!Schema::hasColumn('stores', 'bin_number')) {
+            if (! Schema::hasColumn('stores', 'bin_number')) {
                 $table->string('bin_number')->nullable()->after('vat_number');
             }
-            if (!Schema::hasColumn('stores', 'is_godown')) {
+            if (! Schema::hasColumn('stores', 'is_godown')) {
                 $table->boolean('is_godown')->default(false)->after('is_active');
             }
-            if (!Schema::hasColumn('stores', 'mfs_number')) {
+            if (! Schema::hasColumn('stores', 'mfs_number')) {
                 $table->string('mfs_number')->nullable()->after('phone');
             }
-            if (!Schema::hasColumn('stores', 'sms_gateway_url')) {
+            if (! Schema::hasColumn('stores', 'sms_gateway_url')) {
                 $table->string('sms_gateway_url')->nullable()->after('receipt_footer');
             }
-            if (!Schema::hasColumn('stores', 'sms_api_key')) {
+            if (! Schema::hasColumn('stores', 'sms_api_key')) {
                 $table->string('sms_api_key')->nullable()->after('sms_gateway_url');
             }
         });
 
         // 2. Add credit_limit to customers table
         Schema::table('customers', function (Blueprint $table) {
-            if (!Schema::hasColumn('customers', 'credit_limit')) {
+            if (! Schema::hasColumn('customers', 'credit_limit')) {
                 $table->decimal('credit_limit', 12, 2)->default(50000.00)->after('due_balance');
             }
         });
 
         // 3. Add idempotency_key to orders table
         Schema::table('orders', function (Blueprint $table) {
-            if (!Schema::hasColumn('orders', 'idempotency_key')) {
+            if (! Schema::hasColumn('orders', 'idempotency_key')) {
                 $table->string('idempotency_key')->nullable()->unique()->after('invoice_no');
             }
         });
 
         // 4. MFS Non-API Android Notification Webhook Transactions Table
-        if (!Schema::hasTable('mfs_transactions')) {
+        if (! Schema::hasTable('mfs_transactions')) {
             Schema::create('mfs_transactions', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('tenant_id')->nullable()->index();
@@ -57,7 +57,7 @@ return new class extends Migration
         }
 
         // 5. Product Batches & Expiry (FEFO) Table
-        if (!Schema::hasTable('product_batches')) {
+        if (! Schema::hasTable('product_batches')) {
             Schema::create('product_batches', function (Blueprint $table) {
                 $table->id();
                 $table->unsignedBigInteger('tenant_id')->nullable()->index();
@@ -81,7 +81,10 @@ return new class extends Migration
             if (Schema::hasTable('orders')) {
                 Schema::table('orders', function (Blueprint $table) {
                     if (Schema::hasColumn('orders', 'idempotency_key')) {
-                        try { $table->dropColumn('idempotency_key'); } catch (\Throwable $e) {}
+                        try {
+                            $table->dropColumn('idempotency_key');
+                        } catch (Throwable $e) {
+                        }
                     }
                 });
             }
@@ -89,20 +92,26 @@ return new class extends Migration
             if (Schema::hasTable('customers')) {
                 Schema::table('customers', function (Blueprint $table) {
                     if (Schema::hasColumn('customers', 'credit_limit')) {
-                        try { $table->dropColumn('credit_limit'); } catch (\Throwable $e) {}
+                        try {
+                            $table->dropColumn('credit_limit');
+                        } catch (Throwable $e) {
+                        }
                     }
                 });
             }
 
             if (Schema::hasTable('stores')) {
                 Schema::table('stores', function (Blueprint $table) {
-                    $cols = array_filter(['bin_number', 'is_godown', 'mfs_number', 'sms_gateway_url', 'sms_api_key'], fn($c) => Schema::hasColumn('stores', $c));
-                    if (!empty($cols)) {
-                        try { $table->dropColumn($cols); } catch (\Throwable $e) {}
+                    $cols = array_filter(['bin_number', 'is_godown', 'mfs_number', 'sms_gateway_url', 'sms_api_key'], fn ($c) => Schema::hasColumn('stores', $c));
+                    if (! empty($cols)) {
+                        try {
+                            $table->dropColumn($cols);
+                        } catch (Throwable $e) {
+                        }
                     }
                 });
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Ignore rollback errors
         }
         Schema::enableForeignKeyConstraints();

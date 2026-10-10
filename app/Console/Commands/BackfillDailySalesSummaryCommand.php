@@ -27,7 +27,7 @@ class BackfillDailySalesSummaryCommand extends Command
     public function handle(): int
     {
         $tenantId = $this->option('tenant');
-        $this->info("Starting backfill of daily_sales_summaries...");
+        $this->info('Starting backfill of daily_sales_summaries...');
 
         $now = now()->toDateTimeString();
 
@@ -60,13 +60,13 @@ class BackfillDailySalesSummaryCommand extends Command
                 '{$now}' as updated_at
             FROM orders o
             LEFT JOIN order_payments p ON o.id = p.order_id
-            " . ($tenantId ? "WHERE o.tenant_id = " . intval($tenantId) : "") . "
+            ".($tenantId ? 'WHERE o.tenant_id = '.intval($tenantId) : '').'
             GROUP BY o.tenant_id, o.store_id, DATE(o.created_at)
-        ";
+        ';
 
         $driver = DB::getDriverName();
         if ($driver === 'sqlite') {
-            $salesSql .= "
+            $salesSql .= '
                 ON CONFLICT(tenant_id, store_id, date) DO UPDATE SET
                     orders_count = excluded.orders_count,
                     subtotal = excluded.subtotal,
@@ -82,9 +82,9 @@ class BackfillDailySalesSummaryCommand extends Command
                     due_total = excluded.due_total,
                     other_total = excluded.other_total,
                     updated_at = excluded.updated_at
-            ";
+            ';
         } else {
-            $salesSql .= "
+            $salesSql .= '
                 ON DUPLICATE KEY UPDATE
                     orders_count = VALUES(orders_count),
                     subtotal = VALUES(subtotal),
@@ -100,7 +100,7 @@ class BackfillDailySalesSummaryCommand extends Command
                     due_total = VALUES(due_total),
                     other_total = VALUES(other_total),
                     updated_at = VALUES(updated_at)
-            ";
+            ';
         }
 
         DB::statement($salesSql);
@@ -133,28 +133,29 @@ class BackfillDailySalesSummaryCommand extends Command
                 '{$now}' as created_at,
                 '{$now}' as updated_at
             FROM product_returns r
-            " . ($tenantId ? "WHERE r.tenant_id = " . intval($tenantId) : "") . "
+            ".($tenantId ? 'WHERE r.tenant_id = '.intval($tenantId) : '').'
             GROUP BY r.tenant_id, r.store_id, DATE(r.created_at)
-        ";
+        ';
 
         if ($driver === 'sqlite') {
-            $returnsSql .= "
+            $returnsSql .= '
                 ON CONFLICT(tenant_id, store_id, date) DO UPDATE SET
                     refunds = excluded.refunds,
                     updated_at = excluded.updated_at
-            ";
+            ';
         } else {
-            $returnsSql .= "
+            $returnsSql .= '
                 ON DUPLICATE KEY UPDATE
                     refunds = VALUES(refunds),
                     updated_at = VALUES(updated_at)
-            ";
+            ';
         }
 
         DB::statement($returnsSql);
 
         $count = DB::table('daily_sales_summaries')->count();
         $this->info("✅ Successfully backfilled {$count} daily summary records!");
+
         return Command::SUCCESS;
     }
 }

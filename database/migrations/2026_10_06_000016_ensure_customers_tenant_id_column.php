@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (Schema::hasTable('customers') && !Schema::hasColumn('customers', 'tenant_id')) {
+        if (Schema::hasTable('customers') && ! Schema::hasColumn('customers', 'tenant_id')) {
             Schema::table('customers', function (Blueprint $table) {
                 $table->foreignId('tenant_id')->nullable()->after('id');
             });
@@ -22,11 +22,14 @@ return new class extends Migration
             try {
                 Schema::table('customers', function (Blueprint $table) {
                     if (Schema::hasColumn('customers', 'tenant_id')) {
-                        try { $table->dropForeign('customers_tenant_id_foreign'); } catch (\Throwable $e) {}
+                        try {
+                            $table->dropForeign('customers_tenant_id_foreign');
+                        } catch (Throwable $e) {
+                        }
                         $table->dropColumn('tenant_id');
                     }
                 });
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // Ignore rollback errors for pre-existing tenant_id columns
             }
         }

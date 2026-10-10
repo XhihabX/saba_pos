@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Customer;
+use App\Models\DiscrepancyAlert;
 use App\Models\Order;
+use App\Models\SaaSPlan;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\SmsService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
@@ -18,12 +22,13 @@ class MerchantController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -32,13 +37,13 @@ class MerchantController extends Controller
         $tenantId = $this->getTenantId();
 
         $stores = Store::where('tenant_id', $tenantId)->get();
-        
+
         $storeAggregatesData = DB::table('daily_sales_summaries')
             ->where('tenant_id', $tenantId)
             ->selectRaw('store_id, SUM(orders_count) as order_count, SUM(grand_total) as store_sales')
             ->groupBy('store_id')
             ->get()
-            ->map(fn($r) => (array) $r)
+            ->map(fn ($r) => (array) $r)
             ->keyBy('store_id')
             ->toArray();
 
@@ -49,7 +54,7 @@ class MerchantController extends Controller
                 ->selectRaw('store_id, COUNT(*) as order_count, SUM(grand_total) as store_sales')
                 ->groupBy('store_id')
                 ->get()
-                ->map(fn($r) => (array) $r)
+                ->map(fn ($r) => (array) $r)
                 ->keyBy('store_id')
                 ->toArray();
         }
@@ -61,10 +66,11 @@ class MerchantController extends Controller
         $storePerformance = $stores->map(function ($store) use ($storeAggregates) {
             $agg = $storeAggregates->get($store->id);
             $store->orders_count = $agg ? (int) ($agg['order_count'] ?? 0) : 0;
+
             return $store;
         });
 
-        $unresolvedAlerts = \App\Models\DiscrepancyAlert::where('tenant_id', $tenantId)
+        $unresolvedAlerts = DiscrepancyAlert::where('tenant_id', $tenantId)
             ->whereNull('resolved_at')
             ->get();
 
@@ -108,7 +114,7 @@ class MerchantController extends Controller
 
         // Enforce subscription plan max_users limit
         $tenant = Tenant::find($tenantId);
-        $plan = $tenant ? \App\Models\SaaSPlan::where('name', 'LIKE', '%' . $tenant->plan_name . '%')->first() : null;
+        $plan = $tenant ? SaaSPlan::where('name', 'LIKE', '%'.$tenant->plan_name.'%')->first() : null;
         $maxUsers = $plan->max_users ?? 10;
         $currentUsers = User::where('tenant_id', $tenantId)->count();
 
@@ -137,7 +143,7 @@ class MerchantController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'required|email|unique:users,email,'.$user->id,
             'role' => 'required|in:store_manager,cashier',
             'store_id' => 'required|exists:stores,id',
             'password' => 'nullable|string|min:6',
@@ -153,7 +159,7 @@ class MerchantController extends Controller
         ]);
         $user->role = $validated['role'];
         $user->permissions = $validated['permissions'] ?? $user->permissions;
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
         }
         $user->save();
@@ -304,6 +310,7 @@ class MerchantController extends Controller
                     'customer' => $existing,
                 ], 200);
             }
+
             return redirect()->back()->with('success', "Customer '{$existing->name}' selected.");
         }
 
@@ -365,7 +372,7 @@ class MerchantController extends Controller
         }
 
         $store = Store::where('tenant_id', $tenantId)->first();
-        $sent = \App\Services\SmsService::sendDueReminder(
+        $sent = SmsService::sendDueReminder(
             $store?->id ?? 1,
             $customer->name,
             $customer->phone,
@@ -403,7 +410,7 @@ class MerchantController extends Controller
                 'store:id,name',
                 'customer:id,name',
                 'items:id,order_id,product_name,quantity,unit_price',
-                'user:id,name'
+                'user:id,name',
             ])
             ->latest('id')
             ->skip(($page - 1) * $perPage)
@@ -411,7 +418,7 @@ class MerchantController extends Controller
             ->get()
             ->toArray();
 
-        $orders = new \Illuminate\Pagination\LengthAwarePaginator($items, $totalOrders, $perPage, $page, [
+        $orders = new LengthAwarePaginator($items, $totalOrders, $perPage, $page, [
             'path' => request()->url(),
             'query' => request()->query(),
         ]);
@@ -433,8 +440,8 @@ class MerchantController extends Controller
     public function auditLogsIndex(Request $request)
     {
         $tenantId = $this->getTenantId();
-        
-        $query = \App\Models\AuditLog::where('tenant_id', $tenantId)
+
+        $query = AuditLog::where('tenant_id', $tenantId)
             ->with(['user', 'store']);
 
         if ($request->filled('store_id')) {
@@ -447,21 +454,21 @@ class MerchantController extends Controller
 
         if ($request->filled('search')) {
             $search = $request->input('search');
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('description', 'LIKE', "%{$search}%")
-                  ->orWhere('user_name', 'LIKE', "%{$search}%")
-                  ->orWhere('action', 'LIKE', "%{$search}%");
+                    ->orWhere('user_name', 'LIKE', "%{$search}%")
+                    ->orWhere('action', 'LIKE', "%{$search}%");
             });
         }
 
         $logs = $query->latest()->paginate(25)->withQueryString();
         $stores = Store::where('tenant_id', $tenantId)->get(['id', 'name']);
-        
+
         $stats = [
-            'total_actions' => \App\Models\AuditLog::where('tenant_id', $tenantId)->count(),
-            'pos_sales_count' => \App\Models\AuditLog::where('tenant_id', $tenantId)->where('action', 'pos_checkout')->count(),
-            'shift_audits_count' => \App\Models\AuditLog::where('tenant_id', $tenantId)->whereIn('action', ['shift_opened', 'shift_closed'])->count(),
-            'stock_adjustments_count' => \App\Models\AuditLog::where('tenant_id', $tenantId)->where('action', 'stock_adjusted')->count(),
+            'total_actions' => AuditLog::where('tenant_id', $tenantId)->count(),
+            'pos_sales_count' => AuditLog::where('tenant_id', $tenantId)->where('action', 'pos_checkout')->count(),
+            'shift_audits_count' => AuditLog::where('tenant_id', $tenantId)->whereIn('action', ['shift_opened', 'shift_closed'])->count(),
+            'stock_adjustments_count' => AuditLog::where('tenant_id', $tenantId)->where('action', 'stock_adjusted')->count(),
         ];
 
         return Inertia::render('Merchant/AuditLogs', [
@@ -472,4 +479,3 @@ class MerchantController extends Controller
         ]);
     }
 }
-

@@ -32,7 +32,7 @@ class BackupDatabaseCommand extends Command
         $this->info('Starting automated POS database backup...');
 
         $backupDir = storage_path('app/backups');
-        if (!File::exists($backupDir)) {
+        if (! File::exists($backupDir)) {
             File::makeDirectory($backupDir, 0755, true);
         }
 
@@ -51,34 +51,34 @@ class BackupDatabaseCommand extends Command
             $dbPort = config('database.connections.mysql.port', '3306');
 
             // Try mysqldump path or fallback to PHP native sql dump
-            $mysqldumpBin = "mysqldump";
+            $mysqldumpBin = 'mysqldump';
             if (File::exists('C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqldump.exe')) {
                 $mysqldumpBin = '"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysqldump.exe"';
             }
 
             $rawSqlPath = "{$backupDir}/pos_db_backup_{$timestamp}.sql";
-            $cmd = "{$mysqldumpBin} --single-transaction --skip-lock-tables --host={$dbHost} --port={$dbPort} --user={$dbUser} " . (!empty($dbPass) ? "--password=" . escapeshellarg($dbPass) : "") . " {$dbName} > " . escapeshellarg($rawSqlPath);
+            $cmd = "{$mysqldumpBin} --single-transaction --skip-lock-tables --host={$dbHost} --port={$dbPort} --user={$dbUser} ".(! empty($dbPass) ? '--password='.escapeshellarg($dbPass) : '')." {$dbName} > ".escapeshellarg($rawSqlPath);
             @exec($cmd, $output, $exitCode);
 
-            if ($exitCode !== 0 || !File::exists($rawSqlPath) || filesize($rawSqlPath) === 0) {
+            if ($exitCode !== 0 || ! File::exists($rawSqlPath) || filesize($rawSqlPath) === 0) {
                 // PHP native SQL dumper fallback
                 $pdo = DB::connection()->getPdo();
-                $tables = DB::select("SELECT table_name AS name FROM information_schema.tables WHERE table_schema = DATABASE()");
+                $tables = DB::select('SELECT table_name AS name FROM information_schema.tables WHERE table_schema = DATABASE()');
                 $sqlContent = "-- MySQL Snapshot generated at {$timestamp}\nSET FOREIGN_KEY_CHECKS=0;\n";
                 foreach ($tables as $t) {
                     $tName = $t->name;
                     $createRow = DB::selectOne("SHOW CREATE TABLE `{$tName}`");
                     $createSqlKey = 'Create Table';
-                    $createSql = (array)$createRow;
+                    $createSql = (array) $createRow;
                     if (isset($createSql[$createSqlKey])) {
                         $sqlContent .= "DROP TABLE IF EXISTS `{$tName}`;\n";
-                        $sqlContent .= $createSql[$createSqlKey] . ";\n";
+                        $sqlContent .= $createSql[$createSqlKey].";\n";
                     }
                     $rows = DB::table($tName)->get();
                     foreach ($rows as $row) {
-                        $cols = array_keys((array)$row);
-                        $vals = array_map(fn($v) => is_null($v) ? 'NULL' : $pdo->quote($v), array_values((array)$row));
-                        $sqlContent .= "INSERT INTO `{$tName}` (`" . implode('`, `', $cols) . "`) VALUES (" . implode(', ', $vals) . ");\n";
+                        $cols = array_keys((array) $row);
+                        $vals = array_map(fn ($v) => is_null($v) ? 'NULL' : $pdo->quote($v), array_values((array) $row));
+                        $sqlContent .= "INSERT INTO `{$tName}` (`".implode('`, `', $cols).'`) VALUES ('.implode(', ', $vals).");\n";
                     }
                 }
                 $sqlContent .= "SET FOREIGN_KEY_CHECKS=1;\n";
@@ -88,7 +88,7 @@ class BackupDatabaseCommand extends Command
             // PHP native gzopen compression
             $fpOut = gzopen($filepath, 'wb9');
             $fpIn = fopen($rawSqlPath, 'rb');
-            while (!feof($fpIn)) {
+            while (! feof($fpIn)) {
                 gzwrite($fpOut, fread($fpIn, 1024 * 512));
             }
             fclose($fpIn);
@@ -97,9 +97,9 @@ class BackupDatabaseCommand extends Command
         } else {
             // SQLite driver backup
             $dbPath = config('database.connections.sqlite.database');
-            if ($dbPath === ':memory:' || !File::exists($dbPath)) {
+            if ($dbPath === ':memory:' || ! File::exists($dbPath)) {
                 $dbPath = database_path('database.sqlite');
-                if (!File::exists($dbPath)) {
+                if (! File::exists($dbPath)) {
                     File::put($dbPath, '');
                 }
             }
@@ -109,7 +109,7 @@ class BackupDatabaseCommand extends Command
 
             $fpOut = gzopen($filepath, 'wb9');
             $fpIn = fopen($rawCopy, 'rb');
-            while (!feof($fpIn)) {
+            while (! feof($fpIn)) {
                 gzwrite($fpOut, fread($fpIn, 1024 * 512));
             }
             fclose($fpIn);
@@ -117,7 +117,7 @@ class BackupDatabaseCommand extends Command
             File::delete($rawCopy);
         }
 
-        $this->info("✅ Database backup created: {$filepath} (" . number_format(filesize($filepath)) . " bytes)");
+        $this->info("✅ Database backup created: {$filepath} (".number_format(filesize($filepath)).' bytes)');
         Log::info("Automated DB Backup created: {$filename}");
 
         // Send to off-server / remote storage disk if configured
@@ -130,7 +130,7 @@ class BackupDatabaseCommand extends Command
 
                 // Rotate remote backups to retain only last N files
                 $remoteFiles = collect($remoteDisk->files('backups'))
-                    ->sortByDesc(fn($file) => $remoteDisk->lastModified($file))
+                    ->sortByDesc(fn ($file) => $remoteDisk->lastModified($file))
                     ->values();
 
                 if ($remoteFiles->count() > $keep) {
@@ -142,12 +142,12 @@ class BackupDatabaseCommand extends Command
                 }
             }
         } catch (\Throwable $e) {
-            $this->warn("Remote off-server sync notice: " . $e->getMessage());
+            $this->warn('Remote off-server sync notice: '.$e->getMessage());
         }
 
         // Local retention rotation: Keep last N backups
         $localFiles = collect(File::files($backupDir))
-            ->sortByDesc(fn($file) => $file->getMTime())
+            ->sortByDesc(fn ($file) => $file->getMTime())
             ->values();
 
         if ($localFiles->count() > $keep) {

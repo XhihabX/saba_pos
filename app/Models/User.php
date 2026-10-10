@@ -17,7 +17,7 @@ use Illuminate\Notifications\Notifiable;
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, Tenantable, SoftDeletes;
+    use HasFactory, Notifiable, SoftDeletes, Tenantable;
 
     protected $fillable = [
         'name',
@@ -51,6 +51,7 @@ class User extends Authenticatable
             return true;
         }
         $perms = $this->permissions ?? [];
+
         return in_array($permission, $perms);
     }
 
@@ -68,4 +69,3 @@ class User extends Authenticatable
         ];
     }
 }
-

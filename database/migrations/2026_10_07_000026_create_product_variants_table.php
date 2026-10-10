@@ -26,12 +26,12 @@ return new class extends Migration
             $table->index(['product_id']);
         });
 
-        if (!Schema::hasColumn('stocks', 'variant_id')) {
+        if (! Schema::hasColumn('stocks', 'variant_id')) {
             try {
                 Schema::table('stocks', function (Blueprint $table) {
                     $table->dropUnique(['store_id', 'product_id']);
                 });
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // Ignore if unique index does not exist or named differently
             }
 
@@ -41,7 +41,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasColumn('order_items', 'variant_id')) {
+        if (! Schema::hasColumn('order_items', 'variant_id')) {
             Schema::table('order_items', function (Blueprint $table) {
                 $table->foreignId('variant_id')->nullable()->constrained('product_variants')->onDelete('set null');
                 $table->string('variant_name')->nullable();
@@ -55,21 +55,36 @@ return new class extends Migration
         try {
             if (Schema::hasTable('order_items')) {
                 Schema::table('order_items', function (Blueprint $table) {
-                    try { $table->dropForeign(['variant_id']); } catch (\Throwable $e) {}
-                    try { $table->dropColumn(['variant_id', 'variant_name']); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropForeign(['variant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    try {
+                        $table->dropColumn(['variant_id', 'variant_name']);
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             if (Schema::hasTable('stocks')) {
                 Schema::table('stocks', function (Blueprint $table) {
-                    try { $table->dropUnique('stocks_store_product_variant_unique'); } catch (\Throwable $e) {}
-                    try { $table->dropForeign(['variant_id']); } catch (\Throwable $e) {}
-                    try { $table->dropColumn('variant_id'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropUnique('stocks_store_product_variant_unique');
+                    } catch (Throwable $e) {
+                    }
+                    try {
+                        $table->dropForeign(['variant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    try {
+                        $table->dropColumn('variant_id');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             Schema::dropIfExists('product_variants');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Ignore rollback errors
         }
         Schema::enableForeignKeyConstraints();

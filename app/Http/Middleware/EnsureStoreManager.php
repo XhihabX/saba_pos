@@ -12,11 +12,11 @@ class EnsureStoreManager
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return redirect()->route('login');
         }
 
-        if (!in_array($user->role, ['super_admin', 'merchant', 'store_manager'])) {
+        if (! in_array($user->role, ['super_admin', 'merchant', 'store_manager'])) {
             return redirect()->route('login')->with('error', 'Unauthorized access to Store Manager Portal.');
         }
 

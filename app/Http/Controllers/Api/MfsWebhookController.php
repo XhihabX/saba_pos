@@ -17,9 +17,9 @@ class MfsWebhookController extends Controller
     {
         $tenantIdHeader = $request->header('X-MFS-Tenant-ID') ?? $request->header('X-MFS-Tenant') ?? $request->input('tenant_id') ?? $request->input('tenant_code');
         $tenant = null;
-        if (!empty($tenantIdHeader)) {
+        if (! empty($tenantIdHeader)) {
             $tenant = Tenant::where('id', $tenantIdHeader)->orWhere('code', $tenantIdHeader)->first();
-            if (!$tenant) {
+            if (! $tenant) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Invalid tenant specified for MFS webhook.',
@@ -31,7 +31,8 @@ class MfsWebhookController extends Controller
 
         // Reject with 503 if no secret is configured (per-tenant or env)
         if (empty($expectedSecret)) {
-            Log::warning("MFS Webhook unconfigured attempt from IP: " . $request->ip());
+            Log::warning('MFS Webhook unconfigured attempt from IP: '.$request->ip());
+
             return response()->json([
                 'success' => false,
                 'message' => 'MFS Webhook service is unconfigured. Secret key required.',
@@ -40,8 +41,9 @@ class MfsWebhookController extends Controller
 
         // 1. Mandatory Timestamp Drift Replay Protection (5-minute / 300s window) - Never skipped
         $rawTimestamp = $request->header('X-MFS-Timestamp') ?? $request->input('timestamp');
-        if ($rawTimestamp === null || !is_numeric($rawTimestamp) || abs(time() - (int) $rawTimestamp) > 300) {
-            Log::warning("MFS Webhook Replay Blocked: Expired or missing timestamp {$rawTimestamp} from IP: " . $request->ip());
+        if ($rawTimestamp === null || ! is_numeric($rawTimestamp) || abs(time() - (int) $rawTimestamp) > 300) {
+            Log::warning("MFS Webhook Replay Blocked: Expired or missing timestamp {$rawTimestamp} from IP: ".$request->ip());
+
             return response()->json([
                 'success' => false,
                 'message' => 'MFS Webhook request expired or replay attempt detected.',
@@ -55,11 +57,11 @@ class MfsWebhookController extends Controller
 
         $isValidAuth = false;
 
-        if (!empty($providedSecret) && hash_equals($expectedSecret, (string) $providedSecret)) {
+        if (! empty($providedSecret) && hash_equals($expectedSecret, (string) $providedSecret)) {
             $isValidAuth = true;
         }
 
-        if (!empty($providedSignature)) {
+        if (! empty($providedSignature)) {
             $rawBody = $request->getContent();
             $expectedBodySignature = hash_hmac('sha256', $rawBody, $expectedSecret);
 
@@ -72,8 +74,9 @@ class MfsWebhookController extends Controller
             }
         }
 
-        if (!$isValidAuth) {
-            Log::warning("Unauthorized MFS Webhook attempt from IP: " . $request->ip());
+        if (! $isValidAuth) {
+            Log::warning('Unauthorized MFS Webhook attempt from IP: '.$request->ip());
+
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized MFS Webhook authentication failed. Valid HMAC signature or secret key required.',
@@ -88,12 +91,12 @@ class MfsWebhookController extends Controller
         ]);
 
         $targetTenantId = $tenant?->id ?? $request->user()?->tenant_id;
-        if (!$targetTenantId) {
+        if (! $targetTenantId) {
             $firstTenant = Tenant::first();
             $targetTenantId = $firstTenant?->id;
         }
 
-        if (!$targetTenantId) {
+        if (! $targetTenantId) {
             return response()->json([
                 'success' => false,
                 'message' => 'Tenant identification required for MFS webhook.',

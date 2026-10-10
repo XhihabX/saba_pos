@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (!Schema::hasColumn('users', 'permissions')) {
+        if (! Schema::hasColumn('users', 'permissions')) {
             Schema::table('users', function (Blueprint $table) {
                 $table->json('permissions')->nullable()->after('role');
             });

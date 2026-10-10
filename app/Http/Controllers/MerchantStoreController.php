@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SaaSPlan;
 use App\Models\Store;
 use App\Models\Tenant;
 use Illuminate\Http\Request;
@@ -12,12 +13,13 @@ class MerchantStoreController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -45,7 +47,7 @@ class MerchantStoreController extends Controller
         ]);
 
         $tenant = Tenant::find($tenantId);
-        $plan = $tenant ? \App\Models\SaaSPlan::where('name', 'LIKE', '%' . $tenant->plan_name . '%')->first() : null;
+        $plan = $tenant ? SaaSPlan::where('name', 'LIKE', '%'.$tenant->plan_name.'%')->first() : null;
         $maxStores = $plan->max_stores ?? 5;
         $currentStores = Store::where('tenant_id', $tenantId)->count();
 
@@ -56,7 +58,7 @@ class MerchantStoreController extends Controller
         Store::create([
             'tenant_id' => $tenantId,
             'name' => $validated['name'],
-            'code' => 'STORE-' . strtoupper(substr(uniqid(), -4)),
+            'code' => 'STORE-'.strtoupper(substr(uniqid(), -4)),
             'phone' => $validated['phone'] ?? null,
             'email' => $validated['email'] ?? null,
             'address' => $validated['address'] ?? null,

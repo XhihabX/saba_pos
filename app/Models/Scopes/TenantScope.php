@@ -2,11 +2,11 @@
 
 namespace App\Models\Scopes;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Store;
 
 class TenantScope implements Scope
 {
@@ -21,7 +21,7 @@ class TenantScope implements Scope
     public function apply(Builder $builder, Model $model): void
     {
         // Bypass TenantScope on User model queries to prevent Auth::user() infinite recursion loops
-        if ($model instanceof \App\Models\User || static::$isResolvingAuth) {
+        if ($model instanceof User || static::$isResolvingAuth) {
             return;
         }
 
@@ -32,7 +32,7 @@ class TenantScope implements Scope
                 $user = Auth::user();
 
                 if ($user && $user->role !== 'super_admin' && $user->tenant_id) {
-                    $builder->where($model->getTable() . '.tenant_id', $user->tenant_id);
+                    $builder->where($model->getTable().'.tenant_id', $user->tenant_id);
                 }
             }
         } finally {
@@ -40,4 +40,3 @@ class TenantScope implements Scope
         }
     }
 }
-

@@ -9,46 +9,46 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
-            if (!Schema::hasColumn('tenants', 'deleted_at')) {
+            if (! Schema::hasColumn('tenants', 'deleted_at')) {
                 $table->softDeletes();
             }
         });
 
         Schema::table('stores', function (Blueprint $table) {
-            if (!Schema::hasColumn('stores', 'deleted_at')) {
+            if (! Schema::hasColumn('stores', 'deleted_at')) {
                 $table->softDeletes();
             }
-            if (!Schema::hasColumn('stores', 'allow_negative_stock')) {
+            if (! Schema::hasColumn('stores', 'allow_negative_stock')) {
                 $table->boolean('allow_negative_stock')->default(true)->after('is_active');
             }
         });
 
         Schema::table('products', function (Blueprint $table) {
-            if (!Schema::hasColumn('products', 'deleted_at')) {
+            if (! Schema::hasColumn('products', 'deleted_at')) {
                 $table->softDeletes();
             }
         });
 
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'deleted_at')) {
+            if (! Schema::hasColumn('users', 'deleted_at')) {
                 $table->softDeletes();
             }
         });
 
         Schema::table('suppliers', function (Blueprint $table) {
-            if (!Schema::hasColumn('suppliers', 'deleted_at')) {
+            if (! Schema::hasColumn('suppliers', 'deleted_at')) {
                 $table->softDeletes();
             }
         });
 
         Schema::table('categories', function (Blueprint $table) {
-            if (!Schema::hasColumn('categories', 'deleted_at')) {
+            if (! Schema::hasColumn('categories', 'deleted_at')) {
                 $table->softDeletes();
             }
         });
 
         Schema::table('order_items', function (Blueprint $table) {
-            if (!Schema::hasColumn('order_items', 'is_backorder')) {
+            if (! Schema::hasColumn('order_items', 'is_backorder')) {
                 $table->boolean('is_backorder')->default(false);
             }
         });

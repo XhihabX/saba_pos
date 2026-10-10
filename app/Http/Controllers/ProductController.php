@@ -9,6 +9,7 @@ use App\Models\Stock;
 use App\Models\Store;
 use App\Models\Unit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
@@ -17,12 +18,13 @@ class ProductController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -137,7 +139,7 @@ class ProductController extends Controller
         Category::create([
             'tenant_id' => $tenantId,
             'name' => $validated['name'],
-            'slug' => \Illuminate\Support\Str::slug($validated['name']),
+            'slug' => Str::slug($validated['name']),
             'is_active' => true,
         ]);
 
@@ -153,7 +155,7 @@ class ProductController extends Controller
         Brand::firstOrCreate([
             'name' => $validated['name'],
         ], [
-            'slug' => \Illuminate\Support\Str::slug($validated['name']),
+            'slug' => Str::slug($validated['name']),
         ]);
 
         return redirect()->back()->with('success', "Brand '{$validated['name']}' created!");

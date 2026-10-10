@@ -28,7 +28,7 @@ return new class extends Migration
         foreach ($tables as $tableName) {
             if (Schema::hasTable($tableName)) {
                 Schema::table($tableName, function (Blueprint $table) use ($tableName) {
-                    if (!Schema::hasColumn($tableName, 'tenant_id')) {
+                    if (! Schema::hasColumn($tableName, 'tenant_id')) {
                         $table->unsignedBigInteger('tenant_id')->nullable()->index()->after('id');
                     }
                 });
@@ -63,13 +63,13 @@ return new class extends Migration
                         if (Schema::hasColumn($tableName, 'tenant_id')) {
                             try {
                                 $table->dropForeign("{$tableName}_tenant_id_foreign");
-                            } catch (\Throwable $e) {
+                            } catch (Throwable $e) {
                                 // foreign key may not exist
                             }
                             $table->dropColumn('tenant_id');
                         }
                     });
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // Ignore drop errors for pre-existing foreign-constrained tenant_id columns
                 }
             }

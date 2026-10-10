@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -24,6 +25,7 @@ class HandleInertiaRequests extends Middleware
     public function version(Request $request): ?string
     {
         $this->ensureBuildAssetsSynced();
+
         return parent::version($request);
     }
 
@@ -31,22 +33,26 @@ class HandleInertiaRequests extends Middleware
     {
         try {
             $sourceManifest = base_path('public/build/manifest.json');
-            if (!file_exists($sourceManifest)) return;
+            if (! file_exists($sourceManifest)) {
+                return;
+            }
 
             $sourceMtime = filemtime($sourceManifest);
             $targetDirs = array_filter([
-                dirname(base_path()) . '/public_html/build',
-                isset($_SERVER['DOCUMENT_ROOT']) && $_SERVER['DOCUMENT_ROOT'] ? rtrim($_SERVER['DOCUMENT_ROOT'], '/') . '/build' : null,
+                dirname(base_path()).'/public_html/build',
+                isset($_SERVER['DOCUMENT_ROOT']) && $_SERVER['DOCUMENT_ROOT'] ? rtrim($_SERVER['DOCUMENT_ROOT'], '/').'/build' : null,
             ]);
 
             foreach ($targetDirs as $dest) {
-                if (!$dest || $dest === base_path('public/build')) continue;
-                $destManifest = $dest . '/manifest.json';
-                if (!file_exists($destManifest) || filemtime($destManifest) < $sourceMtime) {
+                if (! $dest || $dest === base_path('public/build')) {
+                    continue;
+                }
+                $destManifest = $dest.'/manifest.json';
+                if (! file_exists($destManifest) || filemtime($destManifest) < $sourceMtime) {
                     $this->copyDirRecursive(base_path('public/build'), $dest);
                     @touch($destManifest, $sourceMtime);
-                    @\Illuminate\Support\Facades\Artisan::call('view:clear');
-                    @\Illuminate\Support\Facades\Artisan::call('config:clear');
+                    @Artisan::call('view:clear');
+                    @Artisan::call('config:clear');
                 }
             }
         } catch (\Throwable $e) {
@@ -56,14 +62,20 @@ class HandleInertiaRequests extends Middleware
 
     private function copyDirRecursive(string $src, string $dst): void
     {
-        if (!file_exists($src)) return;
-        if (!file_exists($dst)) @mkdir($dst, 0755, true);
+        if (! file_exists($src)) {
+            return;
+        }
+        if (! file_exists($dst)) {
+            @mkdir($dst, 0755, true);
+        }
         $dir = @opendir($src);
-        if (!$dir) return;
+        if (! $dir) {
+            return;
+        }
         while (($file = readdir($dir)) !== false) {
             if ($file !== '.' && $file !== '..') {
-                $srcPath = $src . '/' . $file;
-                $dstPath = $dst . '/' . $file;
+                $srcPath = $src.'/'.$file;
+                $dstPath = $dst.'/'.$file;
                 if (is_dir($srcPath)) {
                     $this->copyDirRecursive($srcPath, $dstPath);
                 } else {

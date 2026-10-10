@@ -21,9 +21,10 @@ class SmsService
         $gatewayUrl = $store?->sms_gateway_url ?? config('services.sms.gateway_url');
         $apiKey = $store?->sms_api_key ?? config('services.sms.api_key');
 
-        if (!$gatewayUrl) {
+        if (! $gatewayUrl) {
             // Feature flag / fallback: Log SMS to system audit/application logs when gateway URL is not configured
             Log::info("SMS Gateway [Simulated - No Gateway URL Configured] to {$recipientPhone}: {$message}");
+
             return true;
         }
 
@@ -36,7 +37,8 @@ class SmsService
 
             return $response->successful();
         } catch (\Throwable $e) {
-            Log::error("SMS Dispatch Error to {$recipientPhone}: " . $e->getMessage());
+            Log::error("SMS Dispatch Error to {$recipientPhone}: ".$e->getMessage());
+
             return false;
         }
     }
@@ -49,8 +51,9 @@ class SmsService
         $store = Store::find($storeId);
         $storeName = $store?->name ?? 'Our Outlet';
         $formattedDue = number_format($dueAmount, 2);
-        
+
         $msg = "Dear {$customerName}, your current outstanding balance at {$storeName} is BDT {$formattedDue}. Please clear your due at your earliest convenience. Thank you!";
+
         return self::sendSms($storeId, $phone, $msg);
     }
 }

@@ -70,7 +70,6 @@ return new class extends Migration
             $table->foreignId('tenant_id')->nullable()->after('id')->constrained('tenants')->cascadeOnDelete();
         });
 
-
         // 4. Register Shifts (Cashier Open/Close Register & Cash Reconciliation)
         Schema::create('register_shifts', function (Blueprint $table) {
             $table->id();
@@ -100,77 +99,158 @@ return new class extends Migration
 
             if (Schema::hasTable('expenses')) {
                 Schema::table('expenses', function (Blueprint $table) {
-                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
-                    if (Schema::hasColumn('expenses', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                    try {
+                        $table->dropForeign(['tenant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    if (Schema::hasColumn('expenses', 'tenant_id')) {
+                        try {
+                            $table->dropColumn('tenant_id');
+                        } catch (Throwable $e) {
+                        }
+                    }
                 });
             }
 
             if (Schema::hasTable('customers')) {
                 Schema::table('customers', function (Blueprint $table) {
-                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
-                    if (Schema::hasColumn('customers', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                    try {
+                        $table->dropForeign(['tenant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    if (Schema::hasColumn('customers', 'tenant_id')) {
+                        try {
+                            $table->dropColumn('tenant_id');
+                        } catch (Throwable $e) {
+                        }
+                    }
                 });
             }
 
             if (Schema::hasTable('suppliers')) {
                 Schema::table('suppliers', function (Blueprint $table) {
-                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
-                    if (Schema::hasColumn('suppliers', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                    try {
+                        $table->dropForeign(['tenant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    if (Schema::hasColumn('suppliers', 'tenant_id')) {
+                        try {
+                            $table->dropColumn('tenant_id');
+                        } catch (Throwable $e) {
+                        }
+                    }
                 });
             }
 
             if (Schema::hasTable('brands')) {
                 Schema::table('brands', function (Blueprint $table) {
-                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
-                    if (Schema::hasColumn('brands', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                    try {
+                        $table->dropForeign(['tenant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    if (Schema::hasColumn('brands', 'tenant_id')) {
+                        try {
+                            $table->dropColumn('tenant_id');
+                        } catch (Throwable $e) {
+                        }
+                    }
                 });
             }
 
             if (Schema::hasTable('units')) {
                 Schema::table('units', function (Blueprint $table) {
-                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
-                    if (Schema::hasColumn('units', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                    try {
+                        $table->dropForeign(['tenant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    if (Schema::hasColumn('units', 'tenant_id')) {
+                        try {
+                            $table->dropColumn('tenant_id');
+                        } catch (Throwable $e) {
+                        }
+                    }
                 });
             }
 
             if (Schema::hasTable('orders')) {
                 Schema::table('orders', function (Blueprint $table) {
-                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
-                    if (Schema::hasColumn('orders', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                    try {
+                        $table->dropForeign(['tenant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    if (Schema::hasColumn('orders', 'tenant_id')) {
+                        try {
+                            $table->dropColumn('tenant_id');
+                        } catch (Throwable $e) {
+                        }
+                    }
                 });
             }
 
             if (Schema::hasTable('products')) {
                 Schema::table('products', function (Blueprint $table) {
-                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
-                    if (Schema::hasColumn('products', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                    try {
+                        $table->dropForeign(['tenant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    if (Schema::hasColumn('products', 'tenant_id')) {
+                        try {
+                            $table->dropColumn('tenant_id');
+                        } catch (Throwable $e) {
+                        }
+                    }
                 });
             }
 
             if (Schema::hasTable('categories')) {
                 Schema::table('categories', function (Blueprint $table) {
-                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
-                    if (Schema::hasColumn('categories', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                    try {
+                        $table->dropForeign(['tenant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    if (Schema::hasColumn('categories', 'tenant_id')) {
+                        try {
+                            $table->dropColumn('tenant_id');
+                        } catch (Throwable $e) {
+                        }
+                    }
                 });
             }
 
             if (Schema::hasTable('stores')) {
                 Schema::table('stores', function (Blueprint $table) {
-                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
-                    if (Schema::hasColumn('stores', 'tenant_id')) { try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {} }
+                    try {
+                        $table->dropForeign(['tenant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    if (Schema::hasColumn('stores', 'tenant_id')) {
+                        try {
+                            $table->dropColumn('tenant_id');
+                        } catch (Throwable $e) {
+                        }
+                    }
                 });
             }
 
             if (Schema::hasTable('users')) {
                 Schema::table('users', function (Blueprint $table) {
-                    try { $table->dropForeign(['store_id']); } catch (\Throwable $e) {}
-                    try { $table->dropForeign(['tenant_id']); } catch (\Throwable $e) {}
-                    try { $table->dropColumn(['role', 'store_id', 'tenant_id']); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropForeign(['store_id']);
+                    } catch (Throwable $e) {
+                    }
+                    try {
+                        $table->dropForeign(['tenant_id']);
+                    } catch (Throwable $e) {
+                    }
+                    try {
+                        $table->dropColumn(['role', 'store_id', 'tenant_id']);
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             Schema::dropIfExists('tenants');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Ignore rollback errors
         }
         Schema::enableForeignKeyConstraints();

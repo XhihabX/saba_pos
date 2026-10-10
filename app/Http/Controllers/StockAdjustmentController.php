@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\Stock;
 use App\Models\StockAdjustment;
 use App\Models\Store;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -15,12 +16,13 @@ class StockAdjustmentController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -59,7 +61,7 @@ class StockAdjustmentController extends Controller
         $product = Product::where('id', $validated['product_id'])->where('tenant_id', $tenantId)->firstOrFail();
 
         return DB::transaction(function () use ($validated, $tenantId, $store, $product) {
-            $refNo = 'ADJ-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4));
+            $refNo = 'ADJ-'.date('Ymd').'-'.strtoupper(substr(uniqid(), -4));
 
             $adjustment = StockAdjustment::create([
                 'tenant_id' => $tenantId,
@@ -83,7 +85,7 @@ class StockAdjustmentController extends Controller
                 $stock->increment('quantity', $validated['quantity']);
             }
 
-            \App\Services\AuditLogger::log(
+            AuditLogger::log(
                 'stock_adjusted',
                 "Adjusted inventory stock for product '{$product->name}': {$validated['type']} {$validated['quantity']} units",
                 [

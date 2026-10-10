@@ -9,6 +9,7 @@ use App\Models\SaaSPlan;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -73,7 +74,7 @@ class SuperAdminController extends Controller
         ]);
 
         return DB::transaction(function () use ($validated) {
-            $code = 'TENANT-' . strtoupper(substr(uniqid(), -5));
+            $code = 'TENANT-'.strtoupper(substr(uniqid(), -5));
 
             $tenant = Tenant::create([
                 'name' => $validated['name'],
@@ -88,8 +89,8 @@ class SuperAdminController extends Controller
 
             $store = Store::create([
                 'tenant_id' => $tenant->id,
-                'name' => $validated['name'] . ' Flagship',
-                'code' => 'STORE-' . strtoupper(substr(uniqid(), -4)),
+                'name' => $validated['name'].' Flagship',
+                'code' => 'STORE-'.strtoupper(substr(uniqid(), -4)),
                 'phone' => $validated['phone'] ?? null,
                 'email' => $validated['email'],
                 'currency_symbol' => '৳',
@@ -201,6 +202,7 @@ class SuperAdminController extends Controller
             // FIX: Don't destroy the admin session! Store original ID in session so they can return.
             session()->put('impersonated_by', auth()->id());
             Auth::login($merchantUser);
+
             return redirect()->route('merchant.dashboard')->with('success', "Impersonating merchant {$tenant->name}.");
         }
 
@@ -210,6 +212,7 @@ class SuperAdminController extends Controller
     public function plansIndex()
     {
         $plans = SaaSPlan::all();
+
         return Inertia::render('SuperAdmin/Plans', ['plans' => $plans]);
     }
 
@@ -262,7 +265,8 @@ class SuperAdminController extends Controller
 
         $plans = SaaSPlan::where('is_active', true)->get();
         $planDistribution = $plans->map(function ($plan) {
-            $count = Tenant::where('plan_name', 'LIKE', '%' . $plan->name . '%')->where('subscription_status', 'active')->count();
+            $count = Tenant::where('plan_name', 'LIKE', '%'.$plan->name.'%')->where('subscription_status', 'active')->count();
+
             return [
                 'name' => $plan->name,
                 'monthly_price' => (float) $plan->monthly_price,
@@ -274,6 +278,7 @@ class SuperAdminController extends Controller
             ->get()
             ->map(function ($t) {
                 $t->total_sales = Order::where('tenant_id', $t->id)->sum('grand_total');
+
                 return $t;
             })
             ->sortByDesc('total_sales')
@@ -293,6 +298,7 @@ class SuperAdminController extends Controller
     public function auditLogsIndex(Request $request)
     {
         $logs = AuditLog::latest()->paginate(25);
+
         return Inertia::render('SuperAdmin/AuditLogs', [
             'logs' => $logs,
         ]);
@@ -343,6 +349,7 @@ class SuperAdminController extends Controller
     public function storesIndex()
     {
         $stores = Store::with('tenant')->latest()->paginate(25);
+
         return Inertia::render('SuperAdmin/Stores', ['stores' => $stores]);
     }
 
@@ -356,7 +363,7 @@ class SuperAdminController extends Controller
         ]);
 
         $tenant = Tenant::first();
-        if (!$tenant) {
+        if (! $tenant) {
             return redirect()->back()->with('error', 'No merchant tenant found to attach store.');
         }
 
@@ -376,13 +383,13 @@ class SuperAdminController extends Controller
     public function toggleStoreStatus($id)
     {
         $store = Store::findOrFail($id);
-        $store->update(['is_active' => !$store->is_active]);
+        $store->update(['is_active' => ! $store->is_active]);
 
         AuditLog::create([
             'tenant_id' => $store->tenant_id,
             'user_name' => auth()->user()->name ?? 'Super Admin',
             'action' => 'store_status_toggled',
-            'description' => "Toggled active status for outlet '{$store->name}' to " . ($store->is_active ? 'Active' : 'Inactive') . '.',
+            'description' => "Toggled active status for outlet '{$store->name}' to ".($store->is_active ? 'Active' : 'Inactive').'.',
         ]);
 
         return redirect()->back()->with('success', "Store outlet '{$store->name}' status updated.");
@@ -391,6 +398,7 @@ class SuperAdminController extends Controller
     public function usersIndex()
     {
         $users = User::with(['tenant', 'store'])->latest()->paginate(25);
+
         return Inertia::render('SuperAdmin/Users', ['users' => $users]);
     }
 
@@ -416,6 +424,7 @@ class SuperAdminController extends Controller
     public function transactionsIndex()
     {
         $tenants = Tenant::whereNotNull('transaction_id')->orWhereNotNull('payment_method')->latest()->get();
+
         return Inertia::render('SuperAdmin/Transactions', ['tenants' => $tenants]);
     }
 
@@ -426,8 +435,8 @@ class SuperAdminController extends Controller
         ]);
 
         $tenant = Tenant::findOrFail($id);
-        $currentExpiry = $tenant->expires_at && \Carbon\Carbon::parse($tenant->expires_at)->isFuture()
-            ? \Carbon\Carbon::parse($tenant->expires_at)
+        $currentExpiry = $tenant->expires_at && Carbon::parse($tenant->expires_at)->isFuture()
+            ? Carbon::parse($tenant->expires_at)
             : now();
 
         $newExpiry = $currentExpiry->addDays($validated['days']);
@@ -441,7 +450,7 @@ class SuperAdminController extends Controller
             'tenant_id' => $tenant->id,
             'user_name' => auth()->user()->name ?? 'Super Admin',
             'action' => 'subscription_extended',
-            'description' => "Extended subscription for '{$tenant->name}' by {$validated['days']} days until " . $newExpiry->format('Y-m-d') . '.',
+            'description' => "Extended subscription for '{$tenant->name}' by {$validated['days']} days until ".$newExpiry->format('Y-m-d').'.',
         ]);
 
         return redirect()->back()->with('success', "Subscription for '{$tenant->name}' extended by {$validated['days']} days!");
@@ -484,7 +493,7 @@ class SuperAdminController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'required|email|unique:users,email,'.$user->id,
             'role' => 'required|in:super_admin,merchant,store_manager,cashier',
             'tenant_id' => 'nullable|exists:tenants,id',
             'store_id' => 'nullable|exists:stores,id',
@@ -499,7 +508,7 @@ class SuperAdminController extends Controller
             'store_id' => $validated['store_id'] ?? null,
         ];
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $updateData['password'] = Hash::make($validated['password']);
         }
 
@@ -673,6 +682,7 @@ class SuperAdminController extends Controller
     public function exitImpersonation(Request $request)
     {
         $request->session()->forget('impersonated_tenant_id');
+
         return redirect()->route('superadmin.dashboard')->with('success', 'Exited impersonation mode. Returned to Super Admin Command Center.');
     }
 
@@ -686,4 +696,3 @@ class SuperAdminController extends Controller
         return Inertia::render('SuperAdmin/Announcements');
     }
 }
-

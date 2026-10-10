@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Store extends Model
 {
-    use HasFactory, Tenantable, SoftDeletes;
+    use HasFactory, SoftDeletes, Tenantable;
 
     protected $attributes = [
         'default_tax_rate' => 15.00,
@@ -59,4 +59,3 @@ class Store extends Model
         return $this->hasMany(User::class);
     }
 }
-

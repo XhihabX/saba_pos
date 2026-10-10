@@ -22,7 +22,7 @@ class EfdBridgeService
 
         if ($store?->is_vat_registered && empty($binNumber)) {
             throw ValidationException::withMessages([
-                'store' => ['VAT registered store must have a valid BIN number before issuing invoices.']
+                'store' => ['VAT registered store must have a valid BIN number before issuing invoices.'],
             ]);
         }
 
@@ -60,4 +60,3 @@ class EfdBridgeService
         return $payload;
     }
 }
-

@@ -20,6 +20,7 @@ class ThrottleFailedPinAttempts
 
         if (RateLimiter::tooManyAttempts($key, 5)) {
             $seconds = RateLimiter::availableIn($key);
+
             return response()->json([
                 'success' => false,
                 'message' => "Too many failed PIN attempts. Lockout in effect for {$seconds} seconds.",

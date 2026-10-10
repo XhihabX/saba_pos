@@ -2,6 +2,15 @@
 
 namespace App\Providers;
 
+use App\Models\Customer;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\Store;
+use App\Policies\CustomerPolicy;
+use App\Policies\OrderPolicy;
+use App\Policies\ProductPolicy;
+use App\Policies\StorePolicy;
+use Illuminate\Foundation\Console\AboutCommand;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -15,9 +24,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind('path.public', function () {
             // 1. Check DOCUMENT_ROOT from web server (cPanel / Apache / Nginx)
-            if (isset($_SERVER['DOCUMENT_ROOT']) && !empty($_SERVER['DOCUMENT_ROOT'])) {
+            if (isset($_SERVER['DOCUMENT_ROOT']) && ! empty($_SERVER['DOCUMENT_ROOT'])) {
                 $docRoot = rtrim($_SERVER['DOCUMENT_ROOT'], '/');
-                if (file_exists($docRoot . '/build/manifest.json') || file_exists($docRoot . '/build/.vite/manifest.json')) {
+                if (file_exists($docRoot.'/build/manifest.json') || file_exists($docRoot.'/build/.vite/manifest.json')) {
                     return $docRoot;
                 }
             }
@@ -25,16 +34,16 @@ class AppServiceProvider extends ServiceProvider
             // 2. Auto-detect paths in user's home directory
             $baseDir = dirname($this->app->basePath());
             $possiblePaths = [
-                $baseDir . '/public_html',
-                $baseDir . '/sabapos',
-                $baseDir . '/xhihab.com',
-                $baseDir . '/public_html/sabapos',
-                $baseDir . '/pos.sababilling.net',
-                $baseDir . '/pos',
+                $baseDir.'/public_html',
+                $baseDir.'/sabapos',
+                $baseDir.'/xhihab.com',
+                $baseDir.'/public_html/sabapos',
+                $baseDir.'/pos.sababilling.net',
+                $baseDir.'/pos',
             ];
 
             foreach ($possiblePaths as $path) {
-                if (file_exists($path . '/build/manifest.json') || file_exists($path . '/build/.vite/manifest.json')) {
+                if (file_exists($path.'/build/manifest.json') || file_exists($path.'/build/.vite/manifest.json')) {
                     return $path;
                 }
             }
@@ -49,10 +58,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Gate::policy(\App\Models\Store::class, \App\Policies\StorePolicy::class);
-        Gate::policy(\App\Models\Product::class, \App\Policies\ProductPolicy::class);
-        Gate::policy(\App\Models\Order::class, \App\Policies\OrderPolicy::class);
-        Gate::policy(\App\Models\Customer::class, \App\Policies\CustomerPolicy::class);
+        Gate::policy(Store::class, StorePolicy::class);
+        Gate::policy(Product::class, ProductPolicy::class);
+        Gate::policy(Order::class, OrderPolicy::class);
+        Gate::policy(Customer::class, CustomerPolicy::class);
         $rawAppUrl = (string) env('APP_URL', '');
 
         // Enforce HTTPS scheme on production or when behind SSL / Reverse Proxies (cPanel, Nginx, Cloudflare)
@@ -68,7 +77,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Hardened auto-healing for APP_URL to prevent broken asset URLs or malformed Ziggy routes (e.g. http://: or localhost:8000)
         $host = $_SERVER['HTTP_HOST'] ?? 'xhihab.com';
-        if (str_contains($host, ':') && !preg_match('/:\d+$/', $host)) {
+        if (str_contains($host, ':') && ! preg_match('/:\d+$/', $host)) {
             $host = preg_replace('/:.*$/', '', $host);
         }
         if (empty($host)) {
@@ -76,9 +85,9 @@ class AppServiceProvider extends ServiceProvider
         }
 
         $scheme = $isHttps ? 'https' : 'http';
-        $targetUrl = $scheme . '://' . $host;
+        $targetUrl = $scheme.'://'.$host;
 
-        if (!app()->environment('testing')) {
+        if (! app()->environment('testing')) {
             $currentConfigUrl = (string) config('app.url');
             if (
                 empty($currentConfigUrl) ||
@@ -86,7 +95,7 @@ class AppServiceProvider extends ServiceProvider
                 str_contains($currentConfigUrl, '127.0.0.1') ||
                 str_contains($currentConfigUrl, 'http://:') ||
                 str_contains($currentConfigUrl, '://:') ||
-                !empty($_SERVER['HTTP_HOST'])
+                ! empty($_SERVER['HTTP_HOST'])
             ) {
                 config(['app.url' => $targetUrl]);
             }
@@ -94,8 +103,8 @@ class AppServiceProvider extends ServiceProvider
             URL::forceRootUrl(config('app.url') ?: $targetUrl);
         }
 
-        if (class_exists(\Illuminate\Foundation\Console\AboutCommand::class)) {
-            \Illuminate\Foundation\Console\AboutCommand::add('Queue Security', fn () => [
+        if (class_exists(AboutCommand::class)) {
+            AboutCommand::add('Queue Security', fn () => [
                 'Driver' => config('queue.default'),
                 'Status' => (config('app.env') === 'production' && config('queue.default') === 'sync')
                     ? '⚠️ WARNING: QUEUE_CONNECTION=sync in production'
@@ -104,5 +113,3 @@ class AppServiceProvider extends ServiceProvider
         }
     }
 }
-
-

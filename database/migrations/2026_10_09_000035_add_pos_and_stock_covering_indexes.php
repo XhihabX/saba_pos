@@ -38,19 +38,22 @@ return new class extends Migration
             Schema::table('customers', function (Blueprint $table) {
                 $table->dropIndex('customers_tenant_name_v5_idx');
             });
-        } catch (\Throwable $e) {}
+        } catch (Throwable $e) {
+        }
 
         try {
             Schema::table('product_batches', function (Blueprint $table) {
                 $table->dropIndex('batches_tenant_qty_expiry_v5_idx');
             });
-        } catch (\Throwable $e) {}
+        } catch (Throwable $e) {
+        }
 
         try {
             Schema::table('products', function (Blueprint $table) {
                 $table->dropIndex('products_tenant_del_active_v5_idx');
             });
-        } catch (\Throwable $e) {}
+        } catch (Throwable $e) {
+        }
 
         Schema::enableForeignKeyConstraints();
     }

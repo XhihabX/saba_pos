@@ -3,12 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\Store;
-use App\Models\Stock;
 use App\Models\OrderItem;
-use Illuminate\Http\Request;
+use App\Models\Stock;
+use App\Models\Store;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 
 class PdfExportController extends Controller
 {
@@ -22,6 +21,7 @@ class PdfExportController extends Controller
         $order->load(['store', 'customer', 'user', 'items.product', 'items.variant']);
 
         $pdf = Pdf::loadView('pdf.invoice', compact('order'));
+
         return $pdf->download("invoice-{$order->id}.pdf");
     }
 
@@ -35,6 +35,7 @@ class PdfExportController extends Controller
         $order->load(['store', 'customer', 'user', 'items.product', 'items.variant']);
 
         $pdf = Pdf::loadView('pdf.mushak63', compact('order'));
+
         return $pdf->download("mushak63-{$order->id}.pdf");
     }
 
@@ -48,7 +49,7 @@ class PdfExportController extends Controller
 
         foreach ($stores as $store) {
             $ordersQuery = Order::where('tenant_id', $tenantId)->where('store_id', $store->id);
-            
+
             $totalOrders = (clone $ordersQuery)->count();
             $grossRevenue = (clone $ordersQuery)->sum('grand_total');
             $vatCollected = (clone $ordersQuery)->sum('tax_amount');
@@ -74,6 +75,7 @@ class PdfExportController extends Controller
         }
 
         $pdf = Pdf::loadView('pdf.branch_report', compact('branch_data'));
-        return $pdf->download('branch-report-' . date('Ymd-His') . '.pdf');
+
+        return $pdf->download('branch-report-'.date('Ymd-His').'.pdf');
     }
 }

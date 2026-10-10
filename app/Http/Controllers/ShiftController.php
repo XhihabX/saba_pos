@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
 use App\Models\Order;
+use App\Models\OrderPayment;
+use App\Models\ProductReturn;
 use App\Models\RegisterShift;
 use App\Models\Store;
 use App\Services\AuditLogger;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ShiftController extends Controller
@@ -15,12 +17,13 @@ class ShiftController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -37,7 +40,7 @@ class ShiftController extends Controller
             ->first();
 
         return response()->json([
-            'isOpen' => !!$shift,
+            'isOpen' => (bool) $shift,
             'shift' => $shift,
         ]);
     }
@@ -54,9 +57,9 @@ class ShiftController extends Controller
 
         // Verify store belongs to tenant
         $store = Store::where('id', $validated['store_id'])->where('tenant_id', $tenantId)->first();
-        if (!$store) {
+        if (! $store) {
             throw ValidationException::withMessages([
-                'store_id' => ['Selected store outlet is invalid or belongs to another tenant.']
+                'store_id' => ['Selected store outlet is invalid or belongs to another tenant.'],
             ]);
         }
 
@@ -111,50 +114,51 @@ class ShiftController extends Controller
             ->where('tenant_id', $tenantId)
             ->first() ?? RegisterShift::where('id', $validated['shift_id'])->first();
 
-        if (!$shift) {
+        if (! $shift) {
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest' || $request->acceptsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Active register shift record not found.',
                 ], 404);
             }
+
             return redirect()->back()->withErrors(['shift_id' => 'Active register shift record not found.']);
         }
 
         // Calculate sales during this shift period, specific to the cashier (user_id), using OrderPayments for accurate splits.
-        $cashSales = \App\Models\OrderPayment::whereHas('order', function($q) use ($shift) {
+        $cashSales = OrderPayment::whereHas('order', function ($q) use ($shift) {
             $q->where('store_id', $shift->store_id)
-              ->where('user_id', $shift->user_id)
-              ->whereBetween('created_at', [$shift->opened_at, now()]);
+                ->where('user_id', $shift->user_id)
+                ->whereBetween('created_at', [$shift->opened_at, now()]);
         })->where('payment_method', 'cash')->sum('amount');
 
-        $cardSales = \App\Models\OrderPayment::whereHas('order', function($q) use ($shift) {
+        $cardSales = OrderPayment::whereHas('order', function ($q) use ($shift) {
             $q->where('store_id', $shift->store_id)
-              ->where('user_id', $shift->user_id)
-              ->whereBetween('created_at', [$shift->opened_at, now()]);
+                ->where('user_id', $shift->user_id)
+                ->whereBetween('created_at', [$shift->opened_at, now()]);
         })->where('payment_method', 'card')->sum('amount');
 
-        $mobileSales = \App\Models\OrderPayment::whereHas('order', function($q) use ($shift) {
+        $mobileSales = OrderPayment::whereHas('order', function ($q) use ($shift) {
             $q->where('store_id', $shift->store_id)
-              ->where('user_id', $shift->user_id)
-              ->whereBetween('created_at', [$shift->opened_at, now()]);
+                ->where('user_id', $shift->user_id)
+                ->whereBetween('created_at', [$shift->opened_at, now()]);
         })->where('payment_method', 'mobile_wallet')->sum('amount');
 
-        $totalChangeReturn = (float) \App\Models\Order::where('store_id', $shift->store_id)
+        $totalChangeReturn = (float) Order::where('store_id', $shift->store_id)
             ->where('user_id', $shift->user_id)
             ->whereBetween('created_at', [$shift->opened_at, now()])
             ->sum('change_return');
 
-        $cashRefunds = (float) \App\Models\ProductReturn::where('store_id', $shift->store_id)
+        $cashRefunds = (float) ProductReturn::where('store_id', $shift->store_id)
             ->whereBetween('created_at', [$shift->opened_at, now()])
             ->sum('refund_amount');
 
-        $cashDuePayments = (float) \App\Models\AuditLog::where('tenant_id', $tenantId)
+        $cashDuePayments = (float) AuditLog::where('tenant_id', $tenantId)
             ->where('store_id', $shift->store_id)
             ->where('action', 'customer_due_paid')
             ->whereBetween('created_at', [$shift->opened_at, now()])
             ->get()
-            ->sum(function($log) {
+            ->sum(function ($log) {
                 return (float) ($log->payload['amount'] ?? 0);
             });
 
@@ -209,7 +213,7 @@ class ShiftController extends Controller
     {
         $shift = RegisterShift::with(['store', 'user'])->findOrFail($shiftId);
 
-        $orders = \App\Models\Order::where('store_id', $shift->store_id)
+        $orders = Order::where('store_id', $shift->store_id)
             ->where('user_id', $shift->user_id)
             ->whereBetween('created_at', [$shift->opened_at, $shift->closed_at ?? now()])
             ->get();

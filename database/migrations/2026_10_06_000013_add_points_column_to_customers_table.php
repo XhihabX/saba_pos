@@ -13,7 +13,7 @@ return new class extends Migration
     {
         if (Schema::hasTable('customers')) {
             Schema::table('customers', function (Blueprint $table) {
-                if (!Schema::hasColumn('customers', 'points')) {
+                if (! Schema::hasColumn('customers', 'points')) {
                     $table->integer('points')->default(0)->after('due_balance');
                 }
             });

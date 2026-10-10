@@ -14,7 +14,7 @@ return new class extends Migration
         // 1. Add cost_price to order_items
         if (Schema::hasTable('order_items')) {
             Schema::table('order_items', function (Blueprint $table) {
-                if (!Schema::hasColumn('order_items', 'cost_price')) {
+                if (! Schema::hasColumn('order_items', 'cost_price')) {
                     $table->decimal('cost_price', 12, 2)->default(0.00)->after('unit_price');
                 }
             });
@@ -55,11 +55,11 @@ return new class extends Migration
         if (Schema::hasTable('products')) {
             Schema::table('products', function (Blueprint $table) {
                 $table->index(['tenant_id', 'is_active'], 'products_tenant_active_idx');
-                
+
                 // Tenant-scoped unique SKU constraint
                 try {
                     $table->dropUnique('products_sku_unique');
-                } catch (\Throwable $e) {
+                } catch (Throwable $e) {
                     // Ignore if unique index name differs
                 }
                 $table->unique(['tenant_id', 'sku'], 'products_tenant_sku_unique');
@@ -91,54 +91,84 @@ return new class extends Migration
                     if (Schema::hasColumn('order_items', 'cost_price')) {
                         $table->dropColumn(['cost_price']);
                     }
-                    try { $table->dropIndex('order_items_order_product_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('order_items_order_product_idx');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             if (Schema::hasTable('orders')) {
                 Schema::table('orders', function (Blueprint $table) {
-                    try { $table->dropIndex('orders_tenant_created_idx'); } catch (\Throwable $e) {}
-                    try { $table->dropIndex('orders_tenant_store_created_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('orders_tenant_created_idx');
+                    } catch (Throwable $e) {
+                    }
+                    try {
+                        $table->dropIndex('orders_tenant_store_created_idx');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             if (Schema::hasTable('order_payments')) {
                 Schema::table('order_payments', function (Blueprint $table) {
-                    try { $table->dropIndex('order_payments_order_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('order_payments_order_idx');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             if (Schema::hasTable('stocks')) {
                 Schema::table('stocks', function (Blueprint $table) {
-                    try { $table->dropIndex('stocks_product_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('stocks_product_idx');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             if (Schema::hasTable('customers')) {
                 Schema::table('customers', function (Blueprint $table) {
-                    try { $table->dropIndex('customers_tenant_phone_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('customers_tenant_phone_idx');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             if (Schema::hasTable('products')) {
                 Schema::table('products', function (Blueprint $table) {
-                    try { $table->dropIndex('products_tenant_active_idx'); } catch (\Throwable $e) {}
-                    try { $table->dropUnique('products_tenant_sku_unique'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('products_tenant_active_idx');
+                    } catch (Throwable $e) {
+                    }
+                    try {
+                        $table->dropUnique('products_tenant_sku_unique');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             if (Schema::hasTable('audit_logs')) {
                 Schema::table('audit_logs', function (Blueprint $table) {
-                    try { $table->dropIndex('audit_logs_tenant_created_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('audit_logs_tenant_created_idx');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
 
             if (Schema::hasTable('mfs_transactions')) {
                 Schema::table('mfs_transactions', function (Blueprint $table) {
-                    try { $table->dropIndex('mfs_transactions_tenant_status_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('mfs_transactions_tenant_status_idx');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Ignore rollback index drop errors
         }
         Schema::enableForeignKeyConstraints();

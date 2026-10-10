@@ -76,11 +76,11 @@ class DailySalesSummary extends Model
         ];
 
         foreach ($payments as $method => $amount) {
-            $key = strtolower((string)$method) . '_total';
+            $key = strtolower((string) $method).'_total';
             if (array_key_exists($key, $paymentTotals)) {
-                $paymentTotals[$key] += (float)$amount;
+                $paymentTotals[$key] += (float) $amount;
             } else {
-                $paymentTotals['other_total'] += (float)$amount;
+                $paymentTotals['other_total'] += (float) $amount;
             }
         }
 
@@ -92,11 +92,11 @@ class DailySalesSummary extends Model
             $paymentTotals['cash_total'], $paymentTotals['card_total'], $paymentTotals['bkash_total'],
             $paymentTotals['nagad_total'], $paymentTotals['rocket_total'], $paymentTotals['upay_total'],
             $paymentTotals['due_total'], $paymentTotals['other_total'],
-            $now, $now
+            $now, $now,
         ];
 
         if ($driver === 'sqlite') {
-            DB::statement("
+            DB::statement('
                 INSERT INTO daily_sales_summaries (
                     tenant_id, store_id, date, orders_count, subtotal, tax_amount, grand_total, cogs, refunds,
                     cash_total, card_total, bkash_total, nagad_total, rocket_total, upay_total, due_total, other_total,
@@ -121,9 +121,9 @@ class DailySalesSummary extends Model
                     due_total = due_total + excluded.due_total,
                     other_total = other_total + excluded.other_total,
                     updated_at = excluded.updated_at
-            ", $bindings);
+            ', $bindings);
         } else {
-            DB::statement("
+            DB::statement('
                 INSERT INTO daily_sales_summaries (
                     tenant_id, store_id, date, orders_count, subtotal, tax_amount, grand_total, cogs, refunds,
                     cash_total, card_total, bkash_total, nagad_total, rocket_total, upay_total, due_total, other_total,
@@ -148,7 +148,7 @@ class DailySalesSummary extends Model
                     due_total = due_total + VALUES(due_total),
                     other_total = other_total + VALUES(other_total),
                     updated_at = VALUES(updated_at)
-            ", $bindings);
+            ', $bindings);
         }
     }
 
@@ -167,7 +167,7 @@ class DailySalesSummary extends Model
         $bindings = [$tenantId, $storeId, $date, $refundAmount, $now, $now];
 
         if ($driver === 'sqlite') {
-            DB::statement("
+            DB::statement('
                 INSERT INTO daily_sales_summaries (
                     tenant_id, store_id, date, orders_count, subtotal, tax_amount, grand_total, cogs, refunds,
                     cash_total, card_total, bkash_total, nagad_total, rocket_total, upay_total, due_total, other_total,
@@ -180,9 +180,9 @@ class DailySalesSummary extends Model
                 ON CONFLICT(tenant_id, store_id, date) DO UPDATE SET
                     refunds = refunds + excluded.refunds,
                     updated_at = excluded.updated_at
-            ", $bindings);
+            ', $bindings);
         } else {
-            DB::statement("
+            DB::statement('
                 INSERT INTO daily_sales_summaries (
                     tenant_id, store_id, date, orders_count, subtotal, tax_amount, grand_total, cogs, refunds,
                     cash_total, card_total, bkash_total, nagad_total, rocket_total, upay_total, due_total, other_total,
@@ -195,7 +195,7 @@ class DailySalesSummary extends Model
                 ON DUPLICATE KEY UPDATE
                     refunds = refunds + VALUES(refunds),
                     updated_at = VALUES(updated_at)
-            ", $bindings);
+            ', $bindings);
         }
     }
 
@@ -224,11 +224,11 @@ class DailySalesSummary extends Model
         ];
 
         foreach ($payments as $method => $amount) {
-            $key = strtolower((string)$method) . '_total';
+            $key = strtolower((string) $method).'_total';
             if (array_key_exists($key, $paymentTotals)) {
-                $paymentTotals[$key] += (float)$amount;
+                $paymentTotals[$key] += (float) $amount;
             } else {
-                $paymentTotals['other_total'] += (float)$amount;
+                $paymentTotals['other_total'] += (float) $amount;
             }
         }
 
@@ -240,11 +240,11 @@ class DailySalesSummary extends Model
             $paymentTotals['cash_total'], $paymentTotals['card_total'], $paymentTotals['bkash_total'],
             $paymentTotals['nagad_total'], $paymentTotals['rocket_total'], $paymentTotals['upay_total'],
             $paymentTotals['due_total'], $paymentTotals['other_total'],
-            $now, $now
+            $now, $now,
         ];
 
         if ($driver === 'sqlite') {
-            DB::statement("
+            DB::statement('
                 INSERT INTO daily_sales_summaries (
                     tenant_id, store_id, date, orders_count, subtotal, tax_amount, grand_total, cogs, refunds,
                     cash_total, card_total, bkash_total, nagad_total, rocket_total, upay_total, due_total, other_total,
@@ -269,9 +269,9 @@ class DailySalesSummary extends Model
                     due_total = max(0, due_total - excluded.due_total),
                     other_total = max(0, other_total - excluded.other_total),
                     updated_at = excluded.updated_at
-            ", $bindings);
+            ', $bindings);
         } else {
-            DB::statement("
+            DB::statement('
                 INSERT INTO daily_sales_summaries (
                     tenant_id, store_id, date, orders_count, subtotal, tax_amount, grand_total, cogs, refunds,
                     cash_total, card_total, bkash_total, nagad_total, rocket_total, upay_total, due_total, other_total,
@@ -296,7 +296,7 @@ class DailySalesSummary extends Model
                     due_total = GREATEST(0.00, due_total - VALUES(due_total)),
                     other_total = GREATEST(0.00, other_total - VALUES(other_total)),
                     updated_at = VALUES(updated_at)
-            ", $bindings);
+            ', $bindings);
         }
     }
 
@@ -348,20 +348,20 @@ class DailySalesSummary extends Model
         self::updateOrCreate(
             ['tenant_id' => $tenantId, 'store_id' => $storeId, 'date' => $date],
             [
-                'orders_count' => (int)($orderStats->orders_count ?? 0),
-                'subtotal' => (float)($orderStats->subtotal ?? 0.00),
-                'tax_amount' => (float)($orderStats->tax_amount ?? 0.00),
-                'grand_total' => (float)($orderStats->grand_total ?? 0.00),
-                'cogs' => (float)($orderStats->cogs ?? 0.00),
-                'refunds' => (float)($returnStats->total_refunds ?? 0.00),
-                'cash_total' => (float)($paymentStats->cash_total ?? 0.00),
-                'card_total' => (float)($paymentStats->card_total ?? 0.00),
-                'bkash_total' => (float)($paymentStats->bkash_total ?? 0.00),
-                'nagad_total' => (float)($paymentStats->nagad_total ?? 0.00),
-                'rocket_total' => (float)($paymentStats->rocket_total ?? 0.00),
-                'upay_total' => (float)($paymentStats->upay_total ?? 0.00),
-                'due_total' => (float)($paymentStats->due_total ?? 0.00),
-                'other_total' => (float)($paymentStats->other_total ?? 0.00),
+                'orders_count' => (int) ($orderStats->orders_count ?? 0),
+                'subtotal' => (float) ($orderStats->subtotal ?? 0.00),
+                'tax_amount' => (float) ($orderStats->tax_amount ?? 0.00),
+                'grand_total' => (float) ($orderStats->grand_total ?? 0.00),
+                'cogs' => (float) ($orderStats->cogs ?? 0.00),
+                'refunds' => (float) ($returnStats->total_refunds ?? 0.00),
+                'cash_total' => (float) ($paymentStats->cash_total ?? 0.00),
+                'card_total' => (float) ($paymentStats->card_total ?? 0.00),
+                'bkash_total' => (float) ($paymentStats->bkash_total ?? 0.00),
+                'nagad_total' => (float) ($paymentStats->nagad_total ?? 0.00),
+                'rocket_total' => (float) ($paymentStats->rocket_total ?? 0.00),
+                'upay_total' => (float) ($paymentStats->upay_total ?? 0.00),
+                'due_total' => (float) ($paymentStats->due_total ?? 0.00),
+                'other_total' => (float) ($paymentStats->other_total ?? 0.00),
             ]
         );
     }

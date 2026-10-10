@@ -16,12 +16,13 @@ class StockTransferController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -34,9 +35,9 @@ class StockTransferController extends Controller
         $transfers = StockTransfer::whereHas('fromStore', function ($q) use ($tenantId) {
             $q->where('tenant_id', $tenantId);
         })
-        ->with(['fromStore', 'toStore', 'items.product'])
-        ->latest()
-        ->paginate(15);
+            ->with(['fromStore', 'toStore', 'items.product'])
+            ->latest()
+            ->paginate(15);
 
         return Inertia::render('Manager/Transfers', [
             'transfers' => $transfers,
@@ -72,13 +73,13 @@ class StockTransferController extends Controller
                 $available = $stock ? $stock->quantity : 0;
                 if ($available < $item['quantity']) {
                     throw ValidationException::withMessages([
-                        'items' => ["Cannot transfer stock: Insufficient quantity for '{$product->name}' in source store. Available: {$available}, Requested: {$item['quantity']}."]
+                        'items' => ["Cannot transfer stock: Insufficient quantity for '{$product->name}' in source store. Available: {$available}, Requested: {$item['quantity']}."],
                     ]);
                 }
             }
 
             $transfer = StockTransfer::create([
-                'transfer_no' => 'TRF-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4)),
+                'transfer_no' => 'TRF-'.date('Ymd').'-'.strtoupper(substr(uniqid(), -4)),
                 'from_store_id' => $validated['from_store_id'],
                 'to_store_id' => $validated['to_store_id'],
                 'status' => 'completed',
@@ -97,7 +98,7 @@ class StockTransferController extends Controller
                     'updated_at' => now(),
                 ]);
 
-                $fromStore = \App\Models\Store::find($validated['from_store_id']);
+                $fromStore = Store::find($validated['from_store_id']);
                 $allowNegative = (bool) ($fromStore?->allow_negative_stock ?? false);
 
                 // Deduct from Source Store with DB lock
@@ -106,7 +107,7 @@ class StockTransferController extends Controller
                     ->lockForUpdate()
                     ->first();
 
-                if (!$fromStock) {
+                if (! $fromStock) {
                     $fromStock = Stock::create([
                         'tenant_id' => $tenantId,
                         'store_id' => $validated['from_store_id'],
@@ -115,10 +116,10 @@ class StockTransferController extends Controller
                     ]);
                 }
 
-                if (!$allowNegative && (float) $fromStock->quantity < $item['quantity']) {
-                    $prodName = \App\Models\Product::find($item['product_id'])?->name ?? 'Product';
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'items' => ["Insufficient stock in origin store for '{$prodName}'. Available: {$fromStock->quantity}, requested: {$item['quantity']}."]
+                if (! $allowNegative && (float) $fromStock->quantity < $item['quantity']) {
+                    $prodName = Product::find($item['product_id'])?->name ?? 'Product';
+                    throw ValidationException::withMessages([
+                        'items' => ["Insufficient stock in origin store for '{$prodName}'. Available: {$fromStock->quantity}, requested: {$item['quantity']}."],
                     ]);
                 }
 
@@ -130,7 +131,7 @@ class StockTransferController extends Controller
                     ->lockForUpdate()
                     ->first();
 
-                if (!$toStock) {
+                if (! $toStock) {
                     $toStock = Stock::create([
                         'tenant_id' => $tenantId,
                         'store_id' => $validated['to_store_id'],

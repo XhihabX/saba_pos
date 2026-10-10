@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Services\TwoFactorService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -20,11 +20,11 @@ class TwoFactorController extends Controller
     public function setup(Request $request)
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401);
         }
 
-        if (!in_array($user->role, ['super_admin', 'merchant'])) {
+        if (! in_array($user->role, ['super_admin', 'merchant'])) {
             return response()->json(['message' => '2FA is restricted to Super Admin and Merchant roles.'], 403);
         }
 
@@ -32,12 +32,12 @@ class TwoFactorController extends Controller
         $user->two_factor_secret = encrypt($secret);
         $user->save();
 
-        $qrCodeUrl = "otpauth://totp/IOT%20POS:" . rawurlencode($user->email) . "?secret={$secret}&issuer=IOT%20POS";
+        $qrCodeUrl = 'otpauth://totp/IOT%20POS:'.rawurlencode($user->email)."?secret={$secret}&issuer=IOT%20POS";
 
         return response()->json([
             'secret' => $secret,
             'qr_code_url' => $qrCodeUrl,
-            'is_confirmed' => !empty($user->two_factor_confirmed_at),
+            'is_confirmed' => ! empty($user->two_factor_confirmed_at),
         ]);
     }
 
@@ -51,7 +51,7 @@ class TwoFactorController extends Controller
         }
 
         $secret = decrypt($user->two_factor_secret);
-        if (!$this->twoFactorService->verifyKey($secret, $code)) {
+        if (! $this->twoFactorService->verifyKey($secret, $code)) {
             throw ValidationException::withMessages(['code' => ['Invalid 2FA verification code.']]);
         }
 
@@ -75,14 +75,14 @@ class TwoFactorController extends Controller
     public function verify(Request $request)
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             $userId = session('2fa:user_id');
             if ($userId) {
-                $user = \App\Models\User::find($userId);
+                $user = User::find($userId);
             }
         }
 
-        if (!$user || empty($user->two_factor_secret)) {
+        if (! $user || empty($user->two_factor_secret)) {
             return redirect()->route('login')->with('error', 'Session expired. Please log in again.');
         }
 
@@ -91,7 +91,7 @@ class TwoFactorController extends Controller
 
         $valid = $this->twoFactorService->verifyKey($secret, $code);
 
-        if (!$valid && !empty($user->two_factor_recovery_codes)) {
+        if (! $valid && ! empty($user->two_factor_recovery_codes)) {
             $recoveryCodes = json_decode(decrypt($user->two_factor_recovery_codes), true) ?: [];
             if (in_array(strtoupper($code), $recoveryCodes)) {
                 $valid = true;
@@ -101,14 +101,14 @@ class TwoFactorController extends Controller
             }
         }
 
-        if (!$valid) {
+        if (! $valid) {
             throw ValidationException::withMessages(['code' => ['Invalid 2FA code or recovery code.']]);
         }
 
         session(['2fa:verified' => true]);
         session()->forget('2fa:user_id');
 
-        if (!auth()->check()) {
+        if (! auth()->check()) {
             auth()->login($user);
         }
 

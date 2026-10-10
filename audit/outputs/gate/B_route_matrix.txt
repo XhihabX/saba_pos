@@ -1,6 +1,6 @@
 AUTHORIZATION MATRIX AUDIT REPORT
 =================================
-Generated: 2026-10-10 08:53:49
+Generated: 2026-10-10 15:29:24
 Target Engine: MySQL 8.4
 Total Routes Audited: 148
 
@@ -101,7 +101,7 @@ URI                                           | Method | Guest  | Cashier | Stor
 /pos/parked-orders/{id}                       | DELETE | 404    | 302     | 404          | 404      | 403        | 404            
 /pos/parked/{id}                              | DELETE | 404    | 404     | 404          | 404      | 403        | 404            
 /pos/verify-pin                               | POST   | 422    | 422     | 422          | 422      | 422        | 422            
-/pos/invoice/{id}/pdf                         | GET    | 404    | 200     | 200          | 200      | 403        | 404            
+/pos/invoice/{id}/pdf                         | GET    | 404    | 404     | 404          | 404      | 403        | 404            
 /vat/mushak-6.3/{id}                          | GET    | 404    | 200     | 200          | 200      | 403        | 404            
 /reports/sales/export-csv                     | GET    | 200    | 200     | 200          | 200      | 403        | 200            
 /reports/sales/export-status/{exportId}       | GET    | 404    | 404     | 404          | 404      | 404        | 404            

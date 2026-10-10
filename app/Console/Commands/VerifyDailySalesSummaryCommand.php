@@ -2,22 +2,27 @@
 
 namespace App\Console\Commands;
 
+use App\Mail\DiscrepancyAlertMail;
 use App\Models\DailySalesSummary;
+use App\Models\DiscrepancyAlert;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 class VerifyDailySalesSummaryCommand extends Command
 {
     protected $signature = 'pos:verify-daily-summaries {--fix : Automatically recalculate and fix any summary drift}';
+
     protected $description = 'Audit daily_sales_summaries against direct aggregate of orders & returns for every tenant/store/day and report discrepancies';
 
     public function handle(): int
     {
-        $this->info("==========================================================================================");
-        $this->info(" 🔍 DAILY SALES SUMMARY INTEGRITY & DRIFT AUDIT");
-        $this->info("==========================================================================================");
+        $this->info('==========================================================================================');
+        $this->info(' 🔍 DAILY SALES SUMMARY INTEGRITY & DRIFT AUDIT');
+        $this->info('==========================================================================================');
 
         $shouldFix = $this->option('fix');
 
@@ -36,11 +41,13 @@ class VerifyDailySalesSummaryCommand extends Command
         $discrepancyAlerts = [];
 
         foreach ($allDates as $row) {
-            $tenantId = (int)$row->tenant_id;
-            $storeId = (int)$row->store_id;
-            $date = (string)$row->date_val;
+            $tenantId = (int) $row->tenant_id;
+            $storeId = (int) $row->store_id;
+            $date = (string) $row->date_val;
 
-            if (empty($date)) continue;
+            if (empty($date)) {
+                continue;
+            }
 
             $start = "{$date} 00:00:00";
             $end = "{$date} 23:59:59";
@@ -73,19 +80,19 @@ class VerifyDailySalesSummaryCommand extends Command
                 ->where('date', $date)
                 ->first();
 
-            $expectedCount = (int)($orderAgg->count ?? 0);
-            $expectedSubtotal = round((float)($orderAgg->subtotal ?? 0.00), 2);
-            $expectedTax = round((float)($orderAgg->tax ?? 0.00), 2);
-            $expectedGrand = round((float)($orderAgg->grand ?? 0.00), 2);
-            $expectedCogs = round((float)($orderAgg->cogs ?? 0.00), 2);
-            $expectedRefunds = round((float)($returnAgg->refunds ?? 0.00), 2);
+            $expectedCount = (int) ($orderAgg->count ?? 0);
+            $expectedSubtotal = round((float) ($orderAgg->subtotal ?? 0.00), 2);
+            $expectedTax = round((float) ($orderAgg->tax ?? 0.00), 2);
+            $expectedGrand = round((float) ($orderAgg->grand ?? 0.00), 2);
+            $expectedCogs = round((float) ($orderAgg->cogs ?? 0.00), 2);
+            $expectedRefunds = round((float) ($returnAgg->refunds ?? 0.00), 2);
 
-            $actualCount = $summary ? (int)$summary->orders_count : 0;
-            $actualSubtotal = $summary ? round((float)$summary->subtotal, 2) : 0.00;
-            $actualTax = $summary ? round((float)$summary->tax_amount, 2) : 0.00;
-            $actualGrand = $summary ? round((float)$summary->grand_total, 2) : 0.00;
-            $actualCogs = $summary ? round((float)$summary->cogs, 2) : 0.00;
-            $actualRefunds = $summary ? round((float)$summary->refunds, 2) : 0.00;
+            $actualCount = $summary ? (int) $summary->orders_count : 0;
+            $actualSubtotal = $summary ? round((float) $summary->subtotal, 2) : 0.00;
+            $actualTax = $summary ? round((float) $summary->tax_amount, 2) : 0.00;
+            $actualGrand = $summary ? round((float) $summary->grand_total, 2) : 0.00;
+            $actualCogs = $summary ? round((float) $summary->cogs, 2) : 0.00;
+            $actualRefunds = $summary ? round((float) $summary->refunds, 2) : 0.00;
 
             $differs = (
                 $expectedCount !== $actualCount ||
@@ -126,7 +133,7 @@ class VerifyDailySalesSummaryCommand extends Command
                 ]);
 
                 // Store persistent discrepancy alert in DB table discrepancy_alerts
-                $alertRecord = \App\Models\DiscrepancyAlert::updateOrCreate(
+                $alertRecord = DiscrepancyAlert::updateOrCreate(
                     [
                         'tenant_id' => $tenantId,
                         'store_id' => $storeId,
@@ -141,52 +148,55 @@ class VerifyDailySalesSummaryCommand extends Command
 
                 // Send Email Notification to Tenant Owner
                 try {
-                    $tenant = \App\Models\Tenant::find($tenantId);
+                    $tenant = Tenant::find($tenantId);
                     $ownerEmail = $tenant?->email;
-                    if (!$ownerEmail) {
-                        $owner = \App\Models\User::where('tenant_id', $tenantId)
+                    if (! $ownerEmail) {
+                        $owner = User::where('tenant_id', $tenantId)
                             ->whereIn('role', ['merchant', 'owner', 'super_admin'])
                             ->first();
                         $ownerEmail = $owner?->email;
                     }
 
                     if ($ownerEmail) {
-                        \Illuminate\Support\Facades\Mail::to($ownerEmail)
-                            ->send(new \App\Mail\DiscrepancyAlertMail($alertRecord));
+                        Mail::to($ownerEmail)
+                            ->send(new DiscrepancyAlertMail($alertRecord));
                     }
                 } catch (\Throwable $e) {
-                    Log::warning("Could not send DiscrepancyAlertMail: " . $e->getMessage());
+                    Log::warning('Could not send DiscrepancyAlertMail: '.$e->getMessage());
                 }
 
                 $this->warn(sprintf(
-                    "⚠️ DRIFT DISCREPANCY DETECTED [Tenant #%d | Store #%d | Date: %s]:",
+                    '⚠️ DRIFT DISCREPANCY DETECTED [Tenant #%d | Store #%d | Date: %s]:',
                     $tenantId, $storeId, $date
                 ));
-                $this->line(sprintf("   Orders Count -> Expected: %d | Actual: %d", $expectedCount, $actualCount));
-                $this->line(sprintf("   Grand Total  -> Expected: ৳%.2f | Actual: ৳%.2f", $expectedGrand, $actualGrand));
-                $this->line(sprintf("   Refunds      -> Expected: ৳%.2f | Actual: ৳%.2f", $expectedRefunds, $actualRefunds));
+                $this->line(sprintf('   Orders Count -> Expected: %d | Actual: %d', $expectedCount, $actualCount));
+                $this->line(sprintf('   Grand Total  -> Expected: ৳%.2f | Actual: ৳%.2f', $expectedGrand, $actualGrand));
+                $this->line(sprintf('   Refunds      -> Expected: ৳%.2f | Actual: ৳%.2f', $expectedRefunds, $actualRefunds));
 
                 if ($shouldFix) {
                     DailySalesSummary::recalculateDay($tenantId, $storeId, $date);
                     $alertRecord->update(['resolved_at' => now()]);
                     $fixedCount++;
-                    $this->info("   ✓ Recalculated & synced summary row, resolved alert.");
+                    $this->info('   ✓ Recalculated & synced summary row, resolved alert.');
                 }
             }
         }
 
-        $this->info("==========================================================================================");
+        $this->info('==========================================================================================');
         if ($discrepanciesCount === 0) {
-            $this->info(" ✅ AUDIT VERDICT: 100% SUMMARY INTEGRITY (Zero drift across all tenant/store/day rows).");
+            $this->info(' ✅ AUDIT VERDICT: 100% SUMMARY INTEGRITY (Zero drift across all tenant/store/day rows).');
+
             return 0;
         }
 
         if ($shouldFix) {
-            $this->info(sprintf(" 🔧 AUDIT FIX COMPLETE: Corrected %d / %d summary discrepancies.", $fixedCount, $discrepanciesCount));
+            $this->info(sprintf(' 🔧 AUDIT FIX COMPLETE: Corrected %d / %d summary discrepancies.', $fixedCount, $discrepanciesCount));
+
             return 0;
         }
 
-        $this->error(sprintf(" ❌ AUDIT FAILURE: Found %d summary discrepancies. Logged to system and published admin alert.", $discrepanciesCount));
+        $this->error(sprintf(' ❌ AUDIT FAILURE: Found %d summary discrepancies. Logged to system and published admin alert.', $discrepanciesCount));
+
         return 1;
     }
 }

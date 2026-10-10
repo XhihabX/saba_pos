@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Category extends Model
 {
-    use HasFactory, Tenantable, SoftDeletes;
+    use HasFactory, SoftDeletes, Tenantable;
 
     protected $fillable = ['tenant_id', 'name', 'slug', 'image', 'is_active'];
 

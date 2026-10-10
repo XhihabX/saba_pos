@@ -12,56 +12,56 @@ return new class extends Migration
     public function up(): void
     {
         // 1. Add tenant_id to Stock table if missing
-        if (Schema::hasTable('stocks') && !Schema::hasColumn('stocks', 'tenant_id')) {
+        if (Schema::hasTable('stocks') && ! Schema::hasColumn('stocks', 'tenant_id')) {
             Schema::table('stocks', function (Blueprint $table) {
                 $table->unsignedBigInteger('tenant_id')->nullable()->default(1)->after('id')->index();
             });
         }
 
         // 2. Add tenant_id to order_items table if missing
-        if (Schema::hasTable('order_items') && !Schema::hasColumn('order_items', 'tenant_id')) {
+        if (Schema::hasTable('order_items') && ! Schema::hasColumn('order_items', 'tenant_id')) {
             Schema::table('order_items', function (Blueprint $table) {
                 $table->unsignedBigInteger('tenant_id')->nullable()->default(1)->after('id')->index();
             });
         }
 
         // 3. Add tenant_id to order_payments table if missing
-        if (Schema::hasTable('order_payments') && !Schema::hasColumn('order_payments', 'tenant_id')) {
+        if (Schema::hasTable('order_payments') && ! Schema::hasColumn('order_payments', 'tenant_id')) {
             Schema::table('order_payments', function (Blueprint $table) {
                 $table->unsignedBigInteger('tenant_id')->nullable()->default(1)->after('id')->index();
             });
         }
 
         // 4. Add tenant_id to product_returns table if missing
-        if (Schema::hasTable('product_returns') && !Schema::hasColumn('product_returns', 'tenant_id')) {
+        if (Schema::hasTable('product_returns') && ! Schema::hasColumn('product_returns', 'tenant_id')) {
             Schema::table('product_returns', function (Blueprint $table) {
                 $table->unsignedBigInteger('tenant_id')->nullable()->default(1)->after('id')->index();
             });
         }
 
         // 5. Add tenant_id to purchases table if missing
-        if (Schema::hasTable('purchases') && !Schema::hasColumn('purchases', 'tenant_id')) {
+        if (Schema::hasTable('purchases') && ! Schema::hasColumn('purchases', 'tenant_id')) {
             Schema::table('purchases', function (Blueprint $table) {
                 $table->unsignedBigInteger('tenant_id')->nullable()->default(1)->after('id')->index();
             });
         }
 
         // 6. Add tenant_id to quotations table if missing
-        if (Schema::hasTable('quotations') && !Schema::hasColumn('quotations', 'tenant_id')) {
+        if (Schema::hasTable('quotations') && ! Schema::hasColumn('quotations', 'tenant_id')) {
             Schema::table('quotations', function (Blueprint $table) {
                 $table->unsignedBigInteger('tenant_id')->nullable()->default(1)->after('id')->index();
             });
         }
 
         // 7. Add tenant_id to stock_transfers table if missing
-        if (Schema::hasTable('stock_transfers') && !Schema::hasColumn('stock_transfers', 'tenant_id')) {
+        if (Schema::hasTable('stock_transfers') && ! Schema::hasColumn('stock_transfers', 'tenant_id')) {
             Schema::table('stock_transfers', function (Blueprint $table) {
                 $table->unsignedBigInteger('tenant_id')->nullable()->default(1)->after('id')->index();
             });
         }
 
         // 8. Add tenant_id to attendances table if missing
-        if (Schema::hasTable('attendances') && !Schema::hasColumn('attendances', 'tenant_id')) {
+        if (Schema::hasTable('attendances') && ! Schema::hasColumn('attendances', 'tenant_id')) {
             Schema::table('attendances', function (Blueprint $table) {
                 $table->unsignedBigInteger('tenant_id')->nullable()->default(1)->after('id')->index();
             });
@@ -90,28 +90,43 @@ return new class extends Migration
         try {
             if (Schema::hasTable('stocks')) {
                 Schema::table('stocks', function (Blueprint $table) {
-                    try { $table->dropIndex('stocks_store_product_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('stocks_store_product_idx');
+                    } catch (Throwable $e) {
+                    }
                     if (Schema::hasColumn('stocks', 'tenant_id')) {
-                        try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {}
+                        try {
+                            $table->dropColumn('tenant_id');
+                        } catch (Throwable $e) {
+                        }
                     }
                 });
             }
 
             if (Schema::hasTable('order_items')) {
                 Schema::table('order_items', function (Blueprint $table) {
-                    try { $table->dropIndex('order_items_order_id_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('order_items_order_id_idx');
+                    } catch (Throwable $e) {
+                    }
                     if (Schema::hasColumn('order_items', 'tenant_id')) {
-                        try { $table->dropColumn('tenant_id'); } catch (\Throwable $e) {}
+                        try {
+                            $table->dropColumn('tenant_id');
+                        } catch (Throwable $e) {
+                        }
                     }
                 });
             }
 
             if (Schema::hasTable('orders')) {
                 Schema::table('orders', function (Blueprint $table) {
-                    try { $table->dropIndex('orders_tenant_created_at_idx'); } catch (\Throwable $e) {}
+                    try {
+                        $table->dropIndex('orders_tenant_created_at_idx');
+                    } catch (Throwable $e) {
+                    }
                 });
             }
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Ignore rollback errors
         }
         Schema::enableForeignKeyConstraints();

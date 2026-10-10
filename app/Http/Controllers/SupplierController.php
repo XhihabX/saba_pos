@@ -17,12 +17,13 @@ class SupplierController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -129,7 +130,7 @@ class SupplierController extends Controller
             }
 
             $purchase = Purchase::create([
-                'purchase_no' => 'PO-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -4)),
+                'purchase_no' => 'PO-'.date('Ymd').'-'.strtoupper(substr(uniqid(), -4)),
                 'store_id' => $validated['store_id'],
                 'supplier_id' => $validated['supplier_id'],
                 'total_amount' => $totalAmount,

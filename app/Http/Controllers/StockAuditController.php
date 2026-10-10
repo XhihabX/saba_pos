@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AuditLog;
+use App\Models\Stock;
 use App\Models\StockAudit;
 use App\Models\StockAuditItem;
-use App\Models\Stock;
-use App\Models\Product;
-use App\Models\AuditLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -36,7 +35,7 @@ class StockAuditController extends Controller
         $audit = StockAudit::create([
             'tenant_id' => $tenantId,
             'store_id' => $request->store_id,
-            'reference_no' => 'AUD-' . strtoupper(Str::random(8)),
+            'reference_no' => 'AUD-'.strtoupper(Str::random(8)),
             'status' => 'draft',
             'notes' => $request->notes,
             'created_by' => auth()->id(),

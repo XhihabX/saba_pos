@@ -3,11 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
-use App\Models\Expense;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Product;
-use App\Models\Purchase;
 use App\Models\Stock;
 use App\Models\Store;
 use Illuminate\Http\Request;
@@ -19,12 +16,13 @@ class DashboardController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -32,14 +30,14 @@ class DashboardController extends Controller
     {
         $tenantId = $this->getTenantId();
         $today = date('Y-m-d');
-        
+
         $stores = Store::where('tenant_id', $tenantId)->where('is_active', true)->get();
         $storeId = (int) $request->input('store_id', $stores->first()->id ?? 0);
 
         $todaySales = Order::where('tenant_id', $tenantId)->whereDate('created_at', $today)->sum('grand_total');
         $todayOrdersCount = Order::where('tenant_id', $tenantId)->whereDate('created_at', $today)->count();
         $totalCustomers = Customer::where('tenant_id', $tenantId)->count();
-        
+
         $lowStockProductsCount = Stock::whereHas('store', function ($q) use ($tenantId) {
             $q->where('tenant_id', $tenantId);
         })->where('quantity', '<=', 5)->count();

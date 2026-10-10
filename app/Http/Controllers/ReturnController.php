@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
+use App\Models\DailySalesSummary;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -12,6 +14,7 @@ use App\Models\Stock;
 use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -20,12 +23,13 @@ class ReturnController extends Controller
     private function getTenantId()
     {
         $user = auth()->user();
-        if (!$user) {
+        if (! $user) {
             abort(401, 'Unauthenticated');
         }
-        if (!$user->tenant_id) {
+        if (! $user->tenant_id) {
             abort(403, 'User does not belong to any tenant');
         }
+
         return $user->tenant_id;
     }
 
@@ -76,9 +80,9 @@ class ReturnController extends Controller
                 ->where('product_id', $product->id)
                 ->first();
 
-            if (!$orderItem) {
+            if (! $orderItem) {
                 throw ValidationException::withMessages([
-                    'product_id' => ["Product '{$product->name}' was not part of original order invoice {$order->invoice_no}."]
+                    'product_id' => ["Product '{$product->name}' was not part of original order invoice {$order->invoice_no}."],
                 ]);
             }
 
@@ -90,7 +94,7 @@ class ReturnController extends Controller
             $maxReturnableQty = (float) $orderItem->quantity - $alreadyReturnedQty;
             if ($validated['quantity'] > $maxReturnableQty) {
                 throw ValidationException::withMessages([
-                    'quantity' => ["Return quantity ({$validated['quantity']}) exceeds maximum returnable quantity ({$maxReturnableQty})."]
+                    'quantity' => ["Return quantity ({$validated['quantity']}) exceeds maximum returnable quantity ({$maxReturnableQty})."],
                 ]);
             }
 
@@ -102,7 +106,7 @@ class ReturnController extends Controller
             $maxRefundableAmount = min($itemPaidPrice, max(0, (float) $order->paid_amount - $alreadyRefundedAmount));
             if ((float) $validated['refund_amount'] > $maxRefundableAmount + 0.01) {
                 throw ValidationException::withMessages([
-                    'refund_amount' => ["Refund amount (৳{$validated['refund_amount']}) exceeds maximum refundable paid price for these items (৳" . number_format($maxRefundableAmount, 2) . ")."]
+                    'refund_amount' => ["Refund amount (৳{$validated['refund_amount']}) exceeds maximum refundable paid price for these items (৳".number_format($maxRefundableAmount, 2).').'],
                 ]);
             }
 
@@ -122,7 +126,7 @@ class ReturnController extends Controller
 
             // Re-stock quantity back into Store Inventory
             $stock = Stock::where('store_id', $storeId)->where('product_id', $product->id)->lockForUpdate()->first();
-            if (!$stock) {
+            if (! $stock) {
                 $stock = Stock::create([
                     'tenant_id' => $tenantId,
                     'store_id' => $storeId,
@@ -146,7 +150,7 @@ class ReturnController extends Controller
 
             // Adjust customer ledger and loyalty points
             if ($order->customer_id) {
-                $customer = \App\Models\Customer::where('id', $order->customer_id)->where('tenant_id', $tenantId)->first();
+                $customer = Customer::where('id', $order->customer_id)->where('tenant_id', $tenantId)->first();
                 if ($customer) {
                     $pointsDeducted = floor((float) $validated['refund_amount'] / 100);
                     if ($pointsDeducted > 0 && (int) $customer->points > 0) {
@@ -166,12 +170,12 @@ class ReturnController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if ($activeShift && \Illuminate\Support\Facades\Schema::hasColumn('register_shifts', 'total_refunds')) {
+            if ($activeShift && Schema::hasColumn('register_shifts', 'total_refunds')) {
                 $activeShift->increment('total_refunds', $validated['refund_amount']);
             }
 
             // Record in Daily Sales Summary
-            \App\Models\DailySalesSummary::recordReturn(
+            DailySalesSummary::recordReturn(
                 $tenantId,
                 $storeId,
                 now()->toDateString(),
