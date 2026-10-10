@@ -114,16 +114,12 @@ jobs:
           set -o pipefail
           ./vendor/bin/phpunit -c phpunit.mysql.xml --exclude-group backup 2>&1 | tee test_main.log
 
-      - name: Report Failure to Step Summary
+      - name: Upload Main Test Log Artifact on Failure
         if: failure()
-        shell: bash
-        run: |
-          echo "=== TEST MAIN FAILURE LOG ==="
-          cat test_main.log
-          echo "## ❌ Test Failure Summary" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          tail -n 150 test_main.log >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-main-log
+          path: test_main.log
 
       - name: Execute Backup Test Suite on MySQL 8.4
         shell: bash
