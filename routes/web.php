@@ -143,8 +143,6 @@ Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () 
     Route::post('/pos/verify-pin', [PosController::class, 'verifyPin'])->middleware('throttle.pin')->name('pos.verify-pin');
     Route::get('/pos/invoice/{id}/pdf', [PosController::class, 'downloadInvoicePdf'])->name('pos.invoice.pdf');
     Route::get('/vat/mushak-6.3/{id}', [PosController::class, 'downloadMushak63'])->name('vat.mushak63');
-    Route::get('/reports/sales/export-csv', [PosController::class, 'exportSalesCsv'])->name('reports.sales.export-csv');
-    Route::get('/reports/sales/export-status/{exportId}', [PosController::class, 'checkExportStatus'])->name('reports.sales.export-status');
     Route::get('/pos/products/search', [PosController::class, 'searchProducts'])->name('pos.products.search');
     Route::get('/pos/customers/search', [PosController::class, 'searchCustomers'])->name('pos.customers.search');
 
@@ -159,23 +157,12 @@ Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () 
     Route::post('/pos/shift/open', [ShiftController::class, 'openShift'])->name('pos.shift.open');
     Route::post('/pos/shift/close', [ShiftController::class, 'closeShift'])->name('pos.shift.close');
 
-    // HRM Staff Attendance & Clock In/Out
-    Route::get('/hrm/attendance', [AttendanceController::class, 'index'])->name('hrm.attendance');
+    // HRM Staff Attendance Clock In/Out Toggle
     Route::post('/hrm/attendance/toggle', [AttendanceController::class, 'toggleClock'])->name('hrm.attendance.toggle');
 
     // PDF Export Endpoints (Dompdf)
     Route::get('/invoices/{order}/pdf', [\App\Http\Controllers\PdfExportController::class, 'downloadInvoice'])->name('pdf.invoice');
     Route::get('/invoices/{order}/mushak63/pdf', [\App\Http\Controllers\PdfExportController::class, 'downloadMushak63'])->name('pdf.mushak63');
-    Route::get('/reports/branch/pdf', [\App\Http\Controllers\PdfExportController::class, 'downloadBranchReport'])->name('pdf.branch-report');
-
-    // Stock Audit Workflow Endpoints
-    Route::get('/stock-audits', [\App\Http\Controllers\StockAuditController::class, 'index'])->name('stock-audits.index');
-    Route::post('/stock-audits', [\App\Http\Controllers\StockAuditController::class, 'store'])->name('stock-audits.store');
-    Route::post('/stock-audits/{audit}/items', [\App\Http\Controllers\StockAuditController::class, 'updateItems'])->name('stock-audits.update-items');
-    Route::post('/stock-audits/{audit}/approve', [\App\Http\Controllers\StockAuditController::class, 'approve'])->name('stock-audits.approve');
-
-    // Branch Performance Report
-    Route::get('/reports/branch', [ReportController::class, 'branchReport'])->name('reports.branch');
 
     // Inline Customer Registration for POS Cashier Workstation
     Route::post('/customers', [MerchantController::class, 'storeCustomer'])->name('customers.store');
@@ -202,9 +189,22 @@ Route::middleware(['auth', EnsureStoreManager::class, EnsureActiveSubscription::
     Route::get('/reports/profit-loss', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
     Route::get('/reports/vat', [ReportController::class, 'vatReport'])->name('reports.vat');
     Route::get('/reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock');
+    Route::get('/reports/sales/export-csv', [PosController::class, 'exportSalesCsv'])->name('reports.sales.export-csv');
+    Route::get('/reports/sales/export-status/{exportId}', [PosController::class, 'checkExportStatus'])->name('reports.sales.export-status');
+    Route::get('/reports/branch', [ReportController::class, 'branchReport'])->name('reports.branch');
+    Route::get('/reports/branch/pdf', [\App\Http\Controllers\PdfExportController::class, 'downloadBranchReport'])->name('pdf.branch-report');
     Route::post('/reports/sales-summary/recalculate', [ReportController::class, 'recalculateDailySummary'])->name('reports.sales-summary.recalculate');
     Route::post('/reports/daily-summary/recalculate', [ReportController::class, 'recalculateDailySummary'])->name('reports.daily-summary.recalculate');
     Route::get('/manager/shifts/{id}/z-report', [ShiftController::class, 'zReport'])->name('manager.shifts.z-report');
+
+    // Stock Audit Workflow Endpoints
+    Route::get('/stock-audits', [\App\Http\Controllers\StockAuditController::class, 'index'])->name('stock-audits.index');
+    Route::post('/stock-audits', [\App\Http\Controllers\StockAuditController::class, 'store'])->name('stock-audits.store');
+    Route::post('/stock-audits/{audit}/items', [\App\Http\Controllers\StockAuditController::class, 'updateItems'])->name('stock-audits.update-items');
+    Route::post('/stock-audits/{audit}/approve', [\App\Http\Controllers\StockAuditController::class, 'approve'])->name('stock-audits.approve');
+
+    // HRM Staff Attendance List
+    Route::get('/hrm/attendance', [AttendanceController::class, 'index'])->name('hrm.attendance');
 
     // Store Expenses Management
     Route::get('/expenses', [ExpenseController::class, 'index'])->name('expenses.index');

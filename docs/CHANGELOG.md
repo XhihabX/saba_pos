@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-10-10] — Cashier Route Authorization Bug Fix, Controller Defense-in-Depth & Matrix Test Rewrite
+
+**What:** Restricted managerial operations from cashier role and rewritten route authorization matrix test suite:
+1. **Cashier Route Group Re-organization (`routes/web.php`):** Moved sensitive routes (`/reports/sales/export-csv`, `/reports/sales/export-status/{exportId}`, `/reports/branch`, `/reports/branch/pdf`, all `/stock-audits*` routes, and staff list at `/hrm/attendance`) out of the Cashier group into the `EnsureStoreManager` middleware group (restricted to `store_manager`, `merchant`, and `super_admin`). Preserved cashier access to POS terminal (`/pos`), checkout (`/pos/checkout`), park/resume (`/pos/park*`), PIN verification (`/pos/verify-pin`), register shifts (`/pos/shift/*`), invoice/Mushak PDFs (`/pos/invoice/{id}/pdf`, `/vat/mushak-6.3/{id}`), live product/customer search (`/pos/products/search`, `/pos/customers/search`), customer creation (`/customers`), 2FA TOTP (`/2fa/*`), and clock-in toggle (`/hrm/attendance/toggle`).
+2. **Controller Defense-in-Depth Role Authorization Checks (`PosController.php`, `AttendanceController.php`, `PdfExportController.php`, `ReportController.php`, `StockAuditController.php`):** Added explicit role verification checks (`in_array($user->role, ['super_admin', 'merchant', 'store_manager'])`) throwing HTTP 403 Forbidden inside controller methods (`PosController::exportSalesCsv`, `PosController::checkExportStatus`, `AttendanceController::index`, `PdfExportController::downloadBranchReport`, `ReportController::branchReport`, and `StockAuditController` `index`, `store`, `updateItems`, `approve`).
+3. **Route Authorization Matrix Test Rewrite (`RouteAuthorizationMatrixTest.php`):** Rewrote `RouteAuthorizationMatrixTest.php` with explicit per-route and per-role status code validation across 148 routes and 6 roles (`guest`, `cashier`, `store_manager`, `merchant`, `super_admin`, `other_tenant_user`). Enforced fresh session and guard resets per request (`auth()->logout()`, `$this->be(null)`, `$this->flushSession()`, `$this->app['auth']->forgetGuards()`). Generated raw proof file at `audit/outputs/gate/B_route_matrix.txt`.
+4. **Local MySQL 8.4 Verification:** Executed full PHPUnit test suite against local MySQL 8.4 database: Main test suite (**83 / 83 tests passed, 411 assertions green**) and Backup test group (**2 / 2 tests passed, 9 assertions green**).
+
+**Why:** Prevent cashiers from accessing sensitive managerial operations (exporting sales CSVs, viewing store branch performance reports, managing stock audits, or inspecting employee attendance lists) and enforce strict multi-role policy testing.
+**How:** Updated `routes/web.php`, `PosController.php`, `AttendanceController.php`, `PdfExportController.php`, `ReportController.php`, `StockAuditController.php`, `RestoreDatabaseCommand.php`, `tests/Feature/RouteAuthorizationMatrixTest.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`, and executed full PHPUnit test suite on MySQL 8.4.
+**Where:** `routes/web.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/AttendanceController.php`, `app/Http/Controllers/PdfExportController.php`, `app/Http/Controllers/ReportController.php`, `app/Http/Controllers/StockAuditController.php`, `app/Console/Commands/RestoreDatabaseCommand.php`, `tests/Feature/RouteAuthorizationMatrixTest.php`, `audit/outputs/gate/B_route_matrix.txt`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** Cashiers cannot access managerial reporting or stock audits; 100% route authorization matrix test pass rate (83/83 tests green) on MySQL 8.4; complete proof file generated.
+
+---
+
 ## [2026-10-10] — Master Final Code-Readiness Gate Completion (Sections A to J)
 
 **What:** Completed full 10-gate Code-Readiness Audit (Sections A through J) on native MySQL 8.4 engine:

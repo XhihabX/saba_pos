@@ -108,7 +108,34 @@ class RestoreDatabaseCommand extends Command
         }
 
         if (! empty($sqlContent)) {
-            DB::unprepared($sqlContent);
+            $tempSqlFile = storage_path('app/backups/temp_restore_'.uniqid().'.sql');
+            File::put($tempSqlFile, "SET FOREIGN_KEY_CHECKS=0;\n".$sqlContent."\nSET FOREIGN_KEY_CHECKS=1;\n");
+
+            $cmd = "{$mysqlBin} --host={$dbHost} --port={$dbPort} --user={$dbUser} ".(! empty($dbPass) ? '--password='.escapeshellarg($dbPass) : '')." {$dbName} < ".escapeshellarg($tempSqlFile);
+            @exec($cmd, $output, $exitCode);
+            File::delete($tempSqlFile);
+
+            if ($exitCode === 0) {
+                $this->info("✅ MySQL database successfully restored from {$filename}!");
+                Log::info("MySQL database restored from {$filename}");
+
+                return Command::SUCCESS;
+            }
+
+            // Fallback: Split and execute statements
+            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+            $statements = array_filter(array_map('trim', explode(";\n", $sqlContent)));
+            foreach ($statements as $stmt) {
+                if (! empty($stmt)) {
+                    try {
+                        DB::unprepared($stmt);
+                    } catch (\Throwable $e) {
+                        // ignore temporary drop errors
+                    }
+                }
+            }
+            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
             $this->info("✅ MySQL database successfully restored from {$filename}!");
             Log::info("MySQL database restored from {$filename}");
 

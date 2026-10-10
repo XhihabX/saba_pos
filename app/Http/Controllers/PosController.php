@@ -735,6 +735,11 @@ class PosController extends Controller
 
     public function exportSalesCsv(Request $request)
     {
+        $user = auth()->user();
+        if (! $user || ! in_array($user->role, ['super_admin', 'merchant', 'store_manager'])) {
+            abort(403, 'Unauthorized access to sales export CSV.');
+        }
+
         $tenantId = $this->getTenantId();
 
         $startDate = $request->input('start_date');
@@ -845,6 +850,11 @@ class PosController extends Controller
 
     public function checkExportStatus($exportId)
     {
+        $user = auth()->user();
+        if (! $user || ! in_array($user->role, ['super_admin', 'merchant', 'store_manager'])) {
+            abort(403, 'Unauthorized access to export status.');
+        }
+
         $status = cache()->get("export_status_{$exportId}");
         if (! $status) {
             return response()->json(['success' => false, 'message' => 'Export task not found.'], 404);

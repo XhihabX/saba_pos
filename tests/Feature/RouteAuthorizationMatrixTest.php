@@ -282,7 +282,7 @@ class RouteAuthorizationMatrixTest extends TestCase
         ];
 
         $matrix = [];
-        $guestReachable = [];
+        $failures = [];
 
         foreach ($routes as $route) {
             $methods = array_diff($route->methods(), ['HEAD']);
@@ -290,21 +290,28 @@ class RouteAuthorizationMatrixTest extends TestCase
             $method = reset($methods);
 
             $uri = $route->uri();
+            $formattedUri = '/' . ltrim($uri, '/');
 
-            // Replace parameters with dummy concrete values
-            $testUri = $uri;
-            $testUri = str_replace('{id}', $this->getSampleIdForUri($uri), $testUri);
+            // Replace parameters with concrete dummy values
+            $testUri = $formattedUri;
+            $testUri = str_replace('{id}', $this->getSampleIdForUri($formattedUri), $testUri);
             $testUri = str_replace('{audit}', (string)$this->auditA->id, $testUri);
             $testUri = str_replace('{order}', (string)$this->orderA->id, $testUri);
             $testUri = str_replace('{exportId}', 'exp_test_123', $testUri);
 
             $routeRow = [
-                'uri' => '/' . ltrim($uri, '/'),
+                'uri' => $formattedUri,
                 'method' => $method,
                 'name' => $route->getName() ?? '-',
             ];
 
             foreach ($roles as $roleName => $user) {
+                // Ensure complete session and auth state reset per request
+                auth()->logout();
+                $this->be(null);
+                $this->flushSession();
+                $this->app['auth']->forgetGuards();
+
                 if ($user === null) {
                     $response = $this->call($method, $testUri);
                 } else {
@@ -314,18 +321,13 @@ class RouteAuthorizationMatrixTest extends TestCase
                 $status = $response->getStatusCode();
                 $routeRow[$roleName] = $status;
 
-                if ($roleName === 'guest' && in_array($status, [200, 301, 302, 422])) {
-                    // 302 to login means unauthenticated redirect, so only count as reachable if not redirecting to login
-                    if ($status === 302 && str_contains($response->headers->get('Location') ?? '', '/login')) {
-                        // Redirecting to login -> not guest accessible
-                        $routeRow['guest'] = 302;
-                    } else {
-                        $guestReachable[$routeRow['uri']] = [
-                            'method' => $method,
-                            'status' => $status,
-                            'name' => $routeRow['name'],
-                        ];
-                    }
+                // Validate actual status against declared expectation
+                $isAllowed = $this->isStatusExpectedForRole($formattedUri, $method, $roleName, $status);
+                if (!$isAllowed) {
+                    $failures[] = sprintf(
+                        "Route [%s %s] for role [%s] returned HTTP %d, which violates expected authorization policy.",
+                        $method, $formattedUri, $roleName, $status
+                    );
                 }
             }
 
@@ -340,15 +342,15 @@ class RouteAuthorizationMatrixTest extends TestCase
         $output .= "Total Routes Audited: " . count($matrix) . "\n\n";
 
         $output .= sprintf(
-            "%-45s | %-6s | %-6s | %-7s | %-12s | %-8s | %-10s | %-15s\n",
+            "%-48s | %-6s | %-6s | %-7s | %-12s | %-8s | %-10s | %-15s\n",
             "URI", "Method", "Guest", "Cashier", "StoreManager", "Merchant", "SuperAdmin", "OtherTenantUser"
         );
-        $output .= str_repeat("-", 125) . "\n";
+        $output .= str_repeat("-", 128) . "\n";
 
         foreach ($matrix as $row) {
             $output .= sprintf(
-                "%-45s | %-6s | %-6d | %-7d | %-12d | %-8d | %-10d | %-15d\n",
-                substr($row['uri'], 0, 45),
+                "%-48s | %-6s | %-6d | %-7d | %-12d | %-8d | %-10d | %-15d\n",
+                substr($row['uri'], 0, 48),
                 $row['method'],
                 $row['guest'],
                 $row['cashier'],
@@ -357,13 +359,6 @@ class RouteAuthorizationMatrixTest extends TestCase
                 $row['super_admin'],
                 $row['other_tenant_user']
             );
-        }
-
-        $output .= "\n\nGUEST REACHABLE ROUTES JUSTIFICATION\n";
-        $output .= "====================================\n";
-        foreach ($guestReachable as $uri => $info) {
-            $justification = $this->getGuestJustification($uri);
-            $output .= sprintf("- %s [%s] (HTTP %d): %s\n", $uri, $info['method'], $info['status'], $justification);
         }
 
         // Write raw proof file
@@ -375,6 +370,100 @@ class RouteAuthorizationMatrixTest extends TestCase
 
         $this->assertFileExists($proofPath);
         $this->assertGreaterThan(500, filesize($proofPath));
+
+        // Fail if any route mismatch occurred
+        if (!empty($failures)) {
+            $this->fail("Route Authorization Matrix Mismatches Detected (" . count($failures) . "):\n" . implode("\n", $failures));
+        }
+    }
+
+    protected function isStatusExpectedForRole(string $uri, string $method, string $role, int $status): bool
+    {
+        // 1. Storage & Webhook endpoints with signature/payload guards
+        if (str_starts_with($uri, '/storage/') || $uri === '/api/v1/mfs-webhook') {
+            return in_array($status, [200, 302, 401, 403, 404, 422, 503]);
+        }
+
+        // 2. Public endpoints open to unauthenticated visitors
+        $publicRoutes = ['/up', '/', '/login', '/register', '/demo/pos', '/health'];
+        if (in_array($uri, $publicRoutes)) {
+            return in_array($status, [200, 302, 422, 500, 503]);
+        }
+
+        // 3. Guest MUST NOT access protected routes (Must redirect to login 302 or return 401/403)
+        if ($role === 'guest') {
+            return in_array($status, [302, 401, 403, 404]);
+        }
+
+        // 4. Super Admin Portal (/super-admin/*)
+        if (str_starts_with($uri, '/super-admin')) {
+            if ($role === 'super_admin') {
+                return in_array($status, [200, 302, 422, 404, 500]);
+            }
+            // All non-super_admin roles MUST be redirected away (HTTP 302)
+            return $status === 302;
+        }
+
+        // 5. Merchant Portal (/merchant/*)
+        if (str_starts_with($uri, '/merchant')) {
+            if (in_array($role, ['merchant', 'super_admin', 'other_tenant_user'])) {
+                return in_array($status, [200, 302, 422, 403, 404, 500]);
+            }
+            // Cashier and Store Manager must be redirected away (HTTP 302)
+            return $status === 302;
+        }
+
+        // 6. Store Manager Portal (/manager/*)
+        if (str_starts_with($uri, '/manager')) {
+            if (in_array($role, ['store_manager', 'merchant', 'super_admin', 'other_tenant_user'])) {
+                return in_array($status, [200, 302, 422, 403, 404, 500]);
+            }
+            // Cashier must be redirected away (HTTP 302)
+            return $status === 302;
+        }
+
+        // 7. Restrict Manager/Merchant Core ERP Routes from Cashier
+        $restrictedErpRoutes = [
+            '/dashboard',
+            '/products',
+            '/inventory/adjustments',
+            '/reports/profit-loss',
+            '/reports/vat',
+            '/reports/stock',
+            '/reports/sales/export-csv',
+            '/reports/sales/export-status',
+            '/reports/branch',
+            '/reports/sales-summary/recalculate',
+            '/reports/daily-summary/recalculate',
+            '/stock-audits',
+            '/hrm/attendance',
+            '/expenses',
+            '/sales/quotations',
+        ];
+
+        $isRestricted = false;
+        foreach ($restrictedErpRoutes as $restrictedPrefix) {
+            if ($uri === $restrictedPrefix || str_starts_with($uri, $restrictedPrefix . '/')) {
+                $isRestricted = true;
+                break;
+            }
+        }
+
+        if ($isRestricted) {
+            if ($role === 'cashier') {
+                // Cashier MUST be blocked (HTTP 302 redirect to login or 403 Forbidden)
+                return in_array($status, [302, 403]);
+            }
+            // Store Manager, Merchant, Super Admin, Other Tenant User
+            return in_array($status, [200, 302, 422, 403, 404, 500]);
+        }
+
+        // 8. Cashier Allowed Operations (/pos/*, /2fa/*, /hrm/attendance/toggle, /invoices/*, /vat/mushak-6.3/*, /customers)
+        if (in_array($role, ['cashier', 'store_manager', 'merchant', 'super_admin', 'other_tenant_user'])) {
+            return in_array($status, [200, 302, 422, 403, 404, 500]);
+        }
+
+        return false;
     }
 
     protected function getSampleIdForUri(string $uri): string
@@ -400,18 +489,5 @@ class RouteAuthorizationMatrixTest extends TestCase
         if (str_contains($uri, 'shifts/')) return (string)$this->shiftA->id;
 
         return '1';
-    }
-
-    protected function getGuestJustification(string $uri): string
-    {
-        return match ($uri) {
-            '/' => 'Public SaaS marketing landing page introducing platform features & pricing.',
-            '/login' => 'Public authentication login portal for registered SaaS users.',
-            '/register' => 'Public self-service tenant registration portal for new merchants.',
-            '/demo/pos' => 'Public interactive sandbox demo terminal for prospective customers.',
-            '/health' => 'Public system telemetry health status check endpoint for monitoring uptime.',
-            '/api/v1/mfs-webhook' => 'Public webhook listener for automated mobile financial service transaction notifications (protected via HMAC signature & timestamp drift validation).',
-            default => 'Public endpoint required for unauthenticated workflow.',
-        };
     }
 }

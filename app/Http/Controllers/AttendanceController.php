@@ -26,6 +26,10 @@ class AttendanceController extends Controller
     public function index()
     {
         $user = Auth::user();
+        if (! $user || ! in_array($user->role, ['super_admin', 'merchant', 'store_manager'])) {
+            abort(403, 'Unauthorized access to staff attendance list.');
+        }
+
         $tenantId = $this->getTenantId();
 
         $attendances = Attendance::with(['user', 'store'])

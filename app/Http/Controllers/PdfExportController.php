@@ -41,7 +41,12 @@ class PdfExportController extends Controller
 
     public function downloadBranchReport(Request $request)
     {
-        $tenantId = auth()->user()->tenant_id;
+        $user = auth()->user();
+        if (! $user || ! in_array($user->role, ['super_admin', 'merchant', 'store_manager'])) {
+            abort(403, 'Unauthorized access to branch PDF report.');
+        }
+
+        $tenantId = $user->tenant_id;
 
         $stores = Store::where('tenant_id', $tenantId)->get();
 

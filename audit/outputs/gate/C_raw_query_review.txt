@@ -1,55 +1,55 @@
 TENANT ISOLATION RAW QUERY AUDIT REPORT
 =======================================
-Generated: 2026-10-10 15:29:27
+Generated: 2026-10-10 16:50:02
 Target Engine: MySQL 8.4
-User Context: Merchant B (tenant_id = 94)
+User Context: Merchant B (tenant_id = 84)
 Total Queries Recorded: 11
 
 EXECUTED SQL QUERIES & TENANT SCOPE AUDIT:
 ----------------------------------------------------------------------------------------------------
 [01] PASS (tenant_id scoped)
      SQL: select * from `products` where `products`.`deleted_at` is null and `products`.`tenant_id` = ?
-     Bindings: [94]
+     Bindings: [84]
 
 [02] PASS (tenant_id scoped)
      SQL: select * from `orders` where `orders`.`tenant_id` = ?
-     Bindings: [94]
+     Bindings: [84]
 
 [03] PASS (tenant_id scoped)
      SQL: select * from `customers` where `customers`.`deleted_at` is null and `customers`.`tenant_id` = ?
-     Bindings: [94]
+     Bindings: [84]
 
 [04] PASS (tenant_id scoped)
      SQL: select * from `stores` where `stores`.`deleted_at` is null and `stores`.`tenant_id` = ?
-     Bindings: [94]
+     Bindings: [84]
 
 [05] PASS (tenant_id scoped)
      SQL: select * from `stocks` where `stocks`.`tenant_id` = ?
-     Bindings: [94]
+     Bindings: [84]
 
 [06] PASS (tenant_id scoped)
      SQL: select * from `expenses` where `expenses`.`tenant_id` = ?
-     Bindings: [94]
+     Bindings: [84]
 
 [07] PASS (tenant_id scoped)
      SQL: select * from `quotations` where `quotations`.`tenant_id` = ?
-     Bindings: [94]
+     Bindings: [84]
 
 [08] PASS (tenant_id scoped)
      SQL: select * from `suppliers` where `suppliers`.`deleted_at` is null and `suppliers`.`tenant_id` = ?
-     Bindings: [94]
+     Bindings: [84]
 
 [09] PASS (tenant_id scoped)
      SQL: select * from `purchases` where `purchases`.`tenant_id` = ?
-     Bindings: [94]
+     Bindings: [84]
 
 [10] PASS (tenant_id scoped)
      SQL: select * from `parked_orders` where `parked_orders`.`tenant_id` = ?
-     Bindings: [94]
+     Bindings: [84]
 
 [11] PASS (tenant_id scoped)
      SQL: select * from `stock_audits` where `stock_audits`.`tenant_id` = ?
-     Bindings: [94]
+     Bindings: [84]
 
 SUMMARY:
 --------

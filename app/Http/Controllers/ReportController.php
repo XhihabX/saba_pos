@@ -314,6 +314,11 @@ class ReportController extends Controller
 
     public function branchReport(Request $request)
     {
+        $user = auth()->user();
+        if (! $user || ! in_array($user->role, ['super_admin', 'merchant', 'store_manager'])) {
+            abort(403, 'Unauthorized access to branch performance report.');
+        }
+
         $tenantId = $this->getTenantId();
         $startDate = $request->input('start_date', date('Y-m-01'));
         $endDate = $request->input('end_date', date('Y-m-d'));

@@ -12,8 +12,17 @@ use Illuminate\Support\Str;
 
 class StockAuditController extends Controller
 {
+    private function checkRoleAuthorization(): void
+    {
+        $user = auth()->user();
+        if (! $user || ! in_array($user->role, ['super_admin', 'merchant', 'store_manager'])) {
+            abort(403, 'Unauthorized access to stock audit.');
+        }
+    }
+
     public function index(Request $request)
     {
+        $this->checkRoleAuthorization();
         $tenantId = auth()->user()->tenant_id;
         $audits = StockAudit::where('tenant_id', $tenantId)
             ->with(['store', 'creator', 'approver', 'items.product', 'items.variant'])
@@ -25,6 +34,7 @@ class StockAuditController extends Controller
 
     public function store(Request $request)
     {
+        $this->checkRoleAuthorization();
         $request->validate([
             'store_id' => 'required|exists:stores,id',
             'notes' => 'nullable|string|max:500',
@@ -69,6 +79,7 @@ class StockAuditController extends Controller
 
     public function updateItems(Request $request, StockAudit $audit)
     {
+        $this->checkRoleAuthorization();
         $tenantId = auth()->user()->tenant_id;
         if ($audit->tenant_id !== $tenantId) {
             abort(403, 'Unauthorized cross-tenant stock audit modification.');
@@ -112,6 +123,7 @@ class StockAuditController extends Controller
 
     public function approve(Request $request, StockAudit $audit)
     {
+        $this->checkRoleAuthorization();
         $tenantId = auth()->user()->tenant_id;
         if ($audit->tenant_id !== $tenantId) {
             abort(403, 'Unauthorized cross-tenant stock audit approval.');
