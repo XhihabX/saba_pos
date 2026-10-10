@@ -20,6 +20,8 @@ class DiscrepancyAlert extends Model
     ];
 
     protected $casts = [
+        'tenant_id' => 'integer',
+        'store_id' => 'integer',
         'date' => 'date:Y-m-d',
         'expected' => 'array',
         'actual' => 'array',
