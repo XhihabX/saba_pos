@@ -20,9 +20,9 @@ class BenchmarkCommandTest extends TestCase
 
     protected function tearDown(): void
     {
-        DB::purge();
         config(['database.default' => $this->originalDriver]);
         config(["database.connections.{$this->originalDriver}.database" => $this->originalDb]);
+        DB::purge();
         parent::tearDown();
     }
 
