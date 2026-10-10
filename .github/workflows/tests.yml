@@ -95,23 +95,7 @@ jobs:
         run: php artisan migrate --force
 
       - name: Execute Main Test Suite on MySQL 8.4
-        run: php artisan test -c phpunit.mysql.xml --exclude-group backup 2>&1 | tee test_main.log
+        run: php artisan test -c phpunit.mysql.xml --exclude-group backup
 
       - name: Execute Backup Test Suite on MySQL 8.4
-        run: php artisan test -c phpunit.mysql.xml --group backup 2>&1 | tee test_backup.log
-
-      - name: Log Test Output to Step Summary on Failure
-        if: failure()
-        run: |
-          if [ -f test_main.log ]; then
-            echo "### Main Test Failure Output" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -n 80 test_main.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
-          if [ -f test_backup.log ]; then
-            echo "### Backup Test Failure Output" >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-            tail -n 80 test_backup.log >> $GITHUB_STEP_SUMMARY
-            echo '```' >> $GITHUB_STEP_SUMMARY
-          fi
+        run: php artisan test -c phpunit.mysql.xml --group backup
