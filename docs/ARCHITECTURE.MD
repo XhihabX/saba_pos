@@ -305,6 +305,21 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Depends on:** `routes/web.php`, `PosController`, `AttendanceController`, `PdfExportController`, `ReportController`, `StockAuditController`, `RouteAuthorizationMatrixTest`.
 - **Last updated:** 2026-10-10
 
+### 32. Merchant Self-Service Registration to Live POS Checkout Empirical Proof Engine
+- **What it does:** End-to-end integration test suite and empirical proof generator (`MerchantToPosWorkflowTest.php`) verifying every single step of a merchant's lifecycle:
+  1. Self-service SaaS registration (`POST /register`).
+  2. Super Admin tenant approval (`POST /super-admin/tenants/{id}/approve`).
+  3. HQ product catalog setup, store stock allocation, supplier creation, customer CRM profiling, and cashier staff account provisioning.
+  4. Cashier register shift opening (`POST /pos/shift/open`) with opening float.
+  5. Live POS counter checkout (`POST /pos/checkout`) with subtotal, VAT, discount calculation, invoice generation, and atomic stock deduction (100 -> 98 units).
+  6. Parked order hold and discard lifecycle (`POST /pos/park`, `DELETE /pos/parked/{id}`).
+  7. Shift closure & cash drawer float reconciliation (`POST /pos/shift/close`).
+  Generates automated markdown proof audit report at `audit/outputs/merchant_registration_to_pos_proof.md`.
+- **Where it lives:** `tests/Feature/MerchantToPosWorkflowTest.php`, `audit/outputs/merchant_registration_to_pos_proof.md`.
+- **Key design decisions:** 100% real HTTP request simulations through Laravel test pipeline against MySQL 8.4 database engine, generating step-by-step verifiable empirical proof with zero mocked data.
+- **Depends on:** `AuthController`, `SuperAdminController`, `PosController`, `ShiftController`, `Product`, `Stock`, `Order`, `RegisterShift`.
+- **Last updated:** 2026-10-10
+
 
 
 

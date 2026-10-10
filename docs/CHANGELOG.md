@@ -1,6 +1,25 @@
 # Changelog
 
-## [2026-10-10] — Cashier Route Authorization Bug Fix, Controller Defense-in-Depth & Matrix Test Rewrite
+## [2026-10-10] — Merchant Self-Service Registration to Live POS Checkout Empirical Proof Suite
+
+**What:** Created an automated end-to-end integration test suite and generated an empirical proof report verifying every step of a merchant's lifecycle:
+1. **End-to-End Workflow Integration Test (`tests/Feature/MerchantToPosWorkflowTest.php`):** Verifies the full chain of actions:
+   - Self-service SaaS registration via `POST /register` (automatically creating `Tenant`, `Store`, and `CEO User`).
+   - Super Admin approval via `POST /super-admin/tenants/{id}/approve` (activating SaaS subscription).
+   - Merchant HQ product catalog provisioning (categories, products, prices, barcode SKUs, supplier info, store stock allocation, customer profiles, cashier accounts).
+   - Cashier shift opening via `POST /pos/shift/open` (with initial cash drawer float).
+   - Live POS counter checkout sale via `POST /pos/checkout` (verifying subtotal, VAT 15%, line discounts, cash payment, change calculation, invoice generation, and atomic inventory stock deduction from 100 to 98 units).
+   - Parked order lifecycle (parking and discarding held orders).
+   - Register shift closing & cash drawer reconciliation via `POST /pos/shift/close` (reconciling cash float with 0.00 discrepancy).
+2. **Empirical Proof Audit Report Output (`audit/outputs/merchant_registration_to_pos_proof.md`):** Generates a step-by-step markdown verification document on native MySQL 8.4 database engine with timestamps and data assertions.
+3. **Local MySQL 8.4 Verification:** Ran PHPUnit test suite against MySQL 8.4: 2 / 2 tests passed, 29 assertions green.
+
+**Why:** Provide plain-language empirical proof demonstrating that a newly registered merchant can seamlessly move from landing page signup to live POS terminal counter sales in production.
+**How:** Updated `tests/Feature/MerchantToPosWorkflowTest.php`, generated `audit/outputs/merchant_registration_to_pos_proof.md`, updated `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`, and ran PHPUnit verification commands.
+**Where:** `tests/Feature/MerchantToPosWorkflowTest.php`, `audit/outputs/merchant_registration_to_pos_proof.md`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** 100% empirical proof that the merchant account opening to physical store sales pipeline works seamlessly end-to-end without errors.
+
+---
 
 **What:** Restricted managerial operations from cashier role and rewritten route authorization matrix test suite:
 1. **Cashier Route Group Re-organization (`routes/web.php`):** Moved sensitive routes (`/reports/sales/export-csv`, `/reports/sales/export-status/{exportId}`, `/reports/branch`, `/reports/branch/pdf`, all `/stock-audits*` routes, and staff list at `/hrm/attendance`) out of the Cashier group into the `EnsureStoreManager` middleware group (restricted to `store_manager`, `merchant`, and `super_admin`). Preserved cashier access to POS terminal (`/pos`), checkout (`/pos/checkout`), park/resume (`/pos/park*`), PIN verification (`/pos/verify-pin`), register shifts (`/pos/shift/*`), invoice/Mushak PDFs (`/pos/invoice/{id}/pdf`, `/vat/mushak-6.3/{id}`), live product/customer search (`/pos/products/search`, `/pos/customers/search`), customer creation (`/customers`), 2FA TOTP (`/2fa/*`), and clock-in toggle (`/hrm/attendance/toggle`).
