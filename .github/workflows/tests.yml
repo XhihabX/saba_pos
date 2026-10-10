@@ -110,14 +110,18 @@ jobs:
 
       - name: Execute Main Test Suite on MySQL 8.4
         shell: bash
-        run: ./vendor/bin/phpunit -c phpunit.mysql.xml --exclude-group backup
+        run: |
+          set -o pipefail
+          ./vendor/bin/phpunit -c phpunit.mysql.xml --exclude-group backup 2>&1 | tee test_main.log
 
-      - name: Dump Failure Logs
+      - name: Report Failure to Step Summary
         if: failure()
         shell: bash
         run: |
-          echo "=== LARAVEL LOG ==="
-          cat storage/logs/laravel.log 2>/dev/null || echo "No laravel.log"
+          echo "## ❌ Test Failure Summary" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -n 150 test_main.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Execute Backup Test Suite on MySQL 8.4
         shell: bash
