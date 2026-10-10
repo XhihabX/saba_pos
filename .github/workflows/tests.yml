@@ -10,6 +10,9 @@ jobs:
   sanity-check:
     name: Environment & Sanity Check
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +39,9 @@ jobs:
   laravel-tests:
     name: MySQL 8.4 Test Suite
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
 
     env:
       DB_CONNECTION: mysql
