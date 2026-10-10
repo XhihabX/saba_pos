@@ -144,14 +144,14 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Depends on:** `DailySalesSummary`, `Order`, `Purchase`, `Expense`, `Store`.
 - **Last updated:** 2026-10-10
 
-### 17. Daily Sales Summary Aggregation Engine & Atomic Checkout Hooks
-- **What it does:** Maintains enterprise daily store totals updated atomically inside sales checkout (`PosController::checkout`) and return transactions (`ReturnController::store`) using database-native cross-platform upserts (`ON DUPLICATE KEY UPDATE` for MySQL, `ON CONFLICT` for SQLite).
-- **Where it lives:** `app/Models/DailySalesSummary.php`, `database/migrations/2026_10_10_000036_create_daily_sales_summaries_table.php`, `app/Console/Commands/BackfillDailySalesSummaryCommand.php`
-- **Key design decisions:** Atomically records sale revenue, taxes, COGS, and payment breakdowns per store per day. Historical order datasets are populated via `php artisan pos:backfill-summary`.
-- **Depends on:** `PosController`, `ReturnController`, `DailySalesSummaryIntegrityTest`.
+### 17. Daily Sales Summary Aggregation Engine, Void Audits & Verification Command
+- **What it does:** Maintains enterprise daily store totals updated atomically inside sales checkouts (`PosController::checkout`), void sales (`DailySalesSummary::recordVoidSale`), and return transactions (`ReturnController::store`) using database-native cross-platform upserts (`ON DUPLICATE KEY UPDATE` for MySQL, `ON CONFLICT` for SQLite). Includes scheduled automated audit command `php artisan pos:verify-daily-summaries` comparing summary rows against raw `orders` aggregates per tenant/store/day with optional `--fix` mode.
+- **Where it lives:** `app/Models/DailySalesSummary.php`, `app/Console/Commands/VerifyDailySalesSummaryCommand.php`, `routes/console.php`, `database/migrations/2026_10_10_000036_create_daily_sales_summaries_table.php`, `app/Console/Commands/BackfillDailySalesSummaryCommand.php`
+- **Key design decisions:** Atomically updates sale revenue, taxes, COGS, and payment breakdowns at the final line of sales checkout transactions for minimum lock holding time. Historical order datasets are backfilled via `php artisan pos:backfill-daily-sales-summary`. Nightly schedule runs integrity verification at 02:00.
+- **Depends on:** `PosController`, `ReturnController`, `DailySalesSummary`, `VerifyDailySalesSummaryCommand`, `DailySalesSummaryIntegrityTest`.
 - **Last updated:** 2026-10-10
 
-### 17. Public SaaS Marketing Landing Page
+### 18. Public SaaS Marketing Landing Page
 - **What it does:** Public landing page introducing Saba POS features, pricing tiers, interactive currency selector, FAQ accordion, and link to POS live demo.
 - **Where it lives:** `app/Http/Controllers/LandingController.php`, `resources/js/Pages/Landing.vue`
 - **Key design decisions:** Completely accessible without authentication; includes sandbox POS counter demo link (`/demo/pos`).
@@ -172,12 +172,12 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Depends on:** `AuditLog`, `Tenant`, `Store`, `User`, `Auth`.
 - **Last updated:** 2026-10-06
 
-### 21. Universal Client-Side CSV Data Export Engine
-- **What it does:** Instant client-side CSV download engine with custom column mappers, automatic RFC-4180 CSV escaping, UTF-8 BOM encoding for Excel/Google Sheets compatibility, and zero server roundtrip latency.
-- **Where it lives:** `resources/js/Utils/csvExport.js`, integrated into `Products/Index.vue`, `Merchant/Orders.vue`, `Merchant/Customers.vue`, `Merchant/AuditLogs.vue`, `Manager/AuditLogs.vue`, `SuperAdmin/AuditLogs.vue`, and `Reports/ProfitLoss.vue`.
-- **Key design decisions:** Pure browser Blob-based download avoiding heavy PHP server payload rendering and latency.
-- **Depends on:** `resources/js/Utils/csvExport.js`.
-- **Last updated:** 2026-10-06
+### 21. Hybrid CSV Export Engine (Inline Streamed vs Background Queued Jobs)
+- **What it does:** Hybrid CSV export architecture supporting instant inline HTTP streaming for small date ranges (<= 20,000 rows) and async background queued job processing (`ExportSalesCsvJob`) writing files to storage with download links and status polling page (`/reports/sales/export-status/{exportId}`) for large exports (> 20,000 rows).
+- **Where it lives:** `app/Http/Controllers/PosController.php`, `app/Jobs/ExportSalesCsvJob.php`, `routes/web.php`
+- **Key design decisions:** Uses `chunkById(5000, ..., 'orders.id', 'id')` for $O(N)$ indexed batch pagination during CSV generation, achieving high stream throughput (~600+ KB/s) without memory bloat (Peak RAM <= 64-172MB). `force_stream=1` override parameter allows benchmark telemetry commands to stream large datasets for throughput testing.
+- **Depends on:** `ExportSalesCsvJob`, `PosController`, `Storage`, `Cache`.
+- **Last updated:** 2026-10-10
 
 ### 22. Bangladesh Statutory NBR Compliance & Enterprise Regional Module
 - **What it does:** Provides 100% statutory NBR Musak-6.3 tax invoice compliance, store BIN number management, dynamic NBR QR codes, non-API Android MFS (bKash/Nagad/Rocket/Upay) notification webhook listener (`/api/v1/mfs-webhook`), TrxID regex verification with duplicate check, Bank Card POS Push-to-terminal bridge simulator, semi-integrated manual card fallback modal, customer credit limits (`credit_limit`), automated SMS payment reminders (`SmsService.php`), FEFO (First-Expired, First-Out) stock batch dispatch (`ProductBatch`), bilingual English & Bengali i18n translation dictionary (`messages.js`), IndexedDB offline sales persistence (`IotPosOfflineDB`), and automated Day-End Z-Reports (`ShiftController::zReport`).

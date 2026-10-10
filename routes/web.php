@@ -144,6 +144,7 @@ Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () 
     Route::get('/pos/invoice/{id}/pdf', [PosController::class, 'downloadInvoicePdf'])->name('pos.invoice.pdf');
     Route::get('/vat/mushak-6.3/{id}', [PosController::class, 'downloadMushak63'])->name('vat.mushak63');
     Route::get('/reports/sales/export-csv', [PosController::class, 'exportSalesCsv'])->name('reports.sales.export-csv');
+    Route::get('/reports/sales/export-status/{exportId}', [PosController::class, 'checkExportStatus'])->name('reports.sales.export-status');
     Route::get('/pos/products/search', [PosController::class, 'searchProducts'])->name('pos.products.search');
     Route::get('/pos/customers/search', [PosController::class, 'searchCustomers'])->name('pos.customers.search');
 

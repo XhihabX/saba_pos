@@ -170,4 +170,126 @@ class DailySalesSummaryIntegrityTest extends TestCase
 
         $this->assertEquals(115.00, (float) $updatedSummary->refunds);
     }
+
+    public function test_order_void_decrements_summary_table()
+    {
+        $tenant = Tenant::create([
+            'name' => 'Void Summary Tenant',
+            'code' => 'VOID-01',
+            'email' => 'void@example.com',
+            'subscription_status' => 'active',
+            'expires_at' => now()->addYear(),
+        ]);
+
+        $store = Store::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Void Store',
+            'code' => 'VOID-ST',
+            'is_active' => true,
+        ]);
+
+        $today = date('Y-m-d');
+
+        // Record Sale
+        DailySalesSummary::recordSale(
+            $tenant->id, $store->id, $today,
+            100.00, 15.00, 115.00, 60.00, ['cash' => 115.00]
+        );
+
+        $summaryBefore = DailySalesSummary::where('tenant_id', $tenant->id)->where('store_id', $store->id)->where('date', $today)->first();
+        $this->assertEquals(1, $summaryBefore->orders_count);
+        $this->assertEquals(115.00, (float)$summaryBefore->grand_total);
+
+        // Record Void Sale
+        DailySalesSummary::recordVoidSale(
+            $tenant->id, $store->id, $today,
+            100.00, 15.00, 115.00, 60.00, ['cash' => 115.00]
+        );
+
+        $summaryAfter = DailySalesSummary::where('tenant_id', $tenant->id)->where('store_id', $store->id)->where('date', $today)->first();
+        $this->assertEquals(0, $summaryAfter->orders_count);
+        $this->assertEquals(0.00, (float)$summaryAfter->grand_total);
+        $this->assertEquals(0.00, (float)$summaryAfter->cash_total);
+    }
+
+    public function test_offline_sync_idempotency_prevents_duplicate_summary_records()
+    {
+        $tenant = Tenant::create(['name' => 'Sync Tenant', 'code' => 'SYNC-01', 'email' => 'sync@example.com', 'subscription_status' => 'active', 'expires_at' => now()->addYear()]);
+        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Sync Store', 'code' => 'SYNC-ST', 'is_active' => true]);
+        $user = User::create(['tenant_id' => $tenant->id, 'name' => 'Sync Cashier', 'email' => 'synccashier@example.com', 'password' => bcrypt('password123'), 'role' => 'merchant', 'is_approved' => true]);
+        RegisterShift::create(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'user_id' => $user->id, 'opening_cash' => 500.00, 'status' => 'open', 'opened_at' => now()]);
+        $product = Product::create(['tenant_id' => $tenant->id, 'name' => 'Sync Product', 'sku' => 'SKU-SYNC-1', 'selling_price' => 100.00, 'purchase_cost' => 60.00, 'vat_rate' => 15.00, 'is_active' => true]);
+        DB::table('stocks')->insert(['tenant_id' => $tenant->id, 'store_id' => $store->id, 'product_id' => $product->id, 'quantity' => 100, 'created_at' => now(), 'updated_at' => now()]);
+
+        $payload = [
+            'store_id' => $store->id,
+            'payment_method' => 'cash',
+            'paid_amount' => 115.00,
+            'client_uuid' => (string) Str::uuid(),
+            'idempotency_key' => 'IDEMPOTENT-SYNC-KEY-999',
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+        ];
+
+        // First Post
+        $res1 = $this->actingAs($user)->postJson('/pos/checkout', $payload);
+        $res1->assertStatus(200);
+
+        // Duplicate Retry Post with same Idempotency Key
+        $res2 = $this->actingAs($user)->postJson('/pos/checkout', $payload);
+        $res2->assertStatus(200);
+
+        $today = date('Y-m-d');
+        $summary = DailySalesSummary::where('tenant_id', $tenant->id)->where('store_id', $store->id)->where('date', $today)->first();
+
+        // Exactly 1 order recorded in summary
+        $this->assertEquals(1, $summary->orders_count);
+        $this->assertEquals(115.00, (float)$summary->grand_total);
+    }
+
+    public function test_verify_daily_summaries_command_audits_and_fixes_drift()
+    {
+        $tenant = Tenant::create(['name' => 'Verify Tenant', 'code' => 'VERIFY-01', 'email' => 'verify@example.com', 'subscription_status' => 'active', 'expires_at' => now()->addYear()]);
+        $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Verify Store', 'code' => 'VERIFY-ST', 'is_active' => true]);
+        $today = date('Y-m-d');
+
+        Order::create([
+            'tenant_id' => $tenant->id,
+            'store_id' => $store->id,
+            'invoice_no' => 'INV-VERIFY-01',
+            'subtotal' => 200.00,
+            'discount_amount' => 0.00,
+            'tax_amount' => 30.00,
+            'grand_total' => 230.00,
+            'cogs' => 120.00,
+            'paid_amount' => 230.00,
+            'payment_status' => 'paid',
+            'payment_method' => 'cash',
+            'created_at' => "{$today} 12:00:00",
+            'updated_at' => "{$today} 12:00:00",
+        ]);
+
+        // Manually create artificial drift
+        DailySalesSummary::create([
+            'tenant_id' => $tenant->id,
+            'store_id' => $store->id,
+            'date' => $today,
+            'orders_count' => 1,
+            'subtotal' => 100.00, // Intentional drift
+            'tax_amount' => 15.00,
+            'grand_total' => 115.00,
+            'cogs' => 60.00,
+        ]);
+
+        // Command fails audit without --fix
+        $this->artisan('pos:verify-daily-summaries')
+            ->assertExitCode(1);
+
+        // Command fixes audit with --fix
+        $this->artisan('pos:verify-daily-summaries --fix')
+            ->assertExitCode(0);
+
+        $syncedSummary = DailySalesSummary::where('tenant_id', $tenant->id)->where('store_id', $store->id)->where('date', $today)->first();
+        $this->assertEquals(230.00, (float)$syncedSummary->grand_total);
+        $this->assertEquals(200.00, (float)$syncedSummary->subtotal);
+    }
 }

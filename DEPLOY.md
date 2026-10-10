@@ -78,9 +78,17 @@ chmod -R 775 storage bootstrap/cache
 composer install --no-dev --optimize-autoloader --no-interaction --no-progress
 ```
 
-### Step 3: Run Database Migrations
+### Step 3: Database Migrations & Daily Sales Summary Verification
+Execute database schema migrations, backfill historical sales summaries, and verify financial integrity:
 ```bash
+# 1. Run database schema migrations
 php artisan migrate --force
+
+# 2. Backfill missing daily sales summaries for historical sales data
+php artisan pos:backfill-daily-sales-summary
+
+# 3. Verify zero financial drift between daily_sales_summaries and raw orders aggregates
+php artisan pos:verify-daily-summaries
 ```
 
 ### Step 4: Compile Production Frontend Assets (Vite)
@@ -89,12 +97,13 @@ npm ci
 npm run build
 ```
 
-### Step 5: Optimize Framework Caches
+### Step 5: Optimize Framework Caches & Restart Queue Workers
 ```bash
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 php artisan event:cache
+php artisan queue:restart
 ```
 
 ---

@@ -30,3 +30,4 @@ Thumbs.db
 
 # stray sqlite file from misconfigured DB_DATABASE
 /:memory:
+/scratch/

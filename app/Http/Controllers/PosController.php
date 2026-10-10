@@ -536,7 +536,21 @@ class PosController extends Controller
                 }
             }
 
-            // Record Daily Sales Summary
+            $order->load(['items', 'customer', 'store', 'payments', 'user']);
+
+            AuditLogger::log(
+                'pos_checkout',
+                "Processed sale invoice {$order->invoice_no} for total ৳{$order->grand_total}",
+                [
+                    'invoice_no' => $order->invoice_no,
+                    'grand_total' => $order->grand_total,
+                    'payment_method' => $order->payment_method,
+                    'payment_status' => $order->payment_status,
+                ],
+                $store->id
+            );
+
+            // Record Daily Sales Summary (Executed at final line of transaction for shortest lock holding time)
             $paymentsMap = [];
             foreach ($order->payments as $pmt) {
                 $paymentsMap[$pmt->payment_method] = ($paymentsMap[$pmt->payment_method] ?? 0) + (float) $pmt->amount;
@@ -550,21 +564,6 @@ class PosController extends Controller
                 (float) $grandTotal,
                 (float) $calculatedCogs,
                 $paymentsMap
-            );
-
-            $order->load(['items', 'customer', 'store', 'payments', 'user']);
-
-
-            AuditLogger::log(
-                'pos_checkout',
-                "Processed sale invoice {$order->invoice_no} for total ৳{$order->grand_total}",
-                [
-                    'invoice_no' => $order->invoice_no,
-                    'grand_total' => $order->grand_total,
-                    'payment_method' => $order->payment_method,
-                    'payment_status' => $order->payment_status,
-                ],
-                $store->id
             );
 
             if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
@@ -581,7 +580,7 @@ class PosController extends Controller
                 'success' => 'Order completed successfully!',
                 'receipt' => $order,
             ]);
-        });
+        }, 5);
     }
 
     public function parkOrder(Request $request)
@@ -745,6 +744,38 @@ class PosController extends Controller
             $startDate = \Carbon\Carbon::parse($endDate)->subDays(366)->startOfDay()->toDateTimeString();
         }
 
+        $totalMatchingRows = DB::table('orders')
+            ->where('tenant_id', $tenantId)
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->count();
+
+        $forceStream = $request->boolean('force_stream') || $request->input('stream') === '1' || $request->boolean('stream');
+
+        // Large exports (> 20,000 rows) run as queued background job unless force_stream is true
+        if ($totalMatchingRows > 20000 && !$forceStream) {
+            $exportId = uniqid('exp_');
+            cache()->put("export_status_{$exportId}", [
+                'status' => 'queued',
+                'matching_rows' => $totalMatchingRows,
+                'created_at' => now()->toDateTimeString(),
+            ], 86400);
+
+            \App\Jobs\ExportSalesCsvJob::dispatch($tenantId, $startDate, $endDate, $exportId);
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'queued' => true,
+                    'export_id' => $exportId,
+                    'matching_rows' => $totalMatchingRows,
+                    'message' => "Export containing {$totalMatchingRows} rows dispatched to background queue.",
+                    'status_url' => url("/reports/sales/export-status/{$exportId}"),
+                ], 202);
+            }
+
+            return redirect()->back()->with('success', "Large export ({$totalMatchingRows} rows) queued! File will be generated in background.");
+        }
+
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="sales_report_' . date('Ymd_His') . '.csv"',
@@ -772,8 +803,7 @@ class PosController extends Controller
                     'orders.payment_method',
                     'orders.payment_status',
                 ])
-                ->orderBy('orders.id')
-                ->chunk(5000, function ($orders) use ($file) {
+                ->chunkById(5000, function ($orders) use ($file) {
                     foreach ($orders as $order) {
                         fputcsv($file, [
                             $order->invoice_no,
@@ -788,11 +818,20 @@ class PosController extends Controller
                             $order->payment_status,
                         ]);
                     }
-                });
+                }, 'orders.id', 'id');
 
             fclose($file);
         };
 
         return response()->stream($callback, 200, $headers);
+    }
+
+    public function checkExportStatus($exportId)
+    {
+        $status = cache()->get("export_status_{$exportId}");
+        if (!$status) {
+            return response()->json(['success' => false, 'message' => 'Export task not found.'], 404);
+        }
+        return response()->json(['success' => true, 'export' => $status]);
     }
 }
