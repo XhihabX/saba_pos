@@ -1,6 +1,6 @@
 MONEY INVARIANTS PROPERTY TEST REPORT
 =====================================
-Generated: 2026-10-10 16:49:52
+Generated: 2026-10-10 17:39:15
 Target Engine: MySQL 8.4
 Random Seed: 12345 (Fixed deterministic seed)
 Total Scenarios Executed: 500

@@ -21,6 +21,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Tests\TestCase;
 
@@ -308,26 +309,31 @@ class RouteAuthorizationMatrixTest extends TestCase
             foreach ($roles as $roleName => $user) {
                 // Ensure complete session and auth state reset per request
                 auth()->logout();
-                $this->be(null);
                 $this->flushSession();
                 $this->app['auth']->forgetGuards();
 
-                if ($user === null) {
-                    $response = $this->call($method, $testUri);
-                } else {
-                    $response = $this->actingAs($user)->call($method, $testUri);
-                }
+                DB::beginTransaction();
+                try {
+                    if ($user === null) {
+                        $response = $this->call($method, $testUri);
+                    } else {
+                        $response = $this->actingAs($user)->call($method, $testUri);
+                    }
 
-                $status = $response->getStatusCode();
-                $routeRow[$roleName] = $status;
+                    $status = $response->getStatusCode();
+                    $routeRow[$roleName] = $status;
 
-                // Validate actual status against declared expectation
-                $isAllowed = $this->isStatusExpectedForRole($formattedUri, $method, $roleName, $status);
-                if (!$isAllowed) {
-                    $failures[] = sprintf(
-                        "Route [%s %s] for role [%s] returned HTTP %d, which violates expected authorization policy.",
-                        $method, $formattedUri, $roleName, $status
-                    );
+                    // Validate actual status against declared expectation
+                    $isAllowed = $this->isStatusExpectedForRole($formattedUri, $method, $roleName, $status);
+                    if (!$isAllowed) {
+                        $excMsg = $response->exception ? $response->exception->getMessage() : '';
+                        $failures[] = sprintf(
+                            "Route [%s %s] for role [%s] returned HTTP %d (%s), which violates expected authorization policy.",
+                            $method, $formattedUri, $roleName, $status, $excMsg
+                        );
+                    }
+                } finally {
+                    DB::rollBack();
                 }
             }
 

@@ -1,6 +1,6 @@
 OFFLINE MODE & QUEUE RESILIENCE AUDIT REPORT
 ============================================
-Generated: 2026-10-10 16:49:54
+Generated: 2026-10-10 17:39:16
 Target Engine: MySQL 8.4
 Test Suite: OfflineSalesSyncTest
 

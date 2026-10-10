@@ -1,6 +1,6 @@
 AUTHORIZATION MATRIX AUDIT REPORT
 =================================
-Generated: 2026-10-10 16:48:04
+Generated: 2026-10-10 17:39:42
 Target Engine: MySQL 8.4
 Total Routes Audited: 148
 
@@ -25,7 +25,7 @@ URI                                              | Method | Guest  | Cashier | S
 /super-admin/tenants/{id}/restore                | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /super-admin/tenants/{id}                        | DELETE | 302    | 302     | 302          | 302      | 302        | 302            
 /super-admin/tenants/{id}/force                  | DELETE | 302    | 302     | 302          | 302      | 500        | 302            
-/super-admin/tenants/{id}/impersonate            | POST   | 302    | 302     | 302          | 302      | 404        | 302            
+/super-admin/tenants/{id}/impersonate            | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /super-admin/exit-impersonate                    | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /super-admin/tenants/{id}/extend                 | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /super-admin/plans                               | GET    | 302    | 302     | 302          | 302      | 200        | 302            
@@ -42,7 +42,7 @@ URI                                              | Method | Guest  | Cashier | S
 /super-admin/users/{id}/update                   | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /super-admin/users/{id}                          | DELETE | 302    | 302     | 302          | 302      | 302        | 302            
 /super-admin/users/{id}/force                    | DELETE | 302    | 302     | 302          | 302      | 302        | 302            
-/super-admin/users/{id}/restore                  | POST   | 302    | 302     | 302          | 302      | 404        | 302            
+/super-admin/users/{id}/restore                  | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /super-admin/users/{id}/reset-password           | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /super-admin/products/{id}/force                 | DELETE | 302    | 302     | 302          | 302      | 500        | 302            
 /super-admin/products/{id}/restore               | POST   | 302    | 302     | 302          | 302      | 302        | 302            
@@ -62,25 +62,25 @@ URI                                              | Method | Guest  | Cashier | S
 /merchant/stores/{id}                            | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
 /merchant/users                                  | GET    | 302    | 302     | 302          | 200      | 403        | 200            
 /merchant/users                                  | POST   | 302    | 302     | 302          | 302      | 403        | 302            
-/merchant/users/{id}/update                      | POST   | 302    | 302     | 302          | 404      | 403        | 404            
-/merchant/users/{id}                             | DELETE | 302    | 302     | 302          | 404      | 403        | 404            
-/merchant/users/{id}/force                       | DELETE | 302    | 302     | 302          | 404      | 403        | 404            
-/merchant/users/{id}/restore                     | POST   | 302    | 302     | 302          | 404      | 403        | 404            
+/merchant/users/{id}/update                      | POST   | 302    | 302     | 302          | 302      | 403        | 404            
+/merchant/users/{id}                             | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
+/merchant/users/{id}/force                       | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
+/merchant/users/{id}/restore                     | POST   | 302    | 302     | 302          | 302      | 403        | 404            
 /merchant/suppliers                              | GET    | 302    | 302     | 302          | 200      | 403        | 200            
 /merchant/suppliers                              | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /merchant/suppliers/{id}/update                  | POST   | 302    | 302     | 302          | 302      | 403        | 404            
 /merchant/suppliers/{id}                         | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
 /merchant/purchases                              | GET    | 302    | 302     | 302          | 200      | 403        | 200            
 /merchant/purchases                              | POST   | 302    | 302     | 302          | 302      | 403        | 302            
-/merchant/purchases/{id}                         | DELETE | 302    | 302     | 302          | 404      | 403        | 404            
-/merchant/subscription                           | GET    | 302    | 302     | 302          | 404      | 403        | 200            
-/merchant/settings                               | GET    | 302    | 302     | 302          | 404      | 403        | 200            
-/merchant/settings                               | POST   | 302    | 302     | 302          | 404      | 403        | 302            
+/merchant/purchases/{id}                         | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
+/merchant/subscription                           | GET    | 302    | 302     | 302          | 200      | 403        | 200            
+/merchant/settings                               | GET    | 302    | 302     | 302          | 200      | 403        | 200            
+/merchant/settings                               | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /merchant/customers                              | GET    | 302    | 302     | 302          | 200      | 403        | 200            
 /merchant/customers                              | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /merchant/customers/{id}/update                  | POST   | 302    | 302     | 302          | 302      | 403        | 404            
 /merchant/customers/{id}                         | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
-/merchant/customers/{id}/pay-due                 | POST   | 302    | 302     | 302          | 404      | 403        | 404            
+/merchant/customers/{id}/pay-due                 | POST   | 302    | 302     | 302          | 302      | 403        | 404            
 /merchant/orders                                 | GET    | 302    | 302     | 302          | 200      | 403        | 200            
 /merchant/audit-logs                             | GET    | 302    | 302     | 302          | 200      | 403        | 200            
 /manager                                         | GET    | 302    | 302     | 302          | 302      | 302        | 302            
@@ -98,10 +98,10 @@ URI                                              | Method | Guest  | Cashier | S
 /pos/checkout                                    | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /pos/park                                        | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /pos/parked-orders                               | GET    | 302    | 200     | 200          | 200      | 403        | 200            
-/pos/parked-orders/{id}                          | DELETE | 302    | 302     | 404          | 404      | 403        | 404            
-/pos/parked/{id}                                 | DELETE | 302    | 404     | 404          | 404      | 403        | 404            
+/pos/parked-orders/{id}                          | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
+/pos/parked/{id}                                 | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
 /pos/verify-pin                                  | POST   | 302    | 422     | 422          | 422      | 422        | 422            
-/pos/invoice/{id}/pdf                            | GET    | 302    | 200     | 200          | 200      | 403        | 404            
+/pos/invoice/{id}/pdf                            | GET    | 302    | 404     | 404          | 404      | 403        | 404            
 /vat/mushak-6.3/{id}                             | GET    | 302    | 200     | 200          | 200      | 403        | 404            
 /pos/products/search                             | GET    | 302    | 200     | 200          | 200      | 403        | 200            
 /pos/customers/search                            | GET    | 302    | 200     | 200          | 200      | 403        | 200            
@@ -112,7 +112,7 @@ URI                                              | Method | Guest  | Cashier | S
 /pos/shift/status                                | GET    | 302    | 200     | 200          | 200      | 403        | 200            
 /pos/shift/open                                  | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /pos/shift/close                                 | POST   | 302    | 302     | 302          | 302      | 403        | 302            
-/hrm/attendance/toggle                           | POST   | 302    | 500     | 302          | 302      | 403        | 302            
+/hrm/attendance/toggle                           | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /invoices/{order}/pdf                            | GET    | 302    | 200     | 200          | 200      | 403        | 404            
 /invoices/{order}/mushak63/pdf                   | GET    | 302    | 200     | 200          | 200      | 403        | 404            
 /customers                                       | POST   | 302    | 302     | 302          | 302      | 403        | 302            
@@ -123,7 +123,7 @@ URI                                              | Method | Guest  | Cashier | S
 /products/brands                                 | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /products/units                                  | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /products/{id}/update                            | POST   | 302    | 302     | 302          | 302      | 403        | 404            
-/products/{id}                                   | DELETE | 302    | 302     | 302          | 404      | 403        | 404            
+/products/{id}                                   | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
 /products/barcodes                               | GET    | 302    | 302     | 200          | 200      | 403        | 200            
 /inventory/adjustments                           | GET    | 302    | 302     | 200          | 200      | 403        | 200            
 /inventory/adjustments                           | POST   | 302    | 302     | 302          | 302      | 403        | 302            
@@ -137,20 +137,20 @@ URI                                              | Method | Guest  | Cashier | S
 /reports/branch/pdf                              | GET    | 302    | 302     | 200          | 200      | 200        | 200            
 /reports/sales-summary/recalculate               | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /reports/daily-summary/recalculate               | POST   | 302    | 302     | 302          | 302      | 403        | 302            
-/manager/shifts/{id}/z-report                    | GET    | 302    | 302     | 404          | 404      | 404        | 404            
+/manager/shifts/{id}/z-report                    | GET    | 302    | 302     | 200          | 200      | 200        | 404            
 /stock-audits                                    | GET    | 302    | 302     | 200          | 200      | 200        | 200            
 /stock-audits                                    | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /stock-audits/{audit}/items                      | POST   | 302    | 302     | 302          | 302      | 403        | 404            
-/stock-audits/{audit}/approve                    | POST   | 302    | 302     | 200          | 422      | 403        | 404            
+/stock-audits/{audit}/approve                    | POST   | 302    | 302     | 200          | 200      | 403        | 404            
 /hrm/attendance                                  | GET    | 302    | 302     | 200          | 200      | 403        | 200            
 /expenses                                        | GET    | 302    | 302     | 200          | 200      | 403        | 200            
 /expenses                                        | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /expenses/{id}/update                            | POST   | 302    | 302     | 302          | 302      | 403        | 404            
-/expenses/{id}                                   | DELETE | 302    | 302     | 302          | 404      | 403        | 404            
+/expenses/{id}                                   | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
 /sales/quotations                                | GET    | 302    | 302     | 200          | 200      | 403        | 200            
 /sales/quotations                                | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /sales/quotations/{id}/convert                   | POST   | 302    | 302     | 302          | 302      | 403        | 404            
-/sales/quotations/{id}                           | DELETE | 302    | 302     | 302          | 404      | 403        | 404            
+/sales/quotations/{id}                           | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
 /api/v1/mfs-webhook                              | POST   | 403    | 403     | 403          | 403      | 403        | 403            
 /storage/{path}                                  | GET    | 403    | 403     | 403          | 403      | 403        | 403            
 /storage/{path}                                  | PUT    | 403    | 403     | 403          | 403      | 403        | 403            
