@@ -32,6 +32,31 @@
         </div>
       </div>
 
+      <!-- ⚠️ Summary Drift Discrepancy Alert Banner -->
+      <div v-if="discrepancyAlerts && discrepancyAlerts.length > 0" class="space-y-3">
+        <div v-for="alert in discrepancyAlerts" :key="alert.id" class="p-5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-md">
+          <div class="flex items-start gap-3">
+            <div class="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0 font-bold text-sm">
+              ⚠️
+            </div>
+            <div>
+              <h4 class="font-bold text-sm font-heading flex items-center gap-2">
+                Daily Sales Summary Drift Detected
+                <span class="text-xs px-2 py-0.5 rounded-full bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100 font-mono">Store #{{ alert.store_id }} | Date: {{ alert.date }}</span>
+              </h4>
+              <p class="text-xs mt-1 text-amber-800 dark:text-amber-300">
+                A discrepancy was detected between live order aggregates and daily sales summaries.
+                Expected grand total: ৳{{ alert.expected?.grand_total ?? 0 }} ({{ alert.expected?.count ?? 0 }} orders) vs Summary actual: ৳{{ alert.actual?.grand_total ?? 0 }} ({{ alert.actual?.count ?? 0 }} orders).
+              </p>
+            </div>
+          </div>
+          <button @click="recalculate(alert)" :disabled="recalculating === alert.id" class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs shadow-md transition-all shrink-0 flex items-center gap-2 disabled:opacity-50">
+            <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': recalculating === alert.id }" />
+            <span>{{ recalculating === alert.id ? 'Recalculating...' : 'Fix & Recalculate' }}</span>
+          </button>
+        </div>
+      </div>
+
       <!-- 📊 Business Performance Cards Grid -->
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div class="p-6 rounded-3xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/80 shadow-xs dark:shadow-xl dark:shadow-black/20 space-y-3">
@@ -125,16 +150,36 @@
 </template>
 
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { ref } from 'vue';
+import { router, Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Building2, Store, Zap, DollarSign, TrendingUp, Users } from 'lucide-vue-next';
+import { Building2, Store, Zap, DollarSign, TrendingUp, Users, RefreshCw } from 'lucide-vue-next';
+import axios from 'axios';
 
-defineProps({
+const props = defineProps({
   stores: Array,
   totalSales: Number,
   totalStaff: Number,
   storePerformance: Array,
+  discrepancyAlerts: Array,
 });
+
+const recalculating = ref(null);
+
+const recalculate = async (alert) => {
+  recalculating.value = alert.id;
+  try {
+    await axios.post('/reports/daily-summary/recalculate', {
+      store_id: alert.store_id,
+      date: alert.date,
+    });
+    router.reload({ preserveScroll: true });
+  } catch (err) {
+    alert('Failed to recalculate: ' + (err.response?.data?.message || err.message));
+  } finally {
+    recalculating.value = null;
+  }
+};
 
 const formatMoney = (val) => {
   return (parseFloat(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

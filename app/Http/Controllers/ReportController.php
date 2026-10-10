@@ -381,16 +381,12 @@ class ReportController extends Controller
 
         \App\Models\DailySalesSummary::recalculateDay($tenantId, $storeId, $date);
 
-        $alerts = Cache::get('daily_sales_summary_discrepancy_alerts', []);
-        $updatedAlerts = array_values(array_filter($alerts, function ($item) use ($tenantId, $storeId, $date) {
-            return !($item['tenant_id'] == $tenantId && $item['store_id'] == $storeId && $item['date'] == $date);
-        }));
-
-        if (empty($updatedAlerts)) {
-            Cache::forget('daily_sales_summary_discrepancy_alerts');
-        } else {
-            Cache::put('daily_sales_summary_discrepancy_alerts', $updatedAlerts, 86400 * 7);
-        }
+        // Resolve persistent database discrepancy alert
+        \App\Models\DiscrepancyAlert::where('tenant_id', $tenantId)
+            ->where('store_id', $storeId)
+            ->where('date', $date)
+            ->whereNull('resolved_at')
+            ->update(['resolved_at' => now()]);
 
         return response()->json([
             'success' => true,

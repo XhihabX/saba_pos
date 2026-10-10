@@ -64,11 +64,16 @@ class MerchantController extends Controller
             return $store;
         });
 
+        $unresolvedAlerts = \App\Models\DiscrepancyAlert::where('tenant_id', $tenantId)
+            ->whereNull('resolved_at')
+            ->get();
+
         return Inertia::render('Merchant/Dashboard', [
             'stores' => $stores,
             'totalSales' => (float) $totalSales,
             'totalStaff' => $totalStaff,
             'storePerformance' => $storePerformance,
+            'discrepancyAlerts' => $unresolvedAlerts,
         ]);
     }
 

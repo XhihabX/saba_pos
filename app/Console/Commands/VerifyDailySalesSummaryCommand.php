@@ -99,40 +99,64 @@ class VerifyDailySalesSummaryCommand extends Command
             if ($differs) {
                 $discrepanciesCount++;
 
+                $expectedData = [
+                    'count' => $expectedCount,
+                    'subtotal' => $expectedSubtotal,
+                    'tax' => $expectedTax,
+                    'grand_total' => $expectedGrand,
+                    'cogs' => $expectedCogs,
+                    'refunds' => $expectedRefunds,
+                ];
+
+                $actualData = [
+                    'count' => $actualCount,
+                    'subtotal' => $actualSubtotal,
+                    'tax' => $actualTax,
+                    'grand_total' => $actualGrand,
+                    'cogs' => $actualCogs,
+                    'refunds' => $actualRefunds,
+                ];
+
                 Log::error("DAILY_SUMMARY_DRIFT_DISCREPANCY: Discrepancy detected for tenant #{$tenantId}, store #{$storeId}, date {$date}", [
                     'tenant_id' => $tenantId,
                     'store_id' => $storeId,
                     'date' => $date,
-                    'expected' => [
-                        'count' => $expectedCount,
-                        'subtotal' => $expectedSubtotal,
-                        'tax' => $expectedTax,
-                        'grand_total' => $expectedGrand,
-                        'cogs' => $expectedCogs,
-                        'refunds' => $expectedRefunds,
-                    ],
-                    'actual' => [
-                        'count' => $actualCount,
-                        'subtotal' => $actualSubtotal,
-                        'tax' => $actualTax,
-                        'grand_total' => $actualGrand,
-                        'cogs' => $actualCogs,
-                        'refunds' => $actualRefunds,
-                    ],
+                    'expected' => $expectedData,
+                    'actual' => $actualData,
                 ]);
 
-                $discrepancyAlerts[] = [
-                    'tenant_id' => $tenantId,
-                    'store_id' => $storeId,
-                    'date' => $date,
-                    'expected_count' => $expectedCount,
-                    'actual_count' => $actualCount,
-                    'expected_grand' => $expectedGrand,
-                    'actual_grand' => $actualGrand,
-                    'expected_refunds' => $expectedRefunds,
-                    'actual_refunds' => $actualRefunds,
-                    'detected_at' => now()->toDateTimeString(),
-                ];
+                // Store persistent discrepancy alert in DB table discrepancy_alerts
+                $alertRecord = \App\Models\DiscrepancyAlert::updateOrCreate(
+                    [
+                        'tenant_id' => $tenantId,
+                        'store_id' => $storeId,
+                        'date' => $date,
+                        'resolved_at' => null,
+                    ],
+                    [
+                        'expected' => $expectedData,
+                        'actual' => $actualData,
+                    ]
+                );
+
+                // Send Email Notification to Tenant Owner
+                try {
+                    $tenant = \App\Models\Tenant::find($tenantId);
+                    $ownerEmail = $tenant?->email;
+                    if (!$ownerEmail) {
+                        $owner = \App\Models\User::where('tenant_id', $tenantId)
+                            ->whereIn('role', ['merchant', 'owner', 'super_admin'])
+                            ->first();
+                        $ownerEmail = $owner?->email;
+                    }
+
+                    if ($ownerEmail) {
+                        \Illuminate\Support\Facades\Mail::to($ownerEmail)
+                            ->send(new \App\Mail\DiscrepancyAlertMail($alertRecord));
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning("Could not send DiscrepancyAlertMail: " . $e->getMessage());
+                }
 
                 $this->warn(sprintf(
                     "⚠️ DRIFT DISCREPANCY DETECTED [Tenant #%d | Store #%d | Date: %s]:",
@@ -144,16 +168,11 @@ class VerifyDailySalesSummaryCommand extends Command
 
                 if ($shouldFix) {
                     DailySalesSummary::recalculateDay($tenantId, $storeId, $date);
+                    $alertRecord->update(['resolved_at' => now()]);
                     $fixedCount++;
-                    $this->info("   ✓ Recalculated & synced summary row.");
+                    $this->info("   ✓ Recalculated & synced summary row, resolved alert.");
                 }
             }
-        }
-
-        if ($discrepanciesCount > 0 && !$shouldFix) {
-            Cache::put('daily_sales_summary_discrepancy_alerts', $discrepancyAlerts, 86400 * 7);
-        } elseif ($discrepanciesCount === 0 || $shouldFix) {
-            Cache::forget('daily_sales_summary_discrepancy_alerts');
         }
 
         $this->info("==========================================================================================");

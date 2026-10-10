@@ -203,6 +203,7 @@ Route::middleware(['auth', EnsureStoreManager::class, EnsureActiveSubscription::
     Route::get('/reports/vat', [ReportController::class, 'vatReport'])->name('reports.vat');
     Route::get('/reports/stock', [ReportController::class, 'stockReport'])->name('reports.stock');
     Route::post('/reports/sales-summary/recalculate', [ReportController::class, 'recalculateDailySummary'])->name('reports.sales-summary.recalculate');
+    Route::post('/reports/daily-summary/recalculate', [ReportController::class, 'recalculateDailySummary'])->name('reports.daily-summary.recalculate');
     Route::get('/manager/shifts/{id}/z-report', [ShiftController::class, 'zReport'])->name('manager.shifts.z-report');
 
     // Store Expenses Management

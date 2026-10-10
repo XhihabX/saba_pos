@@ -295,6 +295,8 @@ class DailySalesSummaryIntegrityTest extends TestCase
 
     public function test_corrupted_summary_row_is_detected_logged_and_alerted()
     {
+        \Illuminate\Support\Facades\Mail::fake();
+
         $tenant = Tenant::create(['name' => 'Corrupt Test Tenant', 'code' => 'CORRUPT-01', 'email' => 'corrupt@example.com', 'subscription_status' => 'active', 'expires_at' => now()->addYear()]);
         $store = Store::create(['tenant_id' => $tenant->id, 'name' => 'Corrupt Store', 'code' => 'CORRUPT-ST', 'is_active' => true]);
         $user = User::create(['tenant_id' => $tenant->id, 'name' => 'Merchant Admin', 'email' => 'merchantadmin@example.com', 'password' => bcrypt('password123'), 'role' => 'merchant', 'is_approved' => true]);
@@ -329,20 +331,36 @@ class DailySalesSummaryIntegrityTest extends TestCase
             'cogs' => 60.00,
         ]);
 
-        // 1. Scheduled verify command without --fix detects corruption, logs error & stores alert in Cache
+        // 1. Scheduled verify command detects corruption, logs error, stores alert in database table discrepancy_alerts & sends email
         $this->artisan('pos:verify-daily-summaries')
             ->assertExitCode(1);
 
-        $alerts = \Illuminate\Support\Facades\Cache::get('daily_sales_summary_discrepancy_alerts');
-        $this->assertNotEmpty($alerts);
-        $this->assertEquals($tenant->id, $alerts[0]['tenant_id']);
-        $this->assertEquals($store->id, $alerts[0]['store_id']);
-        $this->assertEquals($today, $alerts[0]['date']);
-        $this->assertEquals(115.00, $alerts[0]['expected_grand']);
-        $this->assertEquals(99999.00, $alerts[0]['actual_grand']);
+        $dbAlert = \App\Models\DiscrepancyAlert::where('tenant_id', $tenant->id)
+            ->where('store_id', $store->id)
+            ->where('date', $today)
+            ->whereNull('resolved_at')
+            ->first();
 
-        // 2. Admin triggers manual recalculate endpoint ("Fix" action)
-        $fixResponse = $this->actingAs($user)->postJson('/reports/sales-summary/recalculate', [
+        $this->assertNotNull($dbAlert);
+        $this->assertEquals(115.00, $dbAlert->expected['grand_total']);
+        $this->assertEquals(99999.00, $dbAlert->actual['grand_total']);
+
+        // Assert Email Notification Dispatched to Tenant Owner
+        \Illuminate\Support\Facades\Mail::assertSent(\App\Mail\DiscrepancyAlertMail::class, function ($mail) use ($tenant) {
+            return $mail->hasTo($tenant->email);
+        });
+
+        // 2. Merchant Dashboard displays warning banner with discrepancyAlerts prop
+        $dashboardResponse = $this->actingAs($user)->get('/merchant/dashboard');
+        $dashboardResponse->assertStatus(200);
+        $dashboardResponse->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+            ->component('Merchant/Dashboard')
+            ->has('discrepancyAlerts', 1)
+            ->where('discrepancyAlerts.0.store_id', $store->id)
+        );
+
+        // 3. Admin triggers manual recalculate endpoint ("Fix & Recalculate" action)
+        $fixResponse = $this->actingAs($user)->postJson('/reports/daily-summary/recalculate', [
             'store_id' => $store->id,
             'date' => $today,
         ]);
@@ -350,14 +368,14 @@ class DailySalesSummaryIntegrityTest extends TestCase
         $fixResponse->assertStatus(200)
             ->assertJson(['success' => true]);
 
-        // 3. Verify summary row is repaired & alert is cleared
+        // 4. Verify summary row is repaired & alert is resolved in database table
         $repairedSummary = DailySalesSummary::where('tenant_id', $tenant->id)->where('store_id', $store->id)->where('date', $today)->first();
         $this->assertEquals(115.00, (float)$repairedSummary->grand_total);
 
-        $clearedAlerts = \Illuminate\Support\Facades\Cache::get('daily_sales_summary_discrepancy_alerts');
-        $this->assertNull($clearedAlerts);
+        $resolvedAlert = \App\Models\DiscrepancyAlert::find($dbAlert->id);
+        $this->assertNotNull($resolvedAlert->resolved_at);
 
-        // 4. Verification command now passes cleanly
+        // 5. Verification command now passes cleanly
         $this->artisan('pos:verify-daily-summaries')
             ->assertExitCode(0);
     }
