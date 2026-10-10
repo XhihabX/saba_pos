@@ -122,7 +122,11 @@ jobs:
       - name: Print Failure Log
         if: failure()
         shell: bash
-        run: cat test_main.log
+        run: |
+          echo "### ❌ PHPUnit Failure Log" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat test_main.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Execute Backup Test Suite on MySQL 8.4
         shell: bash
