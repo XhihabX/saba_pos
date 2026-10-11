@@ -111,6 +111,24 @@
         </div>
       </div>
 
+      <!-- Subscription Grace Period Persistent Warning Banner -->
+      <div 
+        v-if="$page.props.auth?.user?.tenant?.is_in_grace_period"
+        class="px-4 py-2 bg-amber-500 text-slate-950 flex items-center justify-between text-xs font-black shrink-0 border-b border-amber-600 shadow-sm"
+      >
+        <div class="flex items-center gap-2">
+          <AlertTriangle class="w-4 h-4 text-slate-950 shrink-0 animate-pulse" />
+          <span>Subscription expired, {{ $page.props.auth.user.tenant.grace_days_remaining }} {{ $page.props.auth.user.tenant.grace_days_remaining === 1 ? 'day' : 'days' }} left.</span>
+        </div>
+        <Link 
+          v-if="$page.props.auth?.user?.role === 'merchant'"
+          href="/merchant/subscription"
+          class="px-2.5 py-1 rounded bg-slate-950 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-wider transition-all"
+        >
+          Renew Plan
+        </Link>
+      </div>
+
       <!-- Sync Notification Toast Banner -->
       <transition name="slide-down">
         <div
@@ -719,7 +737,8 @@ import {
   Lock,
   Sun,
   Moon,
-  Store as StoreIcon
+  Store as StoreIcon,
+  AlertTriangle
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -1041,31 +1060,7 @@ const processCheckout = async (paymentDetails) => {
     notes: paymentDetails.notes || null,
   };
 
-  if (isOnline.value) {
-    router.post('/pos/checkout', payload, {
-      preserveScroll: true,
-      onSuccess: (page) => {
-        isSubmitting.value = false;
-        showCheckoutModal.value = false;
-        if (page.props.flash?.receipt) {
-          latestReceipt.value = page.props.flash.receipt;
-          showReceiptModal.value = true;
-        }
-        cart.value = [];
-        orderDiscount.value = 0;
-      },
-      onError: (errors) => {
-        isSubmitting.value = false;
-        const errorMsg = errors ? (Object.values(errors)[0] || 'Checkout failed.') : 'Checkout failed.';
-        syncNotification.value = { type: 'error', message: `⚠️ ${errorMsg}` };
-        setTimeout(() => { syncNotification.value = null; }, 5000);
-        if (errors?.shift) {
-          showCheckoutModal.value = false;
-          showShiftModal.value = true;
-        }
-      }
-    });
-  } else {
+  const queueOrderOffline = async () => {
     // --- Save to IndexedDB offline queue (survives tab close) ---
     const offlineId = 'OFF-' + Date.now();
     const offlineOrder = {
@@ -1099,6 +1094,62 @@ const processCheckout = async (paymentDetails) => {
     showSyncNotification('queued', `Order queued offline (${offlineQueue.value.length} pending). Will auto-sync when connected.`);
     cart.value = [];
     orderDiscount.value = 0;
+  };
+
+  if (isOnline.value) {
+    try {
+      const response = await fetch('/pos/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': getCsrfToken(),
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      // 402: Payment Required / Subscription Expired
+      if (response.status === 402) {
+        isSubmitting.value = false;
+        showCheckoutModal.value = false;
+        const errData = await response.json().catch(() => ({}));
+        const msg = errData.message || 'Subscription expired. Please ask the store owner to renew.';
+        syncNotification.value = { type: 'error', message: `⚠️ ${msg}` };
+        setTimeout(() => { syncNotification.value = null; }, 8000);
+        // CRITICAL REQUIREMENT 6: Online checkout that gets 402: keep the cart on screen and show the message; never clear it!
+        return;
+      }
+
+      if (response.ok) {
+        const resData = await response.json().catch(() => ({}));
+        isSubmitting.value = false;
+        showCheckoutModal.value = false;
+        if (resData.order) {
+          latestReceipt.value = resData.order;
+          showReceiptModal.value = true;
+        }
+        cart.value = [];
+        orderDiscount.value = 0;
+        return;
+      }
+
+      // Other HTTP errors (e.g. 422 validation)
+      const errData = await response.json().catch(() => ({}));
+      isSubmitting.value = false;
+      const errorMsg = errData.errors ? Object.values(errData.errors)[0][0] : (errData.message || 'Checkout failed.');
+      syncNotification.value = { type: 'error', message: `⚠️ ${errorMsg}` };
+      setTimeout(() => { syncNotification.value = null; }, 6000);
+      if (errData.errors?.shift) {
+        showCheckoutModal.value = false;
+        showShiftModal.value = true;
+      }
+    } catch (networkErr) {
+      console.warn('[POS] Network error during online checkout, queuing offline:', networkErr);
+      await queueOrderOffline();
+    }
+  } else {
+    await queueOrderOffline();
   }
 };
 
@@ -1567,6 +1618,8 @@ const syncOfflineQueue = async () => {
   const token = getCsrfToken();
   const remaining = [];
   let syncedCount = 0;
+  let has402Block = false;
+  let last402Msg = '';
 
   for (const item of [...offlineQueue.value]) {
     try {
@@ -1581,8 +1634,26 @@ const syncOfflineQueue = async () => {
           'X-CSRF-TOKEN': token || _csrf || '',
           'X-Requested-With': 'XMLHttpRequest',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...payload,
+          is_offline_sync: true,
+          client_time: item._queued_at || item.client_time || new Date().toISOString(),
+        }),
       });
+
+      // 402: Payment Required / Subscription Expired
+      if (response.status === 402) {
+        let errMessage = 'Subscription expired. Offline orders retained in queue until renewed.';
+        try {
+          const resData = await response.json();
+          if (resData?.message) errMessage = resData.message;
+        } catch (e) {}
+        console.warn(`[POS] Order ${offlineId} blocked by subscription (HTTP 402):`, errMessage);
+        remaining.push(item);
+        has402Block = true;
+        last402Msg = errMessage;
+        continue;
+      }
 
       const contentType = response.headers.get('content-type') || '';
       if (response.ok && contentType.includes('application/json')) {
@@ -1617,6 +1688,8 @@ const syncOfflineQueue = async () => {
   if (syncedCount > 0) {
     showSyncNotification('success', `✅ Successfully synced ${syncedCount} offline order(s) to the cloud!`);
     router.reload({ only: ['products', 'parkedCount'] });
+  } else if (has402Block) {
+    showSyncNotification('error', `⚠️ ${last402Msg} (${remaining.length} orders safely kept in offline queue; will sync after renewal).`);
   } else if (remaining.length > 0) {
     showSyncNotification('error', `⚠️ ${remaining.length} order(s) still pending — server may be unreachable.`);
   }

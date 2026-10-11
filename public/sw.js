@@ -170,7 +170,7 @@ async function processOfflineOrders() {
   for (const order of orders) {
     try {
       // Strip internal fields before sending
-      const { id: offlineId, _csrf, ...payload } = order;
+      const { id: offlineId, _csrf, _queued_at, ...payload } = order;
 
       const response = await fetch('/pos/checkout', {
         method: 'POST',
@@ -180,7 +180,11 @@ async function processOfflineOrders() {
           'X-CSRF-TOKEN': csrfToken || _csrf || '',
           'X-Requested-With': 'XMLHttpRequest',
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...payload,
+          is_offline_sync: true,
+          client_time: order._queued_at || order.client_time || new Date().toISOString(),
+        }),
       });
 
       if (response.ok) {
