@@ -27,6 +27,11 @@ class Order extends Model
         'payment_status',
         'payment_method',
         'notes',
+        'late_synced',
+    ];
+
+    protected $casts = [
+        'late_synced' => 'boolean',
     ];
 
     public function store()

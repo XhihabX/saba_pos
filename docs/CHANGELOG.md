@@ -1,5 +1,21 @@
 # Changelog
 
+## [2026-10-11] — Subscription Grace Period Migration & Tenant Lifecycle Helpers
+
+**What:** 
+1. **Subscription Lifecycle Migration (`2026_10_11_000041_add_subscription_lifecycle_and_grace_columns.php`):** Added `grace_days` (default 5) and `allow_suspended_read_only` (default false) to `tenants` table; added `late_synced` (boolean, default false) to `orders` table; created idempotent `subscription_reminders` table with unique constraint `(tenant_id, expires_at, reminder_type)`.
+2. **Tenant Model Helpers (`app/Models/Tenant.php`):** Implemented timezone-aware (`Asia/Dhaka`) lifecycle helpers: `isExpired()`, `isInGracePeriod()`, `graceDaysRemaining()`, `isGraceExpired()`, `isWithinLateSyncWindow()`, and `isReadOnlyAllowed()`.
+3. **Subscription Configuration (`config/subscription.php`):** Configured `read_only_days` (90 days), `default_grace_days` (5 days), `late_sync_days` (7 days), and timezone (`Asia/Dhaka`).
+4. **Order Model Update (`app/Models/Order.php`):** Added `late_synced` to `$fillable` and `$casts`.
+5. **Local MySQL 8.4 Verification:** Migrations executed cleanly; full main test suite (89/89 passed, 455 assertions green) and backup test suite (2/2 passed, 9 assertions green) verified on native MySQL 8.4.
+
+**Why:** Establish the database schema and model logic for subscription grace period protection, idempotent notifications, late offline sync exceptions, and 90-day read-only data preservation.
+**How:** Created migration, updated `Tenant.php` and `Order.php`, created `config/subscription.php`, and ran migrations and tests on MySQL 8.4.
+**Where:** `database/migrations/2026_10_11_000041_add_subscription_lifecycle_and_grace_columns.php`, `app/Models/Tenant.php`, `app/Models/Order.php`, `config/subscription.php`, `docs/CHANGELOG.md`.
+**Impact:** Tenant models can accurately evaluate subscription grace status, days remaining, and read-only boundaries in Asia/Dhaka time.
+
+---
+
 ## [2026-10-11] — Route Authorization Matrix Test Mismatch List Assertion & DB Restore Engine
 
 **What:** 
