@@ -17,6 +17,7 @@ use App\Models\ProductVariant;
 use App\Models\RegisterShift;
 use App\Models\Stock;
 use App\Models\Store;
+use App\Models\Tenant;
 use App\Services\AuditLogger;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -180,6 +181,9 @@ class PosController extends Controller
             'client_uuid' => 'required|string',
             'idempotency_key' => 'nullable|string',
             'supervisor_pin' => 'nullable|string',
+            'is_offline_sync' => 'nullable|boolean',
+            'client_time' => 'nullable|string',
+            'created_at' => 'nullable|string',
         ]);
 
         $store = Store::where('id', $validated['store_id'])->where('tenant_id', $tenantId)->first();
@@ -255,6 +259,12 @@ class PosController extends Controller
         }
 
         return DB::transaction(function () use ($request, $validated, $tenantId, $store, $paidAmount, $discountAmount) {
+            $tenant = Tenant::find($tenantId);
+            $isLateSynced = false;
+            if ($tenant && $tenant->isGraceExpired() && $request->boolean('is_offline_sync')) {
+                $isLateSynced = true;
+            }
+
             // Idempotency check inside transaction using orders.idempotency_key
             $idempotencyKey = $validated['idempotency_key'] ?? $validated['client_uuid'] ?? null;
             if (! empty($idempotencyKey)) {
@@ -416,7 +426,13 @@ class PosController extends Controller
                 'payment_status' => $paymentStatus,
                 'payment_method' => $validated['payment_method'],
                 'notes' => $validated['notes'] ?? null,
+                'late_synced' => $isLateSynced,
             ]);
+
+            if ($isLateSynced && ($request->filled('client_time') || $request->filled('created_at'))) {
+                $order->created_at = Carbon::parse($request->input('client_time') ?? $request->input('created_at'));
+                $order->save();
+            }
 
             foreach ($itemsToProcess as $item) {
                 OrderItem::create([
@@ -561,6 +577,22 @@ class PosController extends Controller
                 ],
                 $store->id
             );
+
+            if ($isLateSynced) {
+                AuditLogger::log(
+                    'late_offline_sync',
+                    "Late offline sync accepted for order {$order->invoice_no} after subscription grace period",
+                    [
+                        'order_id' => $order->id,
+                        'invoice_no' => $order->invoice_no,
+                        'client_time' => (string) ($request->input('client_time') ?? $request->input('created_at')),
+                        'received_at' => Carbon::now(config('subscription.timezone', 'Asia/Dhaka'))->toIso8601String(),
+                        'idempotency_key' => $idempotencyKey,
+                    ],
+                    $store->id,
+                    $tenantId
+                );
+            }
 
             // Record Daily Sales Summary (Executed at final line of transaction for shortest lock holding time)
             $paymentsMap = [];

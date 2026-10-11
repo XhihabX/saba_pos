@@ -99,6 +99,16 @@ class AuthController extends Controller
         ]);
     }
 
+    public function showSubscriptionExpired()
+    {
+        $user = Auth::user();
+        $tenant = $user ? $user->tenant : null;
+
+        return Inertia::render('Auth/SubscriptionExpired', [
+            'tenant' => $tenant,
+        ]);
+    }
+
     public function register(Request $request)
     {
         $validated = $request->validate([

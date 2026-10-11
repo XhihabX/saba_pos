@@ -1,8 +1,8 @@
 AUTHORIZATION MATRIX AUDIT REPORT
 =================================
-Generated: 2026-10-11 23:13:41
+Generated: 2026-10-11 23:28:52
 Target Engine: MySQL 8.4
-Total Routes Audited: 148
+Total Routes Audited: 149
 
 URI                                              | Method | Guest  | Cashier | StoreManager | Merchant | SuperAdmin | OtherTenantUser
 --------------------------------------------------------------------------------------------------------------------------------
@@ -12,6 +12,7 @@ URI                                              | Method | Guest  | Cashier | S
 /register                                        | GET    | 200    | 200     | 200          | 200      | 200        | 200            
 /register                                        | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /pending-approval                                | GET    | 302    | 200     | 200          | 200      | 200        | 200            
+/subscription-expired                            | GET    | 302    | 200     | 200          | 200      | 200        | 200            
 /logout                                          | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /                                                | GET    | 200    | 200     | 200          | 200      | 200        | 200            
 /demo/pos                                        | GET    | 302    | 302     | 302          | 302      | 302        | 302            

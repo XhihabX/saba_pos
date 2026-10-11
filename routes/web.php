@@ -31,6 +31,7 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:30
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:15,1');
 Route::get('/pending-approval', [AuthController::class, 'showPendingApproval'])->middleware('auth')->name('pending.approval');
+Route::get('/subscription-expired', [AuthController::class, 'showSubscriptionExpired'])->middleware('auth')->name('subscription.expired');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // 2. Public SaaS Marketing Landing Page, Public Sandbox POS Demo & System Telemetry Health Check
