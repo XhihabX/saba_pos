@@ -377,10 +377,11 @@ class RouteAuthorizationMatrixTest extends TestCase
         $this->assertFileExists($proofPath);
         $this->assertGreaterThan(500, filesize($proofPath));
 
-        // Fail if any route mismatch occurred
-        if (!empty($failures)) {
-            $this->fail("Route Authorization Matrix Mismatches Detected (" . count($failures) . "):\n" . implode("\n", $failures));
-        }
+        // Assert no route authorization policy mismatches occurred
+        $this->assertEmpty(
+            $failures,
+            "Route Authorization Matrix Mismatches Detected (" . count($failures) . "):\n" . implode("\n", $failures)
+        );
     }
 
     protected function isStatusExpectedForRole(string $uri, string $method, string $role, int $status): bool

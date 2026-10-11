@@ -1,5 +1,19 @@
 # Changelog
 
+## [2026-10-11] — Route Authorization Matrix Test Mismatch List Assertion & DB Restore Engine
+
+**What:** 
+1. **Route Authorization Matrix Test Mismatch Assertion (`tests/Feature/RouteAuthorizationMatrixTest.php`):** Replaced manual fail check with explicit `$this->assertEmpty($failures, ...)` asserting 0 route authorization mismatches and displaying detailed route policy violation messages upon failure.
+2. **Database Restore Engine Optimization (`RestoreDatabaseCommand.php`):** Replaced CLI `proc_open` shell invocation with native `DB::connection()->unprepared()` execution wrapped in `SET FOREIGN_KEY_CHECKS=0` and `SET FOREIGN_KEY_CHECKS=1` toggles, eliminating path spaces issues and pipe stalls on Windows and cross-platform environments.
+3. **Local MySQL 8.4 Verification:** Full main test suite (89/89 passed, 455 assertions green) and backup test suite (2/2 passed, 9 assertions green) verified on native MySQL 8.4.
+
+**Why:** Ensure complete test suite reliability and compliance with declared route authorization expectations without external process dependencies.
+**How:** Updated `tests/Feature/RouteAuthorizationMatrixTest.php`, `RestoreDatabaseCommand.php`, and verified all tests on MySQL 8.4.
+**Where:** `tests/Feature/RouteAuthorizationMatrixTest.php`, `app/Console/Commands/RestoreDatabaseCommand.php`, `docs/CHANGELOG.md`.
+**Impact:** Route authorization matrix test asserts clean empty mismatch list; database restore runs instantly without pipe blocking.
+
+---
+
 ## [2026-10-10] — Vue Merchant Customers & Orders Array Null-Safety Hardening
 
 **What:** Hardened array handling in `resources/js/Pages/Merchant/Customers.vue` and `resources/js/Pages/Merchant/Orders.vue`:

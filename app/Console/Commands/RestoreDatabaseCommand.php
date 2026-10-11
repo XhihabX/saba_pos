@@ -91,9 +91,9 @@ class RestoreDatabaseCommand extends Command
         $dbHost = config('database.connections.mysql.host', '127.0.0.1');
         $dbPort = config('database.connections.mysql.port', '3306');
 
-        $mysqlBin = 'mysql';
+        $binary = 'mysql';
         if (File::exists('C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe')) {
-            $mysqlBin = '"C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe"';
+            $binary = 'C:\Program Files\MySQL\MySQL Server 8.4\bin\mysql.exe';
         }
 
         $sqlContent = '';
@@ -108,38 +108,32 @@ class RestoreDatabaseCommand extends Command
         }
 
         if (! empty($sqlContent)) {
-            $tempSqlFile = storage_path('app/backups/temp_restore_'.uniqid().'.sql');
-            File::put($tempSqlFile, "SET FOREIGN_KEY_CHECKS=0;\n".$sqlContent."\nSET FOREIGN_KEY_CHECKS=1;\n");
+            try {
+                DB::connection()->unprepared("SET FOREIGN_KEY_CHECKS=0;\n".$sqlContent."\nSET FOREIGN_KEY_CHECKS=1;\n");
+                $this->info("✅ MySQL database successfully restored from {$filename}!");
+                Log::info("MySQL database restored from {$filename}");
 
-            $cmd = "{$mysqlBin} --host={$dbHost} --port={$dbPort} --user={$dbUser} ".(! empty($dbPass) ? '--password='.escapeshellarg($dbPass) : '')." {$dbName} < ".escapeshellarg($tempSqlFile);
-            @exec($cmd, $output, $exitCode);
-            File::delete($tempSqlFile);
+                return Command::SUCCESS;
+            } catch (\Throwable $e) {
+                // Fallback: Split and execute statements
+                DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+                $statements = array_filter(array_map('trim', explode(";\n", $sqlContent)));
+                foreach ($statements as $stmt) {
+                    if (! empty($stmt)) {
+                        try {
+                            DB::unprepared($stmt);
+                        } catch (\Throwable $subEx) {
+                            // ignore temporary drop errors
+                        }
+                    }
+                }
+                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-            if ($exitCode === 0) {
                 $this->info("✅ MySQL database successfully restored from {$filename}!");
                 Log::info("MySQL database restored from {$filename}");
 
                 return Command::SUCCESS;
             }
-
-            // Fallback: Split and execute statements
-            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
-            $statements = array_filter(array_map('trim', explode(";\n", $sqlContent)));
-            foreach ($statements as $stmt) {
-                if (! empty($stmt)) {
-                    try {
-                        DB::unprepared($stmt);
-                    } catch (\Throwable $e) {
-                        // ignore temporary drop errors
-                    }
-                }
-            }
-            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-
-            $this->info("✅ MySQL database successfully restored from {$filename}!");
-            Log::info("MySQL database restored from {$filename}");
-
-            return Command::SUCCESS;
         }
 
         $this->error('❌ MySQL restore failed: empty SQL file.');
