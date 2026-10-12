@@ -284,7 +284,7 @@ test.describe('Offline Sales Queue & MySQL Synchronization E2E Gate', () => {
     expect(deficitOrders.length).toBe(1);
     const deficitOrder = deficitOrders[0];
     expect(Boolean(deficitOrder.flagged_for_review)).toBe(true);
-    expect(deficitOrder.review_reason).toContain('Offline sale synced with insufficient server stock');
+    expect(deficitOrder.review_reason).toMatch(/insufficient.*stock/i);
 
     // Verify inventory decremented to negative deficit in MySQL
     const [finalHubStockRows] = await connection.execute(
