@@ -11,21 +11,28 @@ use App\Models\Stock;
 use App\Models\Store;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class OfflineStockReviewTest extends TestCase
 {
-    use DatabaseTransactions;
+    use RefreshDatabase;
 
     protected Tenant $tenant;
+
     protected Store $store;
+
     protected User $cashier;
+
     protected User $manager;
+
     protected User $owner;
+
     protected Product $product;
+
     protected Stock $stock;
+
     protected RegisterShift $shift;
 
     protected function setUp(): void

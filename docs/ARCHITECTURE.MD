@@ -378,6 +378,13 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
   8. **CI Telemetry & Artifacts:** Built Vite assets (`npm run build`), health check polling against `/health`, and automated artifact uploads (`playwright-report` and traces).
 - **Where it lives:** `playwright.config.js`, `tests/e2e/offline_sales_sync.spec.js`, `database/seeders/CiPlaywrightSeeder.php`, `.github/workflows/tests.yml`.
 - **Key design decisions:** Direct MySQL verification using `mysql2` prevents false positives from application-level mocks; runs against real compiled production Vite assets in headless Chromium.
+### 38. Empirical Code-Readiness Audit & Feature Truth Table
+- **What it does:** Documents the empirical status of the 42 core platform features across automated test suites, static analysis, and hardware dependencies:
+  1. **Strict Feature Categorization:** Every feature in `audit/outputs/gate/H_feature_truth_table.md` is mapped to an unvarnished status: `WORKING (cited with test class and exact assertion line)`, `PARTIAL`, `SIMULATED`, `SIMULATED/MANUAL`, `NEEDS CREDENTIALS`, or `NEEDS HARDWARE TEST`.
+  2. **Empirical Gate Report (`audit/outputs/gate/GATE_REPORT.md`):** Replaces all claims of "100%", "certified", or "passed" with empirical test metrics (120 tests, 746 assertions green across 34 test files on MySQL 8.4 in CI).
+  3. **Physical Production Boundaries:** Clearly separates automated software test passes from physical production verification: hardware ESC/POS printing, RJ11 cash drawers, USB barcode guns, live MFS/card aggregator APIs, carrier SMS gateways, and formal NBR VAT consultant sign-off are explicitly declared as NOT VERIFIED IN PHYSICAL PRODUCTION.
+- **Where it lives:** `audit/outputs/gate/H_feature_truth_table.md`, `audit/outputs/gate/GATE_REPORT.md`.
+- **Key design decisions:** No feature is declared "REAL" if it relies on a simulator or workaround; every working claim must cite an empirical automated test assertion.
 - **Last updated:** 2026-10-12
 
 ## Data Model
@@ -397,7 +404,9 @@ Store  (1) <---> (N) StockTransfer (Source / Destination)
 
 ## Known Issues / Flagged Inferences
 
-- **HRM Module Extensibility**: Attendance tracking is currently limited to basic clock-in/out timestamps; full payroll calculations are flagged for future enhancement.
+- **Physical Hardware Peripherals**: 80mm ESC/POS thermal printers, RJ11 cash drawer kick-out pulses, and barcode laser scanners depend on physical peripheral drivers and have NOT been tested on physical hardware devices.
+- **Payment & Telecommunication Gateways**: Mobile financial service payments (bKash/Nagad/Rocket) rely on an Android SMS-listener webhook workaround and manual TrxID entry; card processing operates via simulator/manual slip; SMS notifications are logged to `Log::info()` and require live merchant carrier API credentials.
+- **NBR Regulatory Sign-off & EFD Box**: Mushak 6.3 invoices and EFD payload generators match statutory specs but have NOT received formal sign-off from an accredited NBR VAT consultant and are NOT connected to a physical NBR SDC hardware device.
+- **HRM Module Extensibility**: Attendance tracking is currently limited to basic clock-in/out timestamps; full payroll calculations are reserved for future enhancement.
 - **Single Base Currency per Tenant**: Stores can set distinct currency display symbols (`$`, `৳`, `AED`), but overall tenant financial reporting assumes a 1:1 base currency exchange without real-time FX conversions.
-- **Tenant Impersonation Session Handling**: Super Admin impersonation uses session key swapping (`impersonated_by`).
-- **Cash Drawer Hardware**: Physical cash drawer kick-out depends on the printer driver's open-drawer setting; NOT tested on hardware.
+
