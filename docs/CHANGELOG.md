@@ -1,5 +1,23 @@
 # Changelog
 
+## [2026-10-12] — Offline Stock Deficit Review Engine, Manager Resolution & Threshold Alerts
+
+**What:** 
+1. **Database Migration (`2026_10_12_000042_add_flagged_for_review_to_orders_table.php`):** Added `flagged_for_review` (boolean, default false), `review_reason` (string, nullable), `resolved_at` (timestamp, nullable), and `resolved_by` (foreign key to users, nullable) to `orders` table.
+2. **Strict 4-Part Offline Stock Deficit Rule (`PosController.php`):** Only bypasses the stock check when all 4 conditions hold: `is_offline_sync = true`, `idempotency_key` is present, `client_time` is not in the future (<= 60s skew), and `client_time` is not older than 7 days. Forged offline requests or stale timestamps fail with HTTP 422. Authentic offline sales with deficits are accepted, stock decremented, `flagged_for_review = true` set, and an audit trail entry is logged.
+3. **Manager "Needs Review" Portal (`StoreManagerController.php`, `NeedsReviewOrders.vue`):** Added `/manager/orders/needs-review` allowing managers and merchants to inspect flagged orders, view stock deficit details, and resolve orders via `POST /manager/orders/{id}/resolve` with resolution notes and audit logging.
+4. **Dashboard Deficit Counter (`Dashboard.vue`, `StoreManagerController.php`):** Added `needsReviewCount` metric and alert badge on the branch manager dashboard linking directly to the review queue.
+5. **Daily Deficit Threshold Email (`FlaggedOrdersThresholdMail.php`):** Added queued email alert sent to store managers and merchant owner when an outlet records more than 5 flagged offline orders in a day.
+6. **Stock Invariant Exception & Test Suite (`OfflineStockReviewTest.php`, `StockIntegrityConcurrencyTest.php`):** Added 6 automated tests verifying forged sync rejections, valid deficit acceptance, manager resolution, and threshold emails; declared the single permitted offline deficit invariant exception.
+7. **Local MySQL 8.4 Verification:** All 109 main tests and 2 backup tests passed with zero failures on native MySQL 8.4 engine.
+
+**Why:** Ensure sales completed offline at retail counters are never dropped upon reconnection while strictly barring forged online deficits, providing an end-to-end managerial audit and reconciliation flow for stock variances.
+**How:** Implemented migration, controller validation, Vue review interface, threshold mailable, and PHPUnit feature test suite.
+**Where:** `database/migrations/2026_10_12_000042_add_flagged_for_review_to_orders_table.php`, `app/Models/Order.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/StoreManagerController.php`, `app/Mail/FlaggedOrdersThresholdMail.php`, `resources/js/Pages/Manager/NeedsReviewOrders.vue`, `resources/js/Pages/Manager/Dashboard.vue`, `routes/web.php`, `tests/Feature/OfflineStockReviewTest.php`, `tests/Feature/StockIntegrityConcurrencyTest.php`, `docs/ARCHITECTURE.MD`, `docs/CHANGELOG.md`.
+**Impact:** Zero dropped offline sales due to server-side inventory shifts; immediate managerial awareness and resolution workflow.
+
+---
+
 ## [2026-10-12] — Subscription Lifecycle Management, Grace Protection, Late Sync, & Cash Drawer Hardware Disclosure
 
 **What:** 

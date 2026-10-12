@@ -17,13 +17,16 @@ use App\Models\ProductVariant;
 use App\Models\RegisterShift;
 use App\Models\Stock;
 use App\Models\Store;
+use App\Mail\FlaggedOrdersThresholdMail;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\AuditLogger;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -265,6 +268,30 @@ class PosController extends Controller
                 $isLateSynced = true;
             }
 
+            // Offline deficit rule criteria validation
+            $isOfflineSync = $request->boolean('is_offline_sync');
+            $idempotencyKeyParam = $validated['idempotency_key'] ?? null;
+            $hasIdempotencyKey = ! empty($idempotencyKeyParam);
+            $clientTimeRaw = $validated['client_time'] ?? $validated['created_at'] ?? null;
+            $isValidClientTime = false;
+            $parsedClientTime = null;
+
+            if (! empty($clientTimeRaw)) {
+                try {
+                    $parsedClientTime = Carbon::parse($clientTimeRaw);
+                    // Not in future (allowing 60s tolerance for clock skew) and not older than 7 days
+                    if ($parsedClientTime->lte(now()->addSeconds(60)) && $parsedClientTime->gte(now()->subDays(7))) {
+                        $isValidClientTime = true;
+                    }
+                } catch (\Throwable $e) {
+                    $isValidClientTime = false;
+                }
+            }
+
+            $canBypassStockDeficit = $isOfflineSync && $hasIdempotencyKey && $isValidClientTime;
+            $isFlaggedForReview = false;
+            $reviewReasons = [];
+
             // Idempotency check inside transaction using orders.idempotency_key
             $idempotencyKey = $validated['idempotency_key'] ?? $validated['client_uuid'] ?? null;
             if (! empty($idempotencyKey)) {
@@ -333,9 +360,14 @@ class PosController extends Controller
                 $itemName = $product->name.($variant ? " ({$variant->name})" : '');
 
                 if (! $allowNegative && $available < $item['quantity']) {
-                    throw ValidationException::withMessages([
-                        'cart' => ["Insufficient stock for '{$itemName}'. Available: {$available}, Requested: {$item['quantity']}."],
-                    ]);
+                    if ($canBypassStockDeficit) {
+                        $isFlaggedForReview = true;
+                        $reviewReasons[] = "Insufficient stock for '{$itemName}'. Available: {$available}, Requested: {$item['quantity']}";
+                    } else {
+                        throw ValidationException::withMessages([
+                            'cart' => ["Insufficient stock for '{$itemName}'. Available: {$available}, Requested: {$item['quantity']}."],
+                        ]);
+                    }
                 }
 
                 $sellingPrice = $variant?->price ?? $product->selling_price;
@@ -427,10 +459,12 @@ class PosController extends Controller
                 'payment_method' => $validated['payment_method'],
                 'notes' => $validated['notes'] ?? null,
                 'late_synced' => $isLateSynced,
+                'flagged_for_review' => $isFlaggedForReview,
+                'review_reason' => ! empty($reviewReasons) ? implode('; ', $reviewReasons) : null,
             ]);
 
-            if ($isLateSynced && ($request->filled('client_time') || $request->filled('created_at'))) {
-                $order->created_at = Carbon::parse($request->input('client_time') ?? $request->input('created_at'));
+            if (($isLateSynced || $isOfflineSync) && ($request->filled('client_time') || $request->filled('created_at'))) {
+                $order->created_at = $parsedClientTime ?? Carbon::parse($request->input('client_time') ?? $request->input('created_at'));
                 $order->save();
             }
 
@@ -592,6 +626,49 @@ class PosController extends Controller
                     $store->id,
                     $tenantId
                 );
+            }
+
+            if ($isFlaggedForReview) {
+                AuditLogger::log(
+                    'order_flagged_for_review',
+                    "Order {$order->invoice_no} flagged for review: {$order->review_reason}",
+                    [
+                        'order_id' => $order->id,
+                        'invoice_no' => $order->invoice_no,
+                        'reason' => $order->review_reason,
+                        'client_time' => (string) ($request->input('client_time') ?? $request->input('created_at')),
+                        'idempotency_key' => $idempotencyKey,
+                    ],
+                    $store->id,
+                    $tenantId
+                );
+
+                $todayFlaggedCount = Order::where('store_id', $store->id)
+                    ->where('flagged_for_review', true)
+                    ->whereDate('created_at', now()->toDateString())
+                    ->count();
+
+                if ($todayFlaggedCount > 5) {
+                    try {
+                        $recipients = User::where('tenant_id', $tenantId)
+                            ->where(function ($q) use ($store) {
+                                $q->where('role', 'merchant')
+                                    ->orWhere(function ($sq) use ($store) {
+                                        $sq->where('role', 'store_manager')->where('store_id', $store->id);
+                                    });
+                            })
+                            ->whereNotNull('email')
+                            ->pluck('email')
+                            ->unique();
+
+                        foreach ($recipients as $recipientEmail) {
+                            Mail::to($recipientEmail)
+                                ->queue(new FlaggedOrdersThresholdMail($store, $todayFlaggedCount, now()->toDateString()));
+                        }
+                    } catch (\Throwable $mailErr) {
+                        \Illuminate\Support\Facades\Log::warning('Could not dispatch flagged orders threshold email: '.$mailErr->getMessage());
+                    }
+                }
             }
 
             // Record Daily Sales Summary (Executed at final line of transaction for shortest lock holding time)

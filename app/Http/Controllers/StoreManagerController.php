@@ -51,10 +51,17 @@ class StoreManagerController extends Controller
             ->take(5)
             ->get();
 
+        $needsReviewCount = Order::where('tenant_id', $tenantId)
+            ->where('store_id', $storeId)
+            ->where('flagged_for_review', true)
+            ->whereNull('resolved_at')
+            ->count();
+
         return Inertia::render('Manager/Dashboard', [
             'todaySales' => (float) $todaySales,
             'activeShifts' => $activeShifts,
             'recentTransfers' => $recentTransfers,
+            'needsReviewCount' => $needsReviewCount,
         ]);
     }
 
@@ -111,5 +118,90 @@ class StoreManagerController extends Controller
             'stats' => $stats,
             'filters' => $request->only(['action', 'search']),
         ]);
+    }
+
+    public function needsReviewOrders(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+        $storeId = auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
+
+        $query = Order::where('tenant_id', $tenantId)
+            ->where('flagged_for_review', true)
+            ->with(['items.product', 'customer', 'user', 'store', 'resolver']);
+
+        if (auth()->user()->role === 'store_manager') {
+            $query->where('store_id', $storeId);
+        } elseif ($request->filled('store_id')) {
+            $query->where('store_id', (int) $request->input('store_id'));
+        }
+
+        if ($request->input('status') === 'resolved') {
+            $query->whereNotNull('resolved_at');
+        } elseif ($request->input('status') === 'all') {
+            // no filter
+        } else {
+            // default: unresolved
+            $query->whereNull('resolved_at');
+        }
+
+        $orders = $query->latest()->paginate(20)->withQueryString();
+
+        $unresolvedCount = Order::where('tenant_id', $tenantId)
+            ->when(auth()->user()->role === 'store_manager', fn ($q) => $q->where('store_id', $storeId))
+            ->where('flagged_for_review', true)
+            ->whereNull('resolved_at')
+            ->count();
+
+        return Inertia::render('Manager/NeedsReviewOrders', [
+            'orders' => $orders,
+            'unresolvedCount' => $unresolvedCount,
+            'filters' => $request->only(['status', 'store_id']),
+        ]);
+    }
+
+    public function resolveFlaggedOrder(Request $request, $id)
+    {
+        $tenantId = $this->getTenantId();
+        $storeId = auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
+
+        $orderQuery = Order::where('tenant_id', $tenantId)
+            ->where('id', $id)
+            ->where('flagged_for_review', true);
+
+        if (auth()->user()->role === 'store_manager') {
+            $orderQuery->where('store_id', $storeId);
+        }
+
+        $order = $orderQuery->firstOrFail();
+
+        $resolutionNotes = (string) $request->input('notes', 'Reviewed and resolved by manager');
+
+        $order->resolved_at = now();
+        $order->resolved_by = auth()->id();
+        $order->notes = ($order->notes ? $order->notes.' | ' : '').'Resolution: '.$resolutionNotes;
+        $order->save();
+
+        \App\Services\AuditLogger::log(
+            'order_review_resolved',
+            "Order {$order->invoice_no} review resolved by ".auth()->user()->name,
+            [
+                'order_id' => $order->id,
+                'invoice_no' => $order->invoice_no,
+                'resolved_by' => auth()->id(),
+                'resolution_notes' => $resolutionNotes,
+            ],
+            $order->store_id,
+            $tenantId
+        );
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => "Order {$order->invoice_no} marked as resolved.",
+                'order' => $order,
+            ]);
+        }
+
+        return redirect()->back()->with('success', "Order {$order->invoice_no} resolved successfully.");
     }
 }

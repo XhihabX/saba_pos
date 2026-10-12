@@ -197,6 +197,8 @@ Route::middleware(['auth', EnsureStoreManager::class, EnsureActiveSubscription::
     Route::post('/reports/sales-summary/recalculate', [ReportController::class, 'recalculateDailySummary'])->name('reports.sales-summary.recalculate');
     Route::post('/reports/daily-summary/recalculate', [ReportController::class, 'recalculateDailySummary'])->name('reports.daily-summary.recalculate');
     Route::get('/manager/shifts/{id}/z-report', [ShiftController::class, 'zReport'])->name('manager.shifts.z-report');
+    Route::get('/manager/orders/needs-review', [StoreManagerController::class, 'needsReviewOrders'])->name('manager.orders.needs-review');
+    Route::post('/manager/orders/{id}/resolve', [StoreManagerController::class, 'resolveFlaggedOrder'])->name('manager.orders.resolve');
 
     // Stock Audit Workflow Endpoints
     Route::get('/stock-audits', [\App\Http\Controllers\StockAuditController::class, 'index'])->name('stock-audits.index');

@@ -20,7 +20,11 @@
           </div>
 
           <div class="flex items-center gap-3 shrink-0">
-            <Link href="/manager/shifts" class="px-5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/30 flex items-center gap-2 transition-all">
+            <Link v-if="needsReviewCount > 0" href="/manager/orders/needs-review" class="px-5 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/30 flex items-center gap-2 transition-all animate-pulse">
+              <AlertTriangle class="w-4 h-4 stroke-[3]" />
+              <span>Needs Review ({{ needsReviewCount }})</span>
+            </Link>
+            <Link href="/manager/shifts" class="px-5 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-black text-xs shadow-lg flex items-center gap-2 transition-all">
               <Clock class="w-4 h-4 stroke-[3]" />
               <span>Shift Reconciliation</span>
             </Link>
@@ -29,7 +33,7 @@
       </div>
 
       <!-- 📊 Branch Metric Stat Cards Grid -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         <div class="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-sm space-y-3">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Today Branch Sales</span>
@@ -65,6 +69,17 @@
           <div class="text-3xl font-black font-heading text-slate-900">Inter-Store</div>
           <div class="text-[11px] font-semibold text-indigo-600">Branch inventory balancing</div>
         </div>
+
+        <Link href="/manager/orders/needs-review" class="p-6 rounded-3xl bg-white border border-amber-200/80 hover:border-amber-400 shadow-sm space-y-3 transition group">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-amber-700 uppercase tracking-wider">Offline Deficits</span>
+            <div class="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+              <AlertTriangle class="w-5 h-5" />
+            </div>
+          </div>
+          <div class="text-3xl font-black font-heading text-amber-600">{{ needsReviewCount || 0 }} Flagged</div>
+          <div class="text-[11px] font-semibold text-amber-600 group-hover:underline">Orders needing stock review &rarr;</div>
+        </Link>
       </div>
     </div>
   </AuthenticatedLayout>
@@ -73,11 +88,12 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
-import { Store, DollarSign, TrendingUp, Clock, Truck } from 'lucide-vue-next';
+import { Store, DollarSign, TrendingUp, Clock, Truck, AlertTriangle } from 'lucide-vue-next';
 
 defineProps({
   todaySales: Number,
   activeShifts: Array,
+  needsReviewCount: Number,
 });
 
 const formatMoney = (val) => {

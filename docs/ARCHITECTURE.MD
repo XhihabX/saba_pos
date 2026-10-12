@@ -338,6 +338,19 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Depends on:** `Tenant`, `Order`, `AuditLog`, `EnsureActiveSubscription`, `SendSubscriptionExpiryRemindersCommand`.
 - **Last updated:** 2026-10-12
 
+### 34. Offline Stock Deficit Review Engine & Manager Reconciliation
+- **What it does:** Provides resilience against inventory race conditions during offline sales synchronization:
+  1. **Strict 4-Part Deficit Bypass Rule:** If an offline sale encounters an inventory deficit upon synchronization, the server bypasses the normal 422 stock check *only* if all 4 conditions are met: (a) `is_offline_sync = true`, (b) `idempotency_key` is present, (c) `client_time` is not in the future (allowing max 60s clock skew), and (d) `client_time` is not older than 7 days. Otherwise, standard stock validation triggers HTTP 422.
+  2. **Deficit Flagging & Audit Trail:** Valid offline sales with deficits are safely accepted into the database, decrementing inventory to reflect the physical stock deficit, marking `orders.flagged_for_review = true`, populating `orders.review_reason`, and writing an immutable audit log entry (`order_flagged_for_review`).
+  3. **Manager "Needs Review" Portal:** Manager-only interface at `/manager/orders/needs-review` (`NeedsReviewOrders.vue`) with filters for unresolved/resolved orders, defect details, and an atomic Resolve action (`POST /manager/orders/{id}/resolve`) that stamps `resolved_at`, records `resolved_by`, appends resolution notes, and writes an audit log (`order_review_resolved`).
+  4. **Dashboard Telemetry Counter:** Real-time unresolved deficit counter (`needsReviewCount`) exposed on branch manager and merchant dashboards.
+  5. **Daily Deficit Threshold Alerting:** When an outlet accumulates more than 5 flagged offline orders in a single day, an automated queued email notification (`FlaggedOrdersThresholdMail`) is dispatched to the store manager and merchant CEO.
+  6. **Stock Invariant Allowed Exception:** Explicitly declared in `StockIntegrityConcurrencyTest.php` as the single permitted exception where stock may go negative in software to preserve transaction truth from offline counters pending physical reconciliation.
+- **Where it lives:** `database/migrations/2026_10_12_000042_add_flagged_for_review_to_orders_table.php`, `app/Models/Order.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/StoreManagerController.php`, `app/Mail/FlaggedOrdersThresholdMail.php`, `resources/js/Pages/Manager/NeedsReviewOrders.vue`, `resources/js/Pages/Manager/Dashboard.vue`, `routes/web.php`, `tests/Feature/OfflineStockReviewTest.php`, `tests/Feature/StockIntegrityConcurrencyTest.php`.
+- **Key design decisions:** Physical sales completed at offline retail counters must not be discarded upon reconnecting; strict 4-point validation prevents malicious online deficit spoofing; managerial resolve flow ensures stock discrepancies are acknowledged and restocked.
+- **Depends on:** `Order`, `Stock`, `Store`, `AuditLogger`, `FlaggedOrdersThresholdMail`, `EnsureStoreManager` middleware.
+- **Last updated:** 2026-10-12
+
 ## Data Model
 
 ```

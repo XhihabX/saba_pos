@@ -551,6 +551,7 @@ class RouteAuthorizationMatrixTest extends TestCase
         if (str_contains($uri, 'sales/quotations')) return (string)$this->quotationA->id;
         if (str_contains($uri, 'products/')) return (string)$this->productA->id;
         if (str_contains($uri, 'shifts/')) return (string)$this->shiftA->id;
+        if (str_contains($uri, 'orders/')) return (string)$this->orderA->id;
 
         return '1';
     }

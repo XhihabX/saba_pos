@@ -28,10 +28,16 @@ class Order extends Model
         'payment_method',
         'notes',
         'late_synced',
+        'flagged_for_review',
+        'review_reason',
+        'resolved_at',
+        'resolved_by',
     ];
 
     protected $casts = [
         'late_synced' => 'boolean',
+        'flagged_for_review' => 'boolean',
+        'resolved_at' => 'datetime',
     ];
 
     public function store()
@@ -47,6 +53,11 @@ class Order extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function resolver()
+    {
+        return $this->belongsTo(User::class, 'resolved_by');
     }
 
     public function items()

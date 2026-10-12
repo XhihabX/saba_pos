@@ -180,4 +180,100 @@ class StockIntegrityConcurrencyTest extends TestCase
 
         $this->assertEquals(1, Order::where('idempotency_key', $idempotencyKey)->count());
     }
+
+    /**
+     * INVARIANT EXCEPTION DECLARATION:
+     * While allow_negative_stock=false strictly rejects online checkouts when available < quantity,
+     * the SINGLE ALLOWED EXCEPTION is an authentic offline queue sync (is_offline_sync=true,
+     * valid idempotency_key, client_time not future and <= 7 days old) where physical goods
+     * were already handed to the customer offline. This exception decrements stock and flags
+     * the order for review (flagged_for_review=true) so inventory is reconciled rather than dropping sales.
+     */
+    public function test_offline_sync_deficit_is_single_allowed_stock_invariant_exception_and_flags_order_for_review(): void
+    {
+        $tenant = Tenant::create([
+            'name' => 'Offline Invariant Tenant',
+            'code' => 'OIT-'.uniqid(),
+            'email' => 'oit_'.uniqid().'@test.local',
+            'status' => 'active',
+            'subscription_status' => 'active',
+            'expires_at' => now()->addDays(30),
+        ]);
+
+        $store = Store::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Branch Store 1',
+            'code' => 'STORE-OIT-'.uniqid(),
+            'allow_negative_stock' => false,
+            'default_tax_rate' => 15.00,
+        ]);
+
+        $user = User::create([
+            'tenant_id' => $tenant->id,
+            'store_id' => $store->id,
+            'name' => 'Cashier OIT',
+            'email' => 'cashier.oit_'.uniqid().'@test.local',
+            'password' => Hash::make('password123'),
+            'role' => 'cashier',
+        ]);
+
+        $product = Product::create([
+            'tenant_id' => $tenant->id,
+            'name' => 'Stocked Product',
+            'sku' => 'SKU-OIT-'.uniqid(),
+            'selling_price' => 100.00,
+            'purchase_cost' => 60.00,
+            'is_active' => true,
+        ]);
+
+        Stock::create([
+            'tenant_id' => $tenant->id,
+            'store_id' => $store->id,
+            'product_id' => $product->id,
+            'quantity' => 2.00,
+        ]);
+
+        \App\Models\RegisterShift::create([
+            'tenant_id' => $tenant->id,
+            'store_id' => $store->id,
+            'user_id' => $user->id,
+            'opening_float' => 500.00,
+            'opened_at' => now(),
+            'status' => 'open',
+        ]);
+
+        $this->actingAs($user);
+
+        // 1. Regular online checkout requesting 5 units (exceeding stock of 2) is STRICTLY REJECTED
+        $onlineRes = $this->postJson('/pos/checkout', [
+            'client_uuid' => 'UUID-ONLINE-FAIL',
+            'store_id' => $store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 5]],
+            'paid_amount' => 575.00,
+            'payment_method' => 'cash',
+        ]);
+        $onlineRes->assertStatus(422);
+
+        // 2. Offline sync with key & valid client_time is ACCEPTED under the single allowed exception
+        $offlineRes = $this->postJson('/pos/checkout', [
+            'client_uuid' => 'UUID-OFFLINE-ALLOWED',
+            'store_id' => $store->id,
+            'idempotency_key' => 'IDEMP-OFFLINE-ALLOWED',
+            'is_offline_sync' => true,
+            'client_time' => now()->subMinutes(10)->toIso8601String(),
+            'items' => [['product_id' => $product->id, 'quantity' => 5]],
+            'paid_amount' => 575.00,
+            'payment_method' => 'cash',
+        ]);
+        $offlineRes->assertStatus(200);
+
+        $order = Order::where('idempotency_key', 'IDEMP-OFFLINE-ALLOWED')->first();
+        $this->assertNotNull($order);
+        $this->assertTrue($order->flagged_for_review);
+        $this->assertStringContainsString('Insufficient stock', $order->review_reason);
+
+        // Stock reflects physical deficit (-3) awaiting manager reconciliation
+        $stock = Stock::where('store_id', $store->id)->where('product_id', $product->id)->first();
+        $this->assertEquals(-3.00, (float) $stock->quantity);
+    }
 }
