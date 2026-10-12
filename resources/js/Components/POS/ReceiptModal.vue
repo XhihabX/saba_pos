@@ -144,6 +144,7 @@
 </template>
 
 <script setup>
+import { watch } from 'vue';
 import { Printer, X } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -165,6 +166,16 @@ const formatDate = (dateStr) => {
 const printReceipt = () => {
   window.print();
 };
+
+watch(() => props.show, (newVal) => {
+  if (newVal && props.receipt) {
+    setTimeout(() => {
+      try {
+        window.print();
+      } catch (e) {}
+    }, 400);
+  }
+});
 </script>
 
 <style scoped>

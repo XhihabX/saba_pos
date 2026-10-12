@@ -44,17 +44,11 @@
         </button>
       </form>
 
-      <!-- CLOSE SHIFT FORM -->
+      <!-- CLOSE SHIFT FORM (Blind Cash Count) -->
       <form v-else @submit.prevent="submitCloseShift" class="space-y-4">
-        <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 space-y-1 text-xs">
-          <div class="flex justify-between">
-            <span class="text-slate-500 dark:text-slate-400">Opening Cash Float:</span>
-            <span class="font-mono text-slate-800 dark:text-slate-200">৳{{ formatMoney(activeShift?.opening_cash || 0) }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span class="text-slate-500 dark:text-slate-400">Expected Cash in Drawer:</span>
-            <span class="font-mono font-bold text-emerald-700 dark:text-emerald-400">৳{{ formatMoney(expectedCash) }}</span>
-          </div>
+        <div class="p-3.5 rounded-2xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">
+          <span class="font-bold">🔒 Blind Drawer Reconciliation:</span>
+          Please count all physical currency notes and coins in the drawer and enter the total below. Expected balances and variances are audited securely on the manager Z-report.
         </div>
 
         <div>
@@ -64,18 +58,23 @@
             step="0.01" 
             v-model.number="countedCash" 
             required 
+            placeholder="0.00"
             class="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono text-lg font-bold focus:outline-none focus:border-emerald-600 focus:bg-white dark:focus:bg-slate-800"
           />
         </div>
 
-        <!-- Cash Difference Alert -->
-        <div :class="['p-3 rounded-xl border text-xs flex justify-between items-center font-mono font-bold', cashDifference >= 0 ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300' : 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-300']">
-          <span>Cash Variance:</span>
-          <span>৳{{ formatMoney(cashDifference) }} ({{ cashDifference >= 0 ? 'Match/Over' : 'Shortage' }})</span>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Closing Shift Notes (Optional)</label>
+          <input 
+            type="text" 
+            v-model="notes" 
+            placeholder="e.g. End of day till count completed" 
+            class="w-full px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-emerald-600 focus:bg-white dark:focus:bg-slate-800"
+          />
         </div>
 
         <button type="submit" class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm shadow-md">
-          Close Shift & Reconcile Drawer
+          Submit Drawer Count & Close Shift
         </button>
       </form>
     </div>

@@ -17,6 +17,8 @@ class ProductReturn extends Model
         'store_id',
         'order_id',
         'product_id',
+        'variant_id',
+        'variant_name',
         'product_name',
         'quantity',
         'refund_amount',
@@ -47,5 +49,13 @@ class ProductReturn extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * @return BelongsTo<ProductVariant, $this>
+     */
+    public function variant(): BelongsTo
+    {
+        return $this->belongsTo(ProductVariant::class);
     }
 }

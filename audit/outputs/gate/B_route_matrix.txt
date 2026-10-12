@@ -1,8 +1,8 @@
 AUTHORIZATION MATRIX AUDIT REPORT
 =================================
-Generated: 2026-10-12 16:16:30
+Generated: 2026-10-12 23:37:37
 Target Engine: MySQL 8.4
-Total Routes Audited: 151
+Total Routes Audited: 153
 
 URI                                              | Method | Guest  | Cashier | StoreManager | Merchant | SuperAdmin | OtherTenantUser
 --------------------------------------------------------------------------------------------------------------------------------
@@ -95,14 +95,18 @@ URI                                              | Method | Guest  | Cashier | S
 /manager/quotations                              | GET    | 302    | 302     | 200          | 200      | 403        | 200            
 /manager/reports                                 | GET    | 302    | 302     | 200          | 200      | 403        | 200            
 /manager/audit-logs                              | GET    | 302    | 302     | 200          | 200      | 403        | 200            
+/manager/orders/needs-review                     | GET    | 302    | 302     | 200          | 200      | 403        | 200            
+/manager/orders/{id}/resolve                     | POST   | 302    | 302     | 404          | 404      | 403        | 404            
 /pos                                             | GET    | 302    | 200     | 200          | 200      | 403        | 200            
 /pos/checkout                                    | POST   | 302    | 302     | 302          | 302      | 403        | 302            
+/pos/returns                                     | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /pos/park                                        | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /pos/parked-orders                               | GET    | 302    | 200     | 200          | 200      | 403        | 200            
 /pos/parked-orders/{id}                          | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
 /pos/parked/{id}                                 | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
 /pos/verify-pin                                  | POST   | 302    | 422     | 422          | 422      | 422        | 422            
-/pos/invoice/{id}/pdf                            | GET    | 302    | 404     | 404          | 404      | 403        | 404            
+/profile/pin                                     | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/pos/invoice/{id}/pdf                            | GET    | 302    | 200     | 200          | 200      | 403        | 404            
 /vat/mushak-6.3/{id}                             | GET    | 302    | 200     | 200          | 200      | 403        | 404            
 /pos/products/search                             | GET    | 302    | 200     | 200          | 200      | 403        | 200            
 /pos/customers/search                            | GET    | 302    | 200     | 200          | 200      | 403        | 200            
@@ -128,7 +132,7 @@ URI                                              | Method | Guest  | Cashier | S
 /products/barcodes                               | GET    | 302    | 302     | 200          | 200      | 403        | 200            
 /inventory/adjustments                           | GET    | 302    | 302     | 200          | 200      | 403        | 200            
 /inventory/adjustments                           | POST   | 302    | 302     | 302          | 302      | 403        | 302            
-/customers/{id}/send-sms                         | POST   | 302    | 302     | 404          | 404      | 403        | 404            
+/customers/{id}/send-sms                         | POST   | 302    | 302     | 302          | 302      | 403        | 404            
 /reports/profit-loss                             | GET    | 302    | 302     | 200          | 200      | 403        | 200            
 /reports/vat                                     | GET    | 302    | 302     | 200          | 200      | 403        | 200            
 /reports/stock                                   | GET    | 302    | 302     | 200          | 200      | 403        | 200            
@@ -139,8 +143,6 @@ URI                                              | Method | Guest  | Cashier | S
 /reports/sales-summary/recalculate               | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /reports/daily-summary/recalculate               | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /manager/shifts/{id}/z-report                    | GET    | 302    | 302     | 200          | 200      | 200        | 404            
-/manager/orders/needs-review                     | GET    | 302    | 302     | 200          | 200      | 403        | 200            
-/manager/orders/{id}/resolve                     | POST   | 302    | 302     | 404          | 404      | 403        | 404            
 /stock-audits                                    | GET    | 302    | 302     | 200          | 200      | 200        | 200            
 /stock-audits                                    | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /stock-audits/{audit}/items                      | POST   | 302    | 302     | 302          | 302      | 403        | 404            

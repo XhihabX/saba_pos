@@ -723,6 +723,45 @@
         </form>
       </div>
     </div>
+
+    <!-- 🔒 10-Minute Inactivity / Workstation Lock Screen Modal -->
+    <div v-if="showLockModal" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex items-center justify-center p-4">
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 max-w-sm w-full space-y-6 shadow-2xl text-center text-slate-900 dark:text-slate-100">
+        <div class="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center mx-auto shadow-inner">
+          <Lock class="w-8 h-8" />
+        </div>
+
+        <div class="space-y-1">
+          <h3 class="text-xl font-black font-heading tracking-tight">Workstation Locked</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Terminal locked due to 10 minutes inactivity or manual lock. Enter your 4-digit security PIN to resume sales.
+          </p>
+        </div>
+
+        <form @submit.prevent="handleUnlockStation" class="space-y-4">
+          <div>
+            <input 
+              type="password" 
+              maxlength="4" 
+              v-model="unlockPinInput" 
+              placeholder="••••" 
+              autocomplete="off"
+              class="w-full text-center tracking-[0.5em] text-2xl font-mono font-black px-4 py-3 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:outline-none focus:border-emerald-500"
+              required
+            />
+            <p v-if="unlockError" class="text-xs text-rose-500 font-bold mt-2">{{ unlockError }}</p>
+          </div>
+
+          <button 
+            type="submit" 
+            :disabled="isUnlocking || unlockPinInput.length < 4"
+            class="w-full py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-600/30 active:scale-95 transition-all disabled:opacity-50"
+          >
+            {{ isUnlocking ? 'Verifying PIN...' : 'Unlock Terminal ➔' }}
+          </button>
+        </form>
+      </div>
+    </div>
   </AuthenticatedLayout>
 </template>
 
@@ -830,6 +869,42 @@ const showLockModal = ref(false);
 const showParkedOrdersModal = ref(false);
 const showShiftModal = ref(false);
 const showAddCustomerModal = ref(false);
+const unlockPinInput = ref('');
+const unlockError = ref('');
+const isUnlocking = ref(false);
+let inactivityTimer = null;
+
+const resetInactivityTimer = () => {
+  if (inactivityTimer) clearTimeout(inactivityTimer);
+  if (!showLockModal.value) {
+    inactivityTimer = setTimeout(() => {
+      showLockModal.value = true;
+      unlockPinInput.value = '';
+      unlockError.value = '';
+    }, 10 * 60 * 1000); // 10 minutes auto-lock
+  }
+};
+
+const handleUnlockStation = async () => {
+  if (unlockPinInput.value.length < 4 || isUnlocking.value) return;
+  isUnlocking.value = true;
+  unlockError.value = '';
+  try {
+    const res = await window.axios.post('/pos/verify-pin', { pin: unlockPinInput.value });
+    if (res.data?.success) {
+      showLockModal.value = false;
+      unlockPinInput.value = '';
+      resetInactivityTimer();
+      showSyncNotification('success', '✅ POS Terminal workstation unlocked!');
+    } else {
+      unlockError.value = res.data?.message || 'Invalid PIN entered.';
+    }
+  } catch (e) {
+    unlockError.value = e.response?.data?.message || 'Invalid 4-digit security PIN.';
+  } finally {
+    isUnlocking.value = false;
+  }
+};
 
 const showCameraScannerModal = ref(false);
 const cameraVideoRef = ref(null);
@@ -1799,10 +1874,20 @@ onMounted(async () => {
 
   // 7. Global hardware barcode scanner listener
   window.addEventListener('keydown', handleGlobalKeyDown);
+
+  // 8. 10-Minute inactivity auto-lock listeners
+  ['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => {
+    window.addEventListener(evt, resetInactivityTimer, { passive: true });
+  });
+  resetInactivityTimer();
 });
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleGlobalKeyDown);
+  ['mousemove', 'keydown', 'click', 'touchstart'].forEach(evt => {
+    window.removeEventListener(evt, resetInactivityTimer);
+  });
+  if (inactivityTimer) clearTimeout(inactivityTimer);
 });
 
 // Re-cache products when they update (e.g. after a page reload)

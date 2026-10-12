@@ -174,6 +174,13 @@
               <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">{{ isEditing ? 'New Password (Leave blank to keep existing)' : 'Password' }}</label>
               <input type="password" v-model="form.password" :required="!isEditing" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-indigo-500" />
             </div>
+            <div>
+              <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">
+                4-Digit POS Counter PIN
+                <span class="text-[10px] text-slate-400 font-normal">({{ isEditing ? 'Leave blank to keep current' : '4 numeric digits, e.g. 1234' }})</span>
+              </label>
+              <input type="password" maxlength="4" pattern="[0-9]{4}" v-model="form.pos_pin" :placeholder="isEditing ? '••••' : '1234'" class="w-full px-3 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 font-mono tracking-widest focus:outline-none focus:border-indigo-500" />
+            </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-slate-700 dark:text-slate-300 font-semibold mb-1">Assigned Role</label>
@@ -260,6 +267,7 @@ const form = ref({
   name: '',
   email: '',
   password: 'password123',
+  pos_pin: '1234',
   role: 'cashier',
   store_id: props.stores?.[0]?.id || 1,
   permissions: ['can_manage_inventory', 'can_process_returns'],
@@ -272,6 +280,7 @@ const openAddModal = () => {
     name: '',
     email: '',
     password: 'password123',
+    pos_pin: '1234',
     role: 'cashier',
     store_id: props.stores?.[0]?.id || 1,
     permissions: ['can_manage_inventory', 'can_process_returns'],
@@ -286,6 +295,7 @@ const openEditModal = (user) => {
     name: user.name,
     email: user.email,
     password: '',
+    pos_pin: '',
     role: user.role,
     store_id: user.store_id,
     permissions: Array.isArray(user.permissions) ? [...user.permissions] : ['can_manage_inventory', 'can_process_returns'],

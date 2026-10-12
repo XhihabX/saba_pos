@@ -387,6 +387,22 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Key design decisions:** No feature is declared "REAL" if it relies on a simulator or workaround; every working claim must cite an empirical automated test assertion.
 - **Last updated:** 2026-10-12
 
+### 39. 27 Retail Operational Rules Implementation & Production Hardening
+- **What it does:** Implements and enforces 27 frontline retail business operational rules across counter checkout, stockroom inventory, manager/merchant back-office, security, and shift reconciliation:
+  1. **Decoupled Card Payment Slip Entry (Rule 7):** Card slips and external POS terminal authorization numbers are stored directly in `order_payments.reference_no` with `verification_status = 'not_applicable'`, completely decoupled from MFS validation.
+  2. **Counter-Verified bKash / Nagad Mode (Rule 6):** Supports fast counter checkout when telecom SMS webhooks are delayed; checks for duplicate TrxID reuse across tenant orders and records transactions as `counter_verified` on shift Z-reports.
+  3. **Cashier Discount Allowance Limits (Rule 3):** Stores configure `stores.max_cashier_discount_percent` (default 5.00%); discounts within threshold process without PIN, while discounts exceeding threshold strictly require supervisor PIN.
+  4. **Negotiable Price Overrides (Rule 2):** Fixed catalog pricing by default; counter overrides require supervisor PIN, record `original_price` and `price_override_reason` on `order_items`, log `audit_logs` entries, and flag order for manager review.
+  5. **Zero-Stock Selling without Negative Inventory Distortion (Rule 13):** Allows checkouts when shelf items mistakenly have 0 recorded stock without blocking lines; clamps stock at 0.0 (never negative), flags `order_items.zero_stock_sold = true`, and queues order for manager purchase reconciliation.
+  6. **Expired Stock Batch Disposal & FEFO Deductions (Rule 14):** Deducts earliest expiring batches (`ProductBatch` ordered by `expiry_date`) on sales and stock adjustments.
+  7. **Cashier Refunds with Supervisor PIN & Variant Restocking (Rules 15 & 16):** Cashiers require supervisor PIN to process refunds; returns accurately restock the exact product variant row (`variant_id`).
+  8. **Blind Cash Shift Close & Register Petty Cash Deduction (Rules 12 & 23):** Hides expected drawer balances and variances from cashiers during closing count; expenses paid from register drawer (`payment_source = 'register_cash'`) deduct from register expected balance; parked orders auto-discard on shift close (Rule 5).
+  9. **Workstation 10-Minute Auto-Lock (Rule 11):** Terminal inactivity timer locks interface after 10 minutes, requiring 4-digit PIN unlock.
+  10. **Staff Security PIN Management (Rule 27):** Mandatory 4-digit numeric PIN configured on staff creation/edit and self-service PIN updates via `POST /profile/pin`.
+- **Where it lives:** `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ShiftController.php`, `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/MerchantController.php`, `app/Http/Controllers/AuthController.php`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/Components/POS/ShiftModal.vue`, `resources/js/Components/POS/ReceiptModal.vue`, `resources/js/Pages/Merchant/Users.vue`.
+- **Key design decisions:** Defense-in-depth with server-side PIN verification; atomic inventory and payment logging inside database transactions; transparent front-of-house operational resilience.
+- **Last updated:** 2026-10-12
+
 ## Data Model
 
 ```

@@ -165,7 +165,12 @@ class ShiftController extends Controller
                 return (float) ($log->payload['amount'] ?? 0);
             });
 
-        $expectedCash = round((float) $shift->opening_cash + (float) $cashSales - $cashRefunds + $cashDuePayments - $totalChangeReturn, 2);
+        $registerExpenses = (float) \App\Models\Expense::where('store_id', $shift->store_id)
+            ->where('payment_source', 'register_cash')
+            ->whereBetween('created_at', [$shift->opened_at, now()])
+            ->sum('amount');
+
+        $expectedCash = round((float) $shift->opening_cash + (float) $cashSales - $cashRefunds + $cashDuePayments - $totalChangeReturn - $registerExpenses, 2);
         $cashDiff = round((float) $validated['closing_cash_counted'] - $expectedCash, 2);
 
         $shift->update([
@@ -179,6 +184,11 @@ class ShiftController extends Controller
             'closed_at' => now(),
             'notes' => $validated['notes'] ?? null,
         ]);
+
+        // Discard any suspended/parked orders on shift close (Rule 5)
+        \App\Models\ParkedOrder::where('tenant_id', $tenantId)
+            ->where('store_id', $shift->store_id)
+            ->delete();
 
         AuditLogger::log(
             'shift_closed',

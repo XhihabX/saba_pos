@@ -12,7 +12,7 @@ class OrderPayment extends Model
 {
     use HasFactory, Tenantable;
 
-    protected $fillable = ['tenant_id', 'order_id', 'payment_method', 'amount', 'reference_no'];
+    protected $fillable = ['tenant_id', 'order_id', 'payment_method', 'amount', 'reference_no', 'verification_status'];
 
     /**
      * @return BelongsTo<Order, $this>

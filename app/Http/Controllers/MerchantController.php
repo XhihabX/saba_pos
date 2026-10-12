@@ -104,6 +104,7 @@ class MerchantController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:6',
+            'pos_pin' => 'nullable|string|regex:/^[0-9]{4}$/',
             'role' => 'required|in:store_manager,cashier',
             'store_id' => 'required|exists:stores,id',
             'permissions' => 'nullable|array',
@@ -130,6 +131,9 @@ class MerchantController extends Controller
         ]);
         $user->tenant_id = $tenantId;
         $user->role = $validated['role'];
+        if (! empty($validated['pos_pin'])) {
+            $user->pos_pin = Hash::make($validated['pos_pin']);
+        }
         $user->permissions = $validated['permissions'] ?? [];
         $user->save();
 
@@ -147,6 +151,7 @@ class MerchantController extends Controller
             'role' => 'required|in:store_manager,cashier',
             'store_id' => 'required|exists:stores,id',
             'password' => 'nullable|string|min:6',
+            'pos_pin' => 'nullable|string|regex:/^[0-9]{4}$/',
             'permissions' => 'nullable|array',
         ]);
 
@@ -161,6 +166,9 @@ class MerchantController extends Controller
         $user->permissions = $validated['permissions'] ?? $user->permissions;
         if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
+        }
+        if (! empty($validated['pos_pin'])) {
+            $user->pos_pin = Hash::make($validated['pos_pin']);
         }
         $user->save();
 

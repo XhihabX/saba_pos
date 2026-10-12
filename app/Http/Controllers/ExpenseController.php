@@ -40,12 +40,14 @@ class ExpenseController extends Controller
             'title' => 'required|string|max:255',
             'category' => 'required|string',
             'amount' => 'required|numeric|min:0',
+            'payment_source' => 'nullable|string|in:register_cash,bank,other',
             'date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
 
         $tenantId = $this->getTenantId();
         $validated['tenant_id'] = $tenantId;
+        $validated['payment_source'] = $validated['payment_source'] ?? 'register_cash';
         $firstStore = Store::where('tenant_id', $tenantId)->first();
         $validated['store_id'] = auth()->user()->store_id ?? ($firstStore ? $firstStore->id : 1);
 

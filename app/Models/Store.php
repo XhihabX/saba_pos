@@ -43,6 +43,7 @@ class Store extends Model
         'mfs_number',
         'sms_gateway_url',
         'sms_api_key',
+        'max_cashier_discount_percent',
     ];
 
     /**

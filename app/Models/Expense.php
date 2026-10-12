@@ -12,7 +12,7 @@ class Expense extends Model
 {
     use HasFactory, Tenantable;
 
-    protected $fillable = ['tenant_id', 'store_id', 'title', 'category', 'amount', 'date', 'notes'];
+    protected $fillable = ['tenant_id', 'store_id', 'title', 'category', 'amount', 'date', 'notes', 'payment_source'];
 
     /**
      * @return BelongsTo<Store, $this>

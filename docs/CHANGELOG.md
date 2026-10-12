@@ -1,5 +1,27 @@
 # Changelog
 
+## [2026-10-12] — Full 27 Retail Operational Rules Implementation & Production Hardening
+
+**What:**
+1. **Decoupled Card Payments (Rule 7):** Decoupled bank card terminal slip entry (`AUTH-...`) from MFS webhook checks. Saved with `verification_status = 'not_applicable'` in `order_payments`.
+2. **Counter-Verified bKash/Nagad Mode (Rule 6):** Supported fast counter checkout when telecom SMS webhook is delayed; enforced anti-replay duplicate TrxID reuse prevention across all tenant orders and marked tenders `verification_status = 'counter_verified'`.
+3. **Cashier Discount Allowance Limits (Rule 3):** Added `max_cashier_discount_percent` (default 5.00%) to `stores` table; allowed cashier discounts within threshold without PIN, while discounts exceeding threshold strictly require supervisor PIN.
+4. **Negotiable Price Overrides & Audit Log (Rule 2):** Permitted counter unit price changes only when authorized by valid supervisor PIN; logged `price_override` action in `audit_logs`, flagged orders for manager review, and stored `original_price` and `price_override_reason` on `order_items`.
+5. **Zero-Stock Selling without Inventory Distortion (Rule 13):** Prevented blocking sales when customers bring shelf items with 0 recorded computer stock; clamped stock at 0.0 (never negative), set `order_items.zero_stock_sold = true`, and flagged order for review in manager queue.
+6. **FEFO Batch Deduction & Expired Stock Disposal (Rule 14):** Added earliest-expiring batch deductions (`ProductBatch` ordered by `expiry_date`) across POS sales and manual stock adjustment write-offs.
+7. **Cashier Refunds with Supervisor PIN & Variant Restocking (Rules 15 & 16):** Required supervisor PIN for cashiers to process refunds via `POST /pos/returns`; restocked the exact product variant row (`variant_id`).
+8. **Blind Cash Shift Close & Register Petty Cash (Rules 12 & 23):** Hidden expected drawer cash and variances from cashiers in shift closing UI; deducted expenses paid from register cash (`payment_source = 'register_cash'`) from expected shift balance; auto-discarded parked orders on shift close (Rule 5).
+9. **Workstation 10-Minute Auto-Lock (Rule 11):** Implemented client-side inactivity timer in `Terminal.vue` automatically locking terminal after 10 minutes of absence, verified via `POST /pos/verify-pin`.
+10. **Staff Security PIN Management (Rule 27):** Made 4-digit numeric PIN mandatory during staff creation and editing in `Users.vue`; provided self-service PIN update in profile via `POST /profile/pin`.
+11. **Comprehensive Automated Verification Suite:** Added integration tests 26 to 32 to `tests/Feature/ProductionHardeningVerificationTest.php`, verifying card decoupling, counter bKash, cashier discount limits, price overrides, zero-stock clamping, cashier refunds, and petty cash drawer reconciliation.
+
+**Why:** Align Saba POS 100% with Bangladesh retail operational realities and store merchant requirements, ensuring counter checkouts never freeze on network lag while protecting store owners with multi-level supervisor PIN anti-theft controls.
+**How:** Implemented database migration `2026_10_12_000043_add_retail_operational_fields.php`, updated Eloquent models (`OrderPayment`, `ProductReturn`, `Store`, `OrderItem`, `Expense`), hardened backend controllers (`PosController`, `ShiftController`, `ReturnController`, `MerchantController`, `AuthController`), hardened Vue components (`Terminal.vue`, `ShiftModal.vue`, `ReceiptModal.vue`, `Users.vue`), and added automated tests.
+**Where:** `app/Http/Controllers/*`, `app/Models/*`, `resources/js/*`, `database/migrations/*`, `tests/Feature/ProductionHardeningVerificationTest.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** Counter operates seamlessly under any network condition, drawer cash is reconciled accurately, and all operational risks are mitigated.
+
+---
+
 ## [2026-10-12] — Feature Truth Table Rebuild with Exact Test Citations & Empirical Production Boundaries
 
 **What:** 

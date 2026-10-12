@@ -192,4 +192,24 @@ class AuthController extends Controller
 
         return redirect('/login');
     }
+
+    public function updatePin(Request $request)
+    {
+        $validated = $request->validate([
+            'pos_pin' => 'required|string|regex:/^[0-9]{4}$/',
+            'current_password' => 'required|string',
+        ]);
+
+        /** @var User $user */
+        $user = auth()->user();
+        if (! Hash::check($validated['current_password'], $user->password)) {
+            return back()->withErrors(['current_password' => 'Incorrect password entered.']);
+        }
+
+        $user->update([
+            'pos_pin' => Hash::make($validated['pos_pin']),
+        ]);
+
+        return back()->with('success', 'Security PIN updated successfully.');
+    }
 }

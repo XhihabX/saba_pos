@@ -131,17 +131,21 @@ Route::prefix('manager')->middleware(['auth', EnsureStoreManager::class, EnsureA
     Route::get('/quotations', [QuotationController::class, 'index'])->name('manager.quotations');
     Route::get('/reports', [ReportController::class, 'profitLoss'])->name('manager.reports');
     Route::get('/audit-logs', [StoreManagerController::class, 'auditLogsIndex'])->name('manager.auditlogs');
+    Route::get('/orders/needs-review', [StoreManagerController::class, 'needsReviewOrders'])->name('manager.orders.needs-review');
+    Route::post('/orders/{id}/resolve', [StoreManagerController::class, 'resolveFlaggedOrder'])->name('manager.orders.resolve');
 });
 
 // 6. Cashier Terminal Layer & Operational ERP Operations (Protected)
 Route::middleware(['auth', EnsureActiveSubscription::class])->group(function () {
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
     Route::post('/pos/checkout', [PosController::class, 'checkout'])->name('pos.checkout');
+    Route::post('/pos/returns', [ReturnController::class, 'store'])->name('pos.returns.store');
     Route::post('/pos/park', [PosController::class, 'parkOrder'])->name('pos.park');
     Route::get('/pos/parked-orders', [PosController::class, 'getParkedOrders'])->name('pos.parked');
     Route::delete('/pos/parked-orders/{id}', [PosController::class, 'deleteParkedOrder'])->name('pos.parked.delete');
     Route::delete('/pos/parked/{id}', [PosController::class, 'deleteParkedOrder']);
     Route::post('/pos/verify-pin', [PosController::class, 'verifyPin'])->middleware('throttle.pin')->name('pos.verify-pin');
+    Route::post('/profile/pin', [AuthController::class, 'updatePin'])->name('profile.pin.update');
     Route::get('/pos/invoice/{id}/pdf', [PosController::class, 'downloadInvoicePdf'])->name('pos.invoice.pdf');
     Route::get('/vat/mushak-6.3/{id}', [PosController::class, 'downloadMushak63'])->name('vat.mushak63');
     Route::get('/pos/products/search', [PosController::class, 'searchProducts'])->name('pos.products.search');

@@ -58,12 +58,52 @@ class ReturnController extends Controller
         $validated = $request->validate([
             'invoice_no' => 'required|string|exists:orders,invoice_no',
             'product_id' => 'required|exists:products,id',
+            'variant_id' => 'nullable|exists:product_variants,id',
             'quantity' => 'required|numeric|min:0.01',
             'refund_amount' => 'required|numeric|min:0',
             'reason' => 'required|string',
+            'supervisor_pin' => 'nullable|string',
         ]);
 
-        return DB::transaction(function () use ($validated, $tenantId) {
+        return DB::transaction(function () use ($request, $validated, $tenantId) {
+            $user = auth()->user();
+            $approvedBy = $user ? $user->name : 'Store Manager';
+
+            // Cashier requires supervisor PIN authorization
+            if ($user && $user->role === 'cashier') {
+                $pin = (string) ($request->input('supervisor_pin') ?? $request->input('pin') ?? '');
+                if (empty($pin)) {
+                    throw ValidationException::withMessages([
+                        'supervisor_pin' => ['A valid supervisor PIN is required for cashier to process refunds.'],
+                    ]);
+                }
+
+                $authorizedSupervisor = null;
+                $supervisors = \App\Models\User::where('tenant_id', $tenantId)
+                    ->whereIn('role', ['manager', 'store_manager', 'admin', 'merchant', 'super_admin'])
+                    ->whereNotNull('pos_pin')
+                    ->get();
+
+                foreach ($supervisors as $sup) {
+                    if (\Illuminate\Support\Facades\Hash::check($pin, $sup->pos_pin)) {
+                        $authorizedSupervisor = $sup;
+                        break;
+                    }
+                }
+
+                if (! $authorizedSupervisor && ! empty($user->pos_pin) && \Illuminate\Support\Facades\Hash::check($pin, $user->pos_pin)) {
+                    $authorizedSupervisor = $user;
+                }
+
+                if (! $authorizedSupervisor) {
+                    throw ValidationException::withMessages([
+                        'supervisor_pin' => ['Invalid supervisor PIN for refund authorization.'],
+                    ]);
+                }
+
+                $approvedBy = $authorizedSupervisor->name.' (Supervisor PIN)';
+            }
+
             // Verify order belongs to user tenant
             $order = Order::where('invoice_no', $validated['invoice_no'])
                 ->where('tenant_id', $tenantId)
@@ -75,10 +115,14 @@ class ReturnController extends Controller
                 ->where('tenant_id', $tenantId)
                 ->firstOrFail();
 
-            // 1. Validate product was part of original order
-            $orderItem = OrderItem::where('order_id', $order->id)
-                ->where('product_id', $product->id)
-                ->first();
+            // 1. Validate product & variant was part of original order
+            $variantId = $validated['variant_id'] ?? null;
+            $orderItemQuery = OrderItem::where('order_id', $order->id)
+                ->where('product_id', $product->id);
+            if ($variantId) {
+                $orderItemQuery->where('variant_id', $variantId);
+            }
+            $orderItem = $orderItemQuery->first();
 
             if (! $orderItem) {
                 throw ValidationException::withMessages([
@@ -87,9 +131,12 @@ class ReturnController extends Controller
             }
 
             // 2. Validate quantity against already returned items
-            $alreadyReturnedQty = (float) ProductReturn::where('order_id', $order->id)
-                ->where('product_id', $product->id)
-                ->sum('quantity');
+            $alreadyReturnedQuery = ProductReturn::where('order_id', $order->id)
+                ->where('product_id', $product->id);
+            if ($variantId) {
+                $alreadyReturnedQuery->where('variant_id', $variantId);
+            }
+            $alreadyReturnedQty = (float) $alreadyReturnedQuery->sum('quantity');
 
             $maxReturnableQty = (float) $orderItem->quantity - $alreadyReturnedQty;
             if ($validated['quantity'] > $maxReturnableQty) {
@@ -117,20 +164,30 @@ class ReturnController extends Controller
                 'order_id' => $order->id,
                 'store_id' => $storeId,
                 'product_id' => $product->id,
+                'variant_id' => $orderItem->variant_id,
+                'variant_name' => $orderItem->variant_name,
                 'product_name' => $product->name,
                 'quantity' => $validated['quantity'],
                 'refund_amount' => $validated['refund_amount'],
                 'reason' => $validated['reason'],
-                'approved_by' => auth()->user()->name ?? 'Store Manager',
+                'approved_by' => $approvedBy,
             ]);
 
-            // Re-stock quantity back into Store Inventory
-            $stock = Stock::where('store_id', $storeId)->where('product_id', $product->id)->lockForUpdate()->first();
+            // Re-stock quantity back into Store Inventory for exact variant
+            $stockQuery = Stock::where('store_id', $storeId)->where('product_id', $product->id);
+            if ($orderItem->variant_id) {
+                $stockQuery->where('variant_id', $orderItem->variant_id);
+            } else {
+                $stockQuery->whereNull('variant_id');
+            }
+            $stock = $stockQuery->lockForUpdate()->first();
+
             if (! $stock) {
                 $stock = Stock::create([
                     'tenant_id' => $tenantId,
                     'store_id' => $storeId,
                     'product_id' => $product->id,
+                    'variant_id' => $orderItem->variant_id,
                     'quantity' => 0,
                 ]);
             }
@@ -181,6 +238,14 @@ class ReturnController extends Controller
                 now()->toDateString(),
                 (float) $validated['refund_amount']
             );
+
+            if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Return & Cash Refund processed successfully!',
+                    'return' => $returnRecord,
+                ], 200);
+            }
 
             return redirect()->back()->with('success', 'Return & Cash Refund processed successfully!');
         });

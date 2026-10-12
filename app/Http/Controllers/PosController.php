@@ -179,6 +179,8 @@ class PosController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.variant_id' => 'nullable|exists:product_variants,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.unit_price' => 'nullable|numeric|min:0',
+            'items.*.price_override_reason' => 'nullable|string',
             'items.*.discount' => 'nullable|numeric|min:0',
             'items.*.serial_number' => 'nullable|string',
             'discount_amount' => 'nullable|numeric|min:0',
@@ -235,20 +237,27 @@ class PosController extends Controller
 
         // Server-side discount limit & supervisor PIN enforcement
         $discountAmount = (float) ($validated['discount_amount'] ?? 0);
-        $hasLineDiscounts = false;
+        $totalLineDiscounts = 0.0;
+        $rawCartSubtotal = 0.0;
+
         foreach ($validated['items'] as $item) {
-            if (! empty($item['discount']) && (float) $item['discount'] > 0) {
-                $hasLineDiscounts = true;
-                break;
-            }
+            $totalLineDiscounts += (float) ($item['discount'] ?? 0);
+            $itemProduct = Product::where('id', $item['product_id'])->where('tenant_id', $tenantId)->first();
+            $itemPrice = $itemProduct ? (float) $itemProduct->selling_price : (float) ($item['unit_price'] ?? 0);
+            $rawCartSubtotal += (float) $item['quantity'] * $itemPrice;
         }
 
-        if ($discountAmount > 0 || $hasLineDiscounts) {
-            $supervisorPin = (string) ($request->input('supervisor_pin') ?? $request->input('pin') ?? '');
-            $user = auth()->user();
-            if (empty($supervisorPin) || empty($user->pos_pin) || ! Hash::check($supervisorPin, $user->pos_pin)) {
+        $totalDiscountGiven = $discountAmount + $totalLineDiscounts;
+        $maxCashierDiscount = (float) ($store->max_cashier_discount_percent ?? 5.0);
+        $discountPercent = $rawCartSubtotal > 0 ? ($totalDiscountGiven / $rawCartSubtotal) * 100 : 0;
+
+        $supervisorPin = (string) ($request->input('supervisor_pin') ?? $request->input('pin') ?? '');
+
+        // If discount exceeds merchant-configured cashier allowance, require supervisor PIN
+        if ($discountPercent > ($maxCashierDiscount + 0.01)) {
+            if (! $this->verifySupervisorPin($supervisorPin, $tenantId)) {
                 throw ValidationException::withMessages([
-                    'discount' => ['A valid supervisor PIN is required to apply cart or line item discounts.'],
+                    'discount' => ["A valid supervisor PIN is required for discounts exceeding {$maxCashierDiscount}%."],
                 ]);
             }
         }
@@ -266,7 +275,7 @@ class PosController extends Controller
             ]);
         }
 
-        return DB::transaction(function () use ($request, $validated, $tenantId, $store, $paidAmount, $discountAmount) {
+        return DB::transaction(function () use ($request, $validated, $tenantId, $store, $paidAmount, $discountAmount, $supervisorPin) {
             $tenant = Tenant::find($tenantId);
             $isLateSynced = false;
             if ($tenant && $tenant->isGraceExpired() && $request->boolean('is_offline_sync')) {
@@ -364,21 +373,58 @@ class PosController extends Controller
 
                 $itemName = $product->name.($variant ? " ({$variant->name})" : '');
 
-                if (! $allowNegative && $available < $item['quantity']) {
-                    if ($canBypassStockDeficit) {
-                        $isFlaggedForReview = true;
-                        $reviewReasons[] = "Insufficient stock for '{$itemName}'. Available: {$available}, Requested: {$item['quantity']}";
-                    } else {
+                $isZeroStockSold = false;
+                if ($available < $item['quantity']) {
+                    if (! $allowNegative && ! $canBypassStockDeficit) {
                         throw ValidationException::withMessages([
-                            'cart' => ["Insufficient stock for '{$itemName}'. Available: {$available}, Requested: {$item['quantity']}."],
+                            'cart' => ["Insufficient stock for '{$itemName}'. Recorded stock: {$available}, requested: {$item['quantity']}."],
                         ]);
                     }
+                    if ($available <= 0.001) {
+                        $isZeroStockSold = true;
+                    }
+                    $isFlaggedForReview = true;
+                    $reviewReasons[] = "Insufficient stock / Physical stock deficit for '{$itemName}' (Recorded stock: {$available}, Sold: {$item['quantity']})";
                 }
 
-                $sellingPrice = $variant ? $variant->price : $product->selling_price;
-                $costPrice = $variant ? $variant->cost_price : ($product->purchase_cost ?? 0.00);
+                $sellingPrice = (float) ($variant ? $variant->price : ($product->selling_price ?? $product->price ?? 0.00));
+                $costPrice = (float) ($variant ? $variant->cost_price : ($product->purchase_cost ?? 0.00));
 
-                $unitPricePaisa = intval(round((float) $sellingPrice * 100));
+                $isPriceOverridden = false;
+                $originalPrice = null;
+                $overrideReason = null;
+
+                if (isset($item['unit_price']) && abs((float) $item['unit_price'] - $sellingPrice) > 0.001) {
+                    if (! $this->verifySupervisorPin($supervisorPin, $tenantId)) {
+                        throw ValidationException::withMessages([
+                            'price_override' => ["A valid supervisor PIN is required to override the price of '{$product->name}'."],
+                        ]);
+                    }
+
+                    $isPriceOverridden = true;
+                    $originalPrice = $sellingPrice;
+                    $sellingPrice = (float) $item['unit_price'];
+                    $overrideReason = (string) ($item['price_override_reason'] ?? $item['override_reason'] ?? 'Counter supervisor price override');
+
+                    $isFlaggedForReview = true;
+                    $reviewReasons[] = "Price overridden on '{$product->name}' (from ৳{$originalPrice} to ৳{$sellingPrice})";
+
+                    AuditLogger::log(
+                        'price_override',
+                        "Cashier modified price of '{$product->name}' from ৳{$originalPrice} to ৳{$sellingPrice}. Reason: {$overrideReason}",
+                        [
+                            'product_id' => $product->id,
+                            'variant_id' => $variant?->id,
+                            'original_price' => $originalPrice,
+                            'new_price' => $sellingPrice,
+                            'reason' => $overrideReason,
+                        ],
+                        $store->id,
+                        $tenantId
+                    );
+                }
+
+                $unitPricePaisa = intval(round($sellingPrice * 100));
                 $lineDiscountPaisa = intval(round((float) ($item['discount'] ?? 0) * 100));
                 $lineNetPaisa = max(0, intval(round($item['quantity'] * $unitPricePaisa)) - $lineDiscountPaisa);
 
@@ -398,7 +444,7 @@ class PosController extends Controller
 
                 $calculatedSubtotalPaisa += $lineTotalPaisa;
                 $totalInvoiceVatPaisa += $itemVatPaisa;
-                $calculatedCogsPaisa = ($calculatedCogsPaisa ?? 0) + intval(round($item['quantity'] * (float) $costPrice * 100));
+                $calculatedCogsPaisa = ($calculatedCogsPaisa ?? 0) + intval(round($item['quantity'] * $costPrice * 100));
 
                 $itemsToProcess[] = [
                     'product' => $product,
@@ -406,7 +452,11 @@ class PosController extends Controller
                     'stock' => $stock,
                     'quantity' => $item['quantity'],
                     'unit_price' => $unitPricePaisa / 100,
-                    'cost_price' => (float) $costPrice,
+                    'original_price' => $originalPrice,
+                    'price_overridden' => $isPriceOverridden,
+                    'price_override_reason' => $overrideReason,
+                    'cost_price' => $costPrice,
+                    'zero_stock_sold' => $isZeroStockSold,
                     'discount' => $lineDiscountPaisa / 100,
                     'vat_rate' => $vatRate,
                     'vat_amount' => $itemVatPaisa / 100,
@@ -484,15 +534,28 @@ class PosController extends Controller
                     'serial_number' => $item['serial_number'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
+                    'original_price' => $item['original_price'],
+                    'price_overridden' => $item['price_overridden'],
+                    'price_override_reason' => $item['price_override_reason'],
                     'cost_price' => $item['cost_price'],
+                    'zero_stock_sold' => $item['zero_stock_sold'],
                     'discount' => $item['discount'],
                     'vat_rate' => $item['vat_rate'],
                     'vat_amount' => $item['vat_amount'],
                     'total' => $item['line_total'],
                 ]);
 
-                // Deduct stock
-                $item['stock']->decrement('quantity', $item['quantity']);
+                // Deduct stock (decrement on offline sync to record deficit, clamp at 0 on live counter zero-stock sale)
+                if ($isOfflineSync) {
+                    $item['stock']->decrement('quantity', $item['quantity']);
+                } elseif ($item['zero_stock_sold']) {
+                    $item['stock']->update(['quantity' => 0.0]);
+                } elseif ($store->allow_negative_stock) {
+                    $item['stock']->decrement('quantity', $item['quantity']);
+                } else {
+                    $newQty = max(0.0, (float) $item['stock']->quantity - (float) $item['quantity']);
+                    $item['stock']->update(['quantity' => $newQty]);
+                }
 
                 // FEFO Batch Stock Deduction
                 $batches = ProductBatch::where('tenant_id', $tenantId)
@@ -514,70 +577,26 @@ class PosController extends Controller
                 }
             }
 
-            // Multiple payments & MFS Claiming with row locking
+            // Multiple payments & MFS / Card processing with row locking
             if (! empty($validated['payments'])) {
                 foreach ($validated['payments'] as $payment) {
-                    OrderPayment::create([
-                        'tenant_id' => $tenantId,
-                        'order_id' => $order->id,
-                        'payment_method' => $payment['method'],
-                        'amount' => (float) $payment['amount'],
-                        'reference_no' => $payment['reference_no'] ?? null,
-                    ]);
-
-                    if (in_array(strtolower($payment['method']), ['bkash', 'nagad', 'rocket', 'upay']) || ! empty($payment['reference_no'])) {
-                        $trxId = strtoupper(trim((string) ($payment['reference_no'] ?? '')));
-                        $mfsTx = MfsTransaction::where('trx_id', $trxId)
-                            ->where('tenant_id', $tenantId)
-                            ->where('status', 'unclaimed')
-                            ->lockForUpdate()
-                            ->first();
-
-                        if (! $mfsTx) {
-                            throw ValidationException::withMessages([
-                                'payment' => ["MFS Transaction ID '{$trxId}' does not exist, is already claimed, or belongs to another tenant."],
-                            ]);
-                        }
-
-                        if (abs((float) $mfsTx->amount - (float) $payment['amount']) > 0.01) {
-                            throw ValidationException::withMessages([
-                                'payment' => ["MFS Transaction ID '{$trxId}' amount (৳{$mfsTx->amount}) does not match payment amount (৳{$payment['amount']})."],
-                            ]);
-                        }
-
-                        $mfsTx->update(['status' => 'claimed', 'order_id' => $order->id]);
-                    }
+                    $this->processPaymentTender(
+                        $tenantId,
+                        $order->id,
+                        (string) $payment['method'],
+                        (float) $payment['amount'],
+                        isset($payment['reference_no']) ? (string) $payment['reference_no'] : null
+                    );
                 }
             } else {
-                OrderPayment::create([
-                    'tenant_id' => $tenantId,
-                    'order_id' => $order->id,
-                    'payment_method' => $validated['payment_method'],
-                    'amount' => $paidAmount,
-                ]);
-
-                if (in_array(strtolower($validated['payment_method']), ['bkash', 'nagad', 'rocket', 'upay'])) {
-                    $trxId = strtoupper(trim((string) ($request->input('reference_no') ?? $request->input('transaction_id') ?? '')));
-                    $mfsTx = MfsTransaction::where('trx_id', $trxId)
-                        ->where('tenant_id', $tenantId)
-                        ->where('status', 'unclaimed')
-                        ->lockForUpdate()
-                        ->first();
-
-                    if (! $mfsTx) {
-                        throw ValidationException::withMessages([
-                            'payment' => ["MFS Transaction ID '{$trxId}' does not exist, is already claimed, or belongs to another tenant."],
-                        ]);
-                    }
-
-                    if (abs((float) $mfsTx->amount - $paidAmount) > 0.01) {
-                        throw ValidationException::withMessages([
-                            'payment' => ["MFS Transaction ID '{$trxId}' amount (৳{$mfsTx->amount}) does not match paid amount (৳{$paidAmount})."],
-                        ]);
-                    }
-
-                    $mfsTx->update(['status' => 'claimed', 'order_id' => $order->id]);
-                }
+                $ref = $request->input('reference_no') ?? $request->input('transaction_id') ?? $request->input('mfs_trx_id');
+                $this->processPaymentTender(
+                    $tenantId,
+                    $order->id,
+                    (string) $validated['payment_method'],
+                    $paidAmount,
+                    $ref ? (string) $ref : null
+                );
             }
 
             // Update Customer Ledger & Loyalty Points
@@ -807,6 +826,7 @@ class PosController extends Controller
             ->map(function ($p) {
                 $stock = $p->stocks->first();
                 $p->current_stock = $stock ? (float) $stock->quantity : 0;
+                $p->makeHidden(['purchase_cost']);
 
                 return $p;
             });
@@ -975,5 +995,108 @@ class PosController extends Controller
         }
 
         return response()->json(['success' => true, 'export' => $status]);
+    }
+
+    /**
+     * Verify supervisor/manager PIN against current user or authorized supervisors in tenant.
+     */
+    private function verifySupervisorPin(?string $pin, int $tenantId): bool
+    {
+        if (empty($pin)) {
+            return false;
+        }
+
+        $currentUser = auth()->user();
+        if ($currentUser && ! empty($currentUser->pos_pin) && Hash::check($pin, $currentUser->pos_pin)) {
+            return true;
+        }
+
+        $supervisors = User::where('tenant_id', $tenantId)
+            ->whereIn('role', ['manager', 'store_manager', 'admin', 'merchant', 'super_admin'])
+            ->whereNotNull('pos_pin')
+            ->get();
+
+        foreach ($supervisors as $supervisor) {
+            if (Hash::check($pin, $supervisor->pos_pin)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Process a single payment tender and verify MFS or record card/cash.
+     *
+     * @throws ValidationException
+     */
+    private function processPaymentTender(int $tenantId, int $orderId, string $method, float $amount, ?string $referenceNo = null): OrderPayment
+    {
+        $methodLower = strtolower(trim($method));
+        $isMfs = in_array($methodLower, ['bkash', 'nagad', 'rocket', 'upay', 'mobile_wallet', 'mfs'], true);
+        $isCard = in_array($methodLower, ['card', 'credit_card', 'debit_card', 'pos_terminal', 'visa', 'mastercard'], true);
+        $verificationStatus = 'not_applicable';
+
+        if ($isMfs) {
+            $trxId = strtoupper(trim((string) $referenceNo));
+            if ($trxId === '') {
+                throw ValidationException::withMessages([
+                    'payment' => ['MFS payment requires a valid Transaction ID (TrxID).'],
+                ]);
+            }
+
+            // Check if MFS Transaction already arrived via SMS / webhook
+            $mfsTx = MfsTransaction::where('trx_id', $trxId)
+                ->where('tenant_id', $tenantId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($mfsTx) {
+                if ($mfsTx->status === 'claimed') {
+                    throw ValidationException::withMessages([
+                        'payment' => ["MFS Transaction ID '{$trxId}' does not exist, is already claimed, or belongs to another tenant."],
+                    ]);
+                }
+
+                if (abs((float) $mfsTx->amount - $amount) > 0.01) {
+                    throw ValidationException::withMessages([
+                        'payment' => ["MFS Transaction ID '{$trxId}' amount (৳{$mfsTx->amount}) does not match payment amount (৳{$amount})."],
+                    ]);
+                }
+
+                $mfsTx->update(['status' => 'claimed', 'order_id' => $orderId]);
+                $verificationStatus = 'auto_verified';
+            } else {
+                // If not in mfs_transactions (telecom SMS delay), check if already used in prior order payments for tenant
+                $alreadyUsed = OrderPayment::where('tenant_id', $tenantId)
+                    ->where('reference_no', $trxId)
+                    ->exists();
+
+                if ($alreadyUsed) {
+                    throw ValidationException::withMessages([
+                        'payment' => ["MFS Transaction ID '{$trxId}' has already been used in a previous transaction."],
+                    ]);
+                }
+
+                if (strlen($trxId) < 4) {
+                    throw ValidationException::withMessages([
+                        'payment' => ["MFS Transaction ID '{$trxId}' is invalid."],
+                    ]);
+                }
+
+                $verificationStatus = 'counter_verified';
+            }
+        } elseif ($isCard) {
+            $verificationStatus = 'not_applicable';
+        }
+
+        return OrderPayment::create([
+            'tenant_id' => $tenantId,
+            'order_id' => $orderId,
+            'payment_method' => $method,
+            'amount' => $amount,
+            'reference_no' => $referenceNo ? trim($referenceNo) : null,
+            'verification_status' => $verificationStatus,
+        ]);
     }
 }

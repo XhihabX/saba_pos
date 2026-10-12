@@ -27,6 +27,7 @@ class Product extends Model
         'unit_id',
         'purchase_cost',
         'selling_price',
+        'price',
         'vat_rate',
         'vat_mode',
         'alert_quantity',
@@ -34,6 +35,16 @@ class Product extends Model
         'image',
         'is_active',
     ];
+
+    public function setPriceAttribute($value)
+    {
+        $this->attributes['selling_price'] = $value;
+    }
+
+    public function getPriceAttribute()
+    {
+        return $this->attributes['selling_price'] ?? null;
+    }
 
     /**
      * @return BelongsTo<Category, $this>

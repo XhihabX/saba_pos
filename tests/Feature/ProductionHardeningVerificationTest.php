@@ -3,14 +3,18 @@
 namespace Tests\Feature;
 
 use App\Models\Attendance;
+use App\Models\AuditLog;
 use App\Models\Customer;
+use App\Models\Expense;
 use App\Models\MfsTransaction;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\OrderPayment;
+use App\Models\ParkedOrder;
 use App\Models\Product;
 use App\Models\ProductBatch;
 use App\Models\ProductReturn;
+use App\Models\ProductVariant;
 use App\Models\Purchase;
 use App\Models\Quotation;
 use App\Models\RegisterShift;
@@ -134,7 +138,7 @@ class ProductionHardeningVerificationTest extends TestCase
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'paid_amount' => 575.00,
             'payment_method' => 'bkash',
-            'payments' => [['method' => 'bkash', 'amount' => 575.00, 'reference_no' => 'INVALID_TRX_999']],
+            'payments' => [['method' => 'bkash', 'amount' => 575.00, 'reference_no' => $trxId]],
         ]);
 
         $invalidCheckout->assertStatus(422)
@@ -156,7 +160,7 @@ class ProductionHardeningVerificationTest extends TestCase
             'tenant_id' => $this->tenant->id,
             'store_id' => $this->store->id,
             'product_id' => $product->id,
-            'quantity' => 0.0,
+            'quantity' => 1.0,
         ]);
 
         RegisterShift::create([
@@ -404,10 +408,17 @@ class ProductionHardeningVerificationTest extends TestCase
     {
         $product = Product::create([
             'tenant_id' => $this->tenant->id,
-            'name' => 'Zero Stock Product',
-            'sku' => 'SKU-ZERO-01',
+            'name' => 'Oversell Product',
+            'sku' => 'SKU-OVER-01',
             'selling_price' => 100.00,
             'is_active' => true,
+        ]);
+
+        Stock::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'product_id' => $product->id,
+            'quantity' => 1.0,
         ]);
 
         RegisterShift::create([
@@ -419,20 +430,20 @@ class ProductionHardeningVerificationTest extends TestCase
             'status' => 'open',
         ]);
 
-        // Oversell blocked when stock is 0 (no phantom 100 stock created)
+        // Oversell blocked when requested quantity (5) exceeds available stock (1)
         $res = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
             'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->store->id,
-            'items' => [['product_id' => $product->id, 'quantity' => 1]],
-            'paid_amount' => 115.00,
+            'items' => [['product_id' => $product->id, 'quantity' => 5]],
+            'paid_amount' => 575.00,
             'payment_method' => 'cash',
         ]);
 
         $res->assertStatus(422)->assertJsonValidationErrors(['cart']);
 
-        // Stock quantity in database remains 0.0
+        // Stock quantity in database remains 1.0
         $stock = Stock::where('store_id', $this->store->id)->where('product_id', $product->id)->first();
-        $this->assertEquals(0.0, (float) ($stock->quantity ?? 0));
+        $this->assertEquals(1.0, (float) ($stock->quantity ?? 0));
     }
 
     /** @test */
@@ -524,14 +535,35 @@ class ProductionHardeningVerificationTest extends TestCase
         ]);
         $res1->assertStatus(422)->assertJsonValidationErrors(['payments']);
 
-        // Fake MFS TrxID rejected
+        // Duplicate MFS TrxID rejected
+        $priorOrder = Order::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'invoice_no' => 'INV-PRIOR-001',
+            'subtotal' => 100.00,
+            'tax_amount' => 15.00,
+            'grand_total' => 115.00,
+            'paid_amount' => 115.00,
+            'payment_status' => 'paid',
+            'payment_method' => 'bkash',
+        ]);
+
+        OrderPayment::create([
+            'tenant_id' => $this->tenant->id,
+            'order_id' => $priorOrder->id,
+            'payment_method' => 'bkash',
+            'amount' => 115.00,
+            'reference_no' => 'DUPLICATE_TRX_9999',
+            'verification_status' => 'counter_verified',
+        ]);
+
         $res2 = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
             'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
             'store_id' => $this->store->id,
             'items' => [['product_id' => $product->id, 'quantity' => 1]],
             'paid_amount' => 115.00,
             'payment_method' => 'bkash',
-            'reference_no' => 'FAKE_TRX_9999',
+            'reference_no' => 'DUPLICATE_TRX_9999',
         ]);
         $res2->assertStatus(422)->assertJsonValidationErrors(['payment']);
     }
@@ -942,6 +974,502 @@ class ProductionHardeningVerificationTest extends TestCase
         $response->assertStatus(200);
         $this->assertStringContainsString('text/csv', $response->headers->get('Content-Type'));
         $this->assertStringContainsString('attachment; filename="sales_report_', $response->headers->get('Content-Disposition'));
+    }
+
+    /** @test */
+    public function test_26_decoupled_card_payment_with_slip_reference_bypasses_mfs_validation()
+    {
+        $product = Product::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Card Item',
+            'sku' => 'SKU-CARD-01',
+            'selling_price' => 100.00,
+            'is_active' => true,
+        ]);
+
+        Stock::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'product_id' => $product->id,
+            'quantity' => 10.0,
+        ]);
+
+        RegisterShift::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'user_id' => $this->merchantUser->id,
+            'opening_cash' => 500.00,
+            'opened_at' => now(),
+            'status' => 'open',
+        ]);
+
+        $res = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'store_id' => $this->store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'paid_amount' => 115.00,
+            'payment_method' => 'card',
+            'reference_no' => 'AUTH-SLIP-778899',
+        ]);
+
+        $res->assertStatus(200)->assertJson(['success' => true]);
+
+        $order = Order::latest()->first();
+        $payment = OrderPayment::where('order_id', $order->id)->first();
+        $this->assertNotNull($payment);
+        $this->assertEquals('card', $payment->payment_method);
+        $this->assertEquals('AUTH-SLIP-778899', $payment->reference_no);
+        $this->assertEquals('not_applicable', $payment->verification_status);
+    }
+
+    /** @test */
+    public function test_27_counter_verified_bkash_allows_delayed_trxid_and_prevents_duplicate_reuse()
+    {
+        $product = Product::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'bKash Delayed Item',
+            'sku' => 'SKU-BKASH-01',
+            'selling_price' => 100.00,
+            'is_active' => true,
+        ]);
+
+        Stock::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'product_id' => $product->id,
+            'quantity' => 10.0,
+        ]);
+
+        RegisterShift::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'user_id' => $this->merchantUser->id,
+            'opening_cash' => 500.00,
+            'opened_at' => now(),
+            'status' => 'open',
+        ]);
+
+        $delayedTrxId = 'BKASH_DELAYED_9999';
+
+        $res1 = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'store_id' => $this->store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'paid_amount' => 115.00,
+            'payment_method' => 'bkash',
+            'reference_no' => $delayedTrxId,
+        ]);
+
+        $res1->assertStatus(200)->assertJson(['success' => true]);
+
+        $payment1 = OrderPayment::where('reference_no', $delayedTrxId)->first();
+        $this->assertNotNull($payment1);
+        $this->assertEquals('counter_verified', $payment1->verification_status);
+
+        $res2 = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'store_id' => $this->store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'paid_amount' => 115.00,
+            'payment_method' => 'bkash',
+            'reference_no' => $delayedTrxId,
+        ]);
+
+        $res2->assertStatus(422)->assertJsonValidationErrors(['payment']);
+    }
+
+    /** @test */
+    public function test_28_cashier_discount_allowance_limit_and_supervisor_pin()
+    {
+        $this->store->update(['max_cashier_discount_percent' => 5.00]);
+
+        $cashier = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'role' => 'cashier',
+            'pos_pin' => Hash::make('1234'),
+        ]);
+
+        User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'role' => 'store_manager',
+            'pos_pin' => Hash::make('5555'),
+        ]);
+
+        $product = Product::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Discount Item',
+            'sku' => 'SKU-DISC-01',
+            'selling_price' => 100.00,
+            'is_active' => true,
+        ]);
+
+        Stock::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'product_id' => $product->id,
+            'quantity' => 10.0,
+        ]);
+
+        RegisterShift::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'user_id' => $cashier->id,
+            'opening_cash' => 500.00,
+            'opened_at' => now(),
+            'status' => 'open',
+        ]);
+
+        // 1. Discount within 5% limit (৳5.00 on ৳100.00 cart) -> allowed without supervisor PIN
+        $res1 = $this->actingAs($cashier)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'store_id' => $this->store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'discount_amount' => 5.00,
+            'paid_amount' => 109.25,
+            'payment_method' => 'cash',
+        ]);
+        $res1->assertStatus(200);
+
+        // 2. Discount exceeding 5% limit (৳15.00 on ৳100.00 = 15%) without supervisor PIN -> rejected
+        $res2 = $this->actingAs($cashier)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'store_id' => $this->store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'discount_amount' => 15.00,
+            'paid_amount' => 97.75,
+            'payment_method' => 'cash',
+        ]);
+        $res2->assertStatus(422)->assertJsonValidationErrors(['discount']);
+
+        // 3. Discount exceeding 5% limit with valid supervisor PIN -> allowed
+        $res3 = $this->actingAs($cashier)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'store_id' => $this->store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'discount_amount' => 15.00,
+            'paid_amount' => 97.75,
+            'payment_method' => 'cash',
+            'supervisor_pin' => '5555',
+        ]);
+        $res3->assertStatus(200);
+    }
+
+    /** @test */
+    public function test_29_price_override_requires_pin_logs_audit_and_flags_for_review()
+    {
+        $cashier = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'role' => 'cashier',
+            'pos_pin' => Hash::make('1234'),
+        ]);
+
+        User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'role' => 'store_manager',
+            'pos_pin' => Hash::make('7777'),
+        ]);
+
+        $product = Product::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Price Override Item',
+            'sku' => 'SKU-OVR-01',
+            'selling_price' => 100.00,
+            'is_active' => true,
+        ]);
+
+        Stock::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'product_id' => $product->id,
+            'quantity' => 10.0,
+        ]);
+
+        RegisterShift::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'user_id' => $cashier->id,
+            'opening_cash' => 500.00,
+            'opened_at' => now(),
+            'status' => 'open',
+        ]);
+
+        // 1. Changing price from 100 to 80 without supervisor PIN -> rejected
+        $res1 = $this->actingAs($cashier)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'store_id' => $this->store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 1, 'unit_price' => 80.00]],
+            'paid_amount' => 92.00,
+            'payment_method' => 'cash',
+        ]);
+        $res1->assertStatus(422)->assertJsonValidationErrors(['price_override']);
+
+        // 2. With valid supervisor PIN -> succeeds, logs audit, marks order for review
+        $res2 = $this->actingAs($cashier)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'store_id' => $this->store->id,
+            'items' => [
+                [
+                    'product_id' => $product->id,
+                    'quantity' => 1,
+                    'unit_price' => 80.00,
+                    'price_override_reason' => 'Damaged outer box discount',
+                ],
+            ],
+            'paid_amount' => 92.00,
+            'payment_method' => 'cash',
+            'supervisor_pin' => '7777',
+        ]);
+        $res2->assertStatus(200)->assertJson(['success' => true]);
+
+        $order = Order::latest()->first();
+        $this->assertTrue((bool) $order->flagged_for_review);
+        $this->assertStringContainsString('Price overridden', (string) $order->review_reason);
+
+        $orderItem = OrderItem::where('order_id', $order->id)->first();
+        $this->assertTrue((bool) $orderItem->price_overridden);
+        $this->assertEquals(100.00, (float) $orderItem->original_price);
+        $this->assertEquals(80.00, (float) $orderItem->unit_price);
+        $this->assertEquals('Damaged outer box discount', $orderItem->price_override_reason);
+
+        $this->assertDatabaseHas('audit_logs', [
+            'tenant_id' => $this->tenant->id,
+            'action' => 'price_override',
+        ]);
+    }
+
+    /** @test */
+    public function test_30_zero_stock_selling_completes_sale_clamps_at_zero_and_flags_order()
+    {
+        $this->store->update(['allow_negative_stock' => true]);
+
+        $product = Product::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Zero Stock Shelf Item',
+            'sku' => 'SKU-ZERO-01',
+            'selling_price' => 100.00,
+            'is_active' => true,
+        ]);
+
+        $stock = Stock::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'product_id' => $product->id,
+            'quantity' => 0.0,
+        ]);
+
+        RegisterShift::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'user_id' => $this->merchantUser->id,
+            'opening_cash' => 500.00,
+            'opened_at' => now(),
+            'status' => 'open',
+        ]);
+
+        $res = $this->actingAs($this->merchantUser)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'store_id' => $this->store->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 2]],
+            'paid_amount' => 230.00,
+            'payment_method' => 'cash',
+        ]);
+
+        $res->assertStatus(200)->assertJson(['success' => true]);
+
+        $stock->refresh();
+        $this->assertEquals(0.0, (float) $stock->quantity);
+
+        $order = Order::latest()->first();
+        $this->assertTrue((bool) $order->flagged_for_review);
+        $this->assertStringContainsString('Physical stock deficit', (string) $order->review_reason);
+
+        $orderItem = OrderItem::where('order_id', $order->id)->first();
+        $this->assertTrue((bool) $orderItem->zero_stock_sold);
+    }
+
+    /** @test */
+    public function test_31_cashier_refund_requires_supervisor_pin_and_restocks_variant()
+    {
+        $cashier = User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'role' => 'cashier',
+            'pos_pin' => Hash::make('1234'),
+        ]);
+
+        User::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'role' => 'store_manager',
+            'pos_pin' => Hash::make('8888'),
+        ]);
+
+        $product = Product::create([
+            'tenant_id' => $this->tenant->id,
+            'name' => 'Variant Return Shirt',
+            'sku' => 'SKU-VRET-01',
+            'selling_price' => 200.00,
+            'is_active' => true,
+        ]);
+
+        $variant = ProductVariant::create([
+            'tenant_id' => $this->tenant->id,
+            'product_id' => $product->id,
+            'name' => 'Size XL',
+            'sku' => 'SKU-VRET-01-XL',
+            'price' => 200.00,
+            'cost_price' => 120.00,
+        ]);
+
+        $stock = Stock::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'product_id' => $product->id,
+            'variant_id' => $variant->id,
+            'quantity' => 5.0,
+        ]);
+
+        $order = Order::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'invoice_no' => 'INV-RET-888',
+            'subtotal' => 200.00,
+            'tax_amount' => 30.00,
+            'grand_total' => 230.00,
+            'paid_amount' => 230.00,
+            'payment_status' => 'paid',
+            'payment_method' => 'cash',
+        ]);
+
+        OrderItem::create([
+            'tenant_id' => $this->tenant->id,
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'variant_id' => $variant->id,
+            'variant_name' => 'Size XL',
+            'product_name' => $product->name,
+            'quantity' => 1,
+            'unit_price' => 200.00,
+            'vat_rate' => 15.00,
+            'vat_amount' => 30.00,
+            'total' => 200.00,
+        ]);
+
+        // 1. Cashier attempting refund without supervisor PIN -> rejected
+        $res1 = $this->actingAs($cashier)->postJson('/pos/returns', [
+            'invoice_no' => $order->invoice_no,
+            'product_id' => $product->id,
+            'variant_id' => $variant->id,
+            'quantity' => 1,
+            'refund_amount' => 230.00,
+            'reason' => 'Wrong size',
+        ]);
+        $res1->assertStatus(422)->assertJsonValidationErrors(['supervisor_pin']);
+
+        // 2. Cashier with valid supervisor PIN -> succeeds
+        $res2 = $this->actingAs($cashier)->postJson('/pos/returns', [
+            'invoice_no' => $order->invoice_no,
+            'product_id' => $product->id,
+            'variant_id' => $variant->id,
+            'quantity' => 1,
+            'refund_amount' => 230.00,
+            'reason' => 'Wrong size',
+            'supervisor_pin' => '8888',
+        ]);
+        $res2->assertStatus(200)->assertJson(['success' => true]);
+
+        $stock->refresh();
+        $this->assertEquals(6.0, (float) $stock->quantity);
+
+        $return = ProductReturn::latest()->first();
+        $this->assertEquals($variant->id, $return->variant_id);
+        $this->assertStringContainsString('Supervisor PIN', $return->approved_by);
+    }
+
+    /** @test */
+    public function test_32_shift_close_deducts_petty_cash_expenses_and_discards_parked_orders()
+    {
+        $shift = RegisterShift::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'user_id' => $this->merchantUser->id,
+            'opening_cash' => 500.00,
+            'opened_at' => now(),
+            'status' => 'open',
+        ]);
+
+        $order = Order::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'user_id' => $this->merchantUser->id,
+            'invoice_no' => 'INV-SHIFT-01',
+            'subtotal' => 200.00,
+            'tax_amount' => 0.00,
+            'grand_total' => 200.00,
+            'paid_amount' => 200.00,
+            'change_return' => 0.00,
+            'payment_status' => 'paid',
+            'payment_method' => 'cash',
+            'created_at' => now(),
+        ]);
+
+        OrderPayment::create([
+            'tenant_id' => $this->tenant->id,
+            'order_id' => $order->id,
+            'payment_method' => 'cash',
+            'amount' => 200.00,
+            'created_at' => now(),
+        ]);
+
+        Expense::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'title' => 'Cleaning Supplies',
+            'amount' => 50.00,
+            'category' => 'Cleaning Supplies',
+            'date' => now()->toDateString(),
+            'payment_source' => 'register_cash',
+            'created_at' => now(),
+        ]);
+
+        Expense::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'title' => 'Electricity Bill',
+            'amount' => 100.00,
+            'category' => 'Electricity Bill',
+            'date' => now()->toDateString(),
+            'payment_source' => 'bank',
+            'created_at' => now(),
+        ]);
+
+        ParkedOrder::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'reference_no' => 'HOLD-SHIFT-99',
+            'customer_name' => 'Walk-in Customer',
+            'cart_data' => [['product_id' => 1, 'quantity' => 1]],
+        ]);
+
+        $this->assertEquals(1, ParkedOrder::where('store_id', $this->store->id)->count());
+
+        $response = $this->actingAs($this->merchantUser)->postJson('/pos/shift/close', [
+            'shift_id' => $shift->id,
+            'closing_cash_counted' => 650.00,
+        ]);
+
+        $response->assertStatus(200)->assertJson(['success' => true]);
+
+        $shift->refresh();
+        $this->assertEquals('closed', $shift->status);
+        $this->assertEquals(650.00, (float) $shift->expected_cash);
+        $this->assertEquals(0.00, (float) $shift->cash_difference);
+
+        $this->assertEquals(0, ParkedOrder::where('store_id', $this->store->id)->count());
     }
 }
 

@@ -81,6 +81,25 @@ class StockAdjustmentController extends Controller
 
             if (in_array($validated['type'], ['write_off', 'damage', 'expired', 'stolen', 'audit_deduction'])) {
                 $stock->decrement('quantity', $validated['quantity']);
+
+                // Deduct from earliest expiring batches (FEFO)
+                $batches = \App\Models\ProductBatch::where('tenant_id', $tenantId)
+                    ->where('store_id', $store->id)
+                    ->where('product_id', $product->id)
+                    ->where('quantity', '>', 0)
+                    ->orderBy('expiry_date', 'asc')
+                    ->lockForUpdate()
+                    ->get();
+
+                $neededQty = (float) $validated['quantity'];
+                foreach ($batches as $batch) {
+                    if ($neededQty <= 0) {
+                        break;
+                    }
+                    $deduct = min((float) $batch->quantity, $neededQty);
+                    $batch->decrement('quantity', $deduct);
+                    $neededQty -= $deduct;
+                }
             } else {
                 $stock->increment('quantity', $validated['quantity']);
             }
