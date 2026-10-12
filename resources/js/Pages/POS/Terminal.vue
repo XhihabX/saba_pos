@@ -311,10 +311,11 @@
             </div>
 
             <!-- Primary Action CTAs -->
-            <div class="grid grid-cols-3 gap-2">
+            <div class="grid grid-cols-4 gap-2">
               <button 
                 @click="parkActiveOrder" 
                 :disabled="cart.length === 0"
+                id="btn-park-order"
                 class="py-3 rounded-xl bg-white dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-amber-700 dark:text-amber-400 font-bold text-xs border border-slate-300 dark:border-slate-600 flex flex-col items-center justify-center gap-0.5 disabled:opacity-40 transition-all shadow-2xs"
               >
                 <PauseCircle class="w-4 h-4 text-amber-600 dark:text-amber-400" />
@@ -322,8 +323,20 @@
               </button>
 
               <button 
+                @click="openCheckoutModal" 
+                :disabled="cart.length === 0"
+                id="btn-split-checkout"
+                class="py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex flex-col items-center justify-center gap-0.5 disabled:opacity-40 transition-all shadow-md"
+                title="Card & Split Tender Options (F4)"
+              >
+                <CreditCard class="w-4 h-4 text-white" />
+                <span>Pay / Split</span>
+              </button>
+
+              <button 
                 @click="quickCashCheckout" 
                 :disabled="cart.length === 0"
+                id="btn-quick-cash"
                 class="col-span-2 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-40 transition-all"
               >
                 <Zap class="w-5 h-5 text-white fill-white" />

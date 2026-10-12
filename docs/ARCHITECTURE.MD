@@ -366,6 +366,18 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
   7. **High-Density Feature Tests:** `tests/Feature/CoreDomainCoverageEnforcementTest.php` provides end-to-end integration test coverage for all uncovered controller methods, validation branches, and lifecycle events across native MySQL 8.4 engine.
 - **Where it lives:** `scripts/check_coverage.php`, `tests/Feature/CoreDomainCoverageEnforcementTest.php`, `.github/workflows/tests.yml`.
 - **Key design decisions:** PCOV driver enabled in CI via `shivammathur/setup-php@v2` with zero code pollution; explicit domain class mapping prevents unmonitored critical path degradation.
+### 37. Playwright End-to-End Offline Browser Testing & Direct MySQL Verification
+- **What it does:** Automates a real end-to-end browser user journey in headless Chromium verifying cashier offline capability:
+  1. **Cashier Authentication & Terminal Initialization:** Cashier logs in via `/login` (`ci_cashier@iotpos.com`), redirects to `/pos`, loads active register shift, and displays product catalog.
+  2. **Network Disconnection Simulation:** Browser context is placed in offline mode (`context.setOffline(true)`), triggering client-side offline events.
+  3. **3 Offline Sales Cycles:** Completes Sale 1 (Quick Cash for Laser Mouse), Sale 2 (Card Checkout for Keyboard via payment modal), and Sale 3 (Split Tender: Cash + Card for Mouse + USB Hub). All transactions are queued in client IndexedDB (`offlineQueue`).
+  4. **Reconnection & Synchronization:** Network is reconnected (`context.setOffline(false)`), auto-sync is triggered, pushing queued sales to the server with `is_offline_sync = true`, and emptying the offline queue.
+  5. **Direct MySQL 8.4 Database Verification via `mysql2`:** Directly connects to MySQL 8.4 engine (without test HTTP mocks) to assert: exactly 3 orders created, inventory decremented accurately in `stocks` table, and no duplicate orders exist.
+  6. **Idempotency Guardrail:** Replaying an identical transaction key leaves the orders table and stock quantities unchanged.
+  7. **Stock Deficit Resilience:** Forced server-side deficit while offline is accepted upon reconnect and flagged with `flagged_for_review = 1`.
+  8. **CI Telemetry & Artifacts:** Built Vite assets (`npm run build`), health check polling against `/health`, and automated artifact uploads (`playwright-report` and traces).
+- **Where it lives:** `playwright.config.js`, `tests/e2e/offline_sales_sync.spec.js`, `database/seeders/CiPlaywrightSeeder.php`, `.github/workflows/tests.yml`.
+- **Key design decisions:** Direct MySQL verification using `mysql2` prevents false positives from application-level mocks; runs against real compiled production Vite assets in headless Chromium.
 - **Last updated:** 2026-10-12
 
 ## Data Model

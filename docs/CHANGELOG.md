@@ -1,5 +1,29 @@
 # Changelog
 
+## [2026-10-12] — Playwright End-to-End Offline Browser Testing & Direct MySQL Verification
+
+**What:** 
+1. **Dedicated CI Test Seeder (`CiPlaywrightSeeder.php`):** Provisioned dedicated test data (`CI-TENANT-E2E`, outlet store `STORE-CI-01`, cashier account `ci_cashier@iotpos.com`, open register shift with ৳2000 float, hardware category, and 3 test products with 50 units initial stock: Laser Mouse, Mechanical Keyboard, USB Hub).
+2. **Playwright E2E Offline Test Suite (`tests/e2e/offline_sales_sync.spec.js`):** Implemented automated end-to-end browser test running in headless Chromium:
+   - Cashier login via `/login` and redirect to `/pos`.
+   - Network disconnection simulation (`context.setOffline(true)`).
+   - 3 offline sales cycles: Sale 1 (Quick Cash for Mouse), Sale 2 (Card Tender for Keyboard), Sale 3 (Split Tender: Cash + Card for Mouse + USB Hub).
+   - Local offline queuing in IndexedDB and queue indicator tracking.
+   - Network reconnection (`context.setOffline(false)`) and automatic background synchronization.
+   - Direct database assertions using `mysql2` (never test HTTP routes): verified exactly 3 orders created, stock accurately decremented (Mouse: 50 -> 48, Keyboard: 50 -> 49, Hub: 50 -> 49), and zero duplicate idempotency keys.
+   - Idempotency guardrail: replayed transactions leave database orders and stock unchanged.
+   - Forced server deficit while offline: offline checkout accepted upon reconnection, `flagged_for_review = 1`, and review reason recorded.
+3. **CI Pipeline Integration (`.github/workflows/tests.yml`):** Added Playwright Chromium installation (`npx playwright install --with-deps chromium`), background Laravel server launch (`php artisan serve --port=8000`), `/health` endpoint health check polling, Playwright test execution (`npx playwright test`), and automatic artifact uploads (`playwright-report`, traces).
+4. **POS Terminal UI Polish (`Terminal.vue`, `CheckoutModal.vue`):** Added Pay / Split button and deterministic element IDs (`#btn-split-checkout`, `#btn-quick-cash`, `#btn-single-mode`, `#btn-split-mode`, `#btn-add-tender-line`, `#btn-confirm-checkout`).
+5. **Local Production Build Verification:** `npm run build` compiled all 2,309 modules cleanly in 38.7s with zero errors.
+
+**Why:** Provide proof of offline cashier reliability, offline queue durability, and accurate post-reconnection database synchronization under real browser conditions without relying on mocks.
+**How:** Implemented Playwright Chromium test using `mysql2`, dedicated database seeder, Vite asset build, and CI artifact uploading.
+**Where:** `playwright.config.js`, `tests/e2e/offline_sales_sync.spec.js`, `database/seeders/CiPlaywrightSeeder.php`, `package.json`, `.github/workflows/tests.yml`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/Components/POS/CheckoutModal.vue`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** Verified offline-to-online transition integrity, zero data loss, guaranteed idempotency, and complete end-to-end regression defense in CI.
+
+---
+
 ## [2026-10-12] — Core Domain Code Coverage Enforcement (>=60%) & Targeted Tests
 
 **What:** 

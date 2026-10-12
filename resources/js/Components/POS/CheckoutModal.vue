@@ -40,6 +40,7 @@
           <div class="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-xl shadow-xs">
             <button 
               type="button" 
+              id="btn-single-mode"
               @click="isSplitPayment = false"
               :class="['px-3 py-1 rounded-lg transition-all', !isSplitPayment ? 'bg-emerald-600 text-white font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100']"
             >
@@ -47,6 +48,7 @@
             </button>
             <button 
               type="button" 
+              id="btn-split-mode"
               @click="enableSplitMode"
               :class="['px-3 py-1 rounded-lg transition-all', isSplitPayment ? 'bg-indigo-600 text-white font-extrabold' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-100']"
             >
@@ -207,6 +209,7 @@
             <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-slate-300">Split Payment Lines</span>
             <button 
               type="button" 
+              id="btn-add-tender-line"
               @click="addPaymentLine" 
               class="px-3 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
             >
@@ -279,6 +282,7 @@
         <button 
           @click="submitCheckout" 
           :disabled="isSubmitting"
+          id="btn-confirm-checkout"
           class="flex-1 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-base shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-50"
         >
           <CheckCircle2 class="w-5 h-5" />
