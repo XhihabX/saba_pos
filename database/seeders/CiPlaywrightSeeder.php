@@ -133,5 +133,7 @@ class CiPlaywrightSeeder extends Seeder
                 ]
             );
         }
+
+        \Illuminate\Support\Facades\Cache::flush();
     }
 }

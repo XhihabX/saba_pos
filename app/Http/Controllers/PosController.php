@@ -128,6 +128,7 @@ class PosController extends Controller
                         'name' => $p->name,
                         'sku' => $p->sku,
                         'barcode' => $p->barcode,
+                        'category_id' => $p->category_id,
                         'selling_price' => (float) $p->selling_price,
                         'vat_rate' => (float) $p->vat_rate,
                         'vat_mode' => $p->vat_mode,
@@ -149,6 +150,7 @@ class PosController extends Controller
         $activeShiftData = $activeShift ? [
             'id' => $activeShift->id,
             'opening_float' => (float) ($activeShift->opening_cash ?? 0),
+            'opening_cash' => (float) ($activeShift->opening_cash ?? 0),
             'opened_at' => (string) $activeShift->opened_at,
             'status' => $activeShift->status,
         ] : null;
@@ -157,9 +159,12 @@ class PosController extends Controller
             'stores' => $stores,
             'categories' => $categories,
             'customers' => $customers,
+            'products' => $products,
             'initialProducts' => $products,
+            'currentStoreId' => $storeId,
             'activeStoreId' => $storeId,
             'activeShift' => $activeShiftData,
+            'initialActiveShift' => $activeShiftData,
         ]);
     }
 

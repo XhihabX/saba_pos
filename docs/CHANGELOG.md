@@ -14,12 +14,12 @@
    - Idempotency guardrail: replayed transactions leave database orders and stock unchanged.
    - Forced server deficit while offline: offline checkout accepted upon reconnection, `flagged_for_review = 1`, and review reason recorded.
 3. **CI Pipeline Integration (`.github/workflows/tests.yml`):** Added Playwright Chromium installation (`npx playwright install --with-deps chromium`), background Laravel server launch (`php artisan serve --port=8000`), `/health` endpoint health check polling, Playwright test execution (`npx playwright test`), and automatic artifact uploads (`playwright-report`, traces).
-4. **POS Terminal UI Polish (`Terminal.vue`, `CheckoutModal.vue`):** Added Pay / Split button and deterministic element IDs (`#btn-split-checkout`, `#btn-quick-cash`, `#btn-single-mode`, `#btn-split-mode`, `#btn-add-tender-line`, `#btn-confirm-checkout`).
-5. **Local Production Build Verification:** `npm run build` compiled all 2,309 modules cleanly in 38.7s with zero errors.
+4. **POS Terminal UI Polish & Prop Harmonization (`Terminal.vue`, `CheckoutModal.vue`, `PosController.php`):** Harmonized props between `PosController` and `Terminal.vue` to simultaneously support both `products` and `initialProducts`, `activeStoreId` and `currentStoreId`, `activeShift` and `initialActiveShift`. Added `category_id` to product mapping, exact floating-point split half/remainder calculation in `enableSplitMode`, and deterministic element IDs (`#btn-split-checkout`, `#btn-quick-cash`, `#btn-single-mode`, `#btn-split-mode`, `#btn-add-tender-line`, `#btn-confirm-checkout`, `#btn-method-cash`, `#btn-method-card`, `#btn-method-mfs`).
+5. **Local Production Build Verification:** `npm run build` compiled all 2,309 modules cleanly in 11.1s with zero errors.
 
 **Why:** Provide proof of offline cashier reliability, offline queue durability, and accurate post-reconnection database synchronization under real browser conditions without relying on mocks.
-**How:** Implemented Playwright Chromium test using `mysql2`, dedicated database seeder, Vite asset build, and CI artifact uploading.
-**Where:** `playwright.config.js`, `tests/e2e/offline_sales_sync.spec.js`, `database/seeders/CiPlaywrightSeeder.php`, `package.json`, `.github/workflows/tests.yml`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/Components/POS/CheckoutModal.vue`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**How:** Implemented Playwright Chromium test using `mysql2`, dedicated database seeder, Vite asset build, prop harmonization, and CI artifact uploading.
+**Where:** `playwright.config.js`, `tests/e2e/offline_sales_sync.spec.js`, `database/seeders/CiPlaywrightSeeder.php`, `app/Http/Controllers/PosController.php`, `package.json`, `.github/workflows/tests.yml`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/Components/POS/CheckoutModal.vue`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
 **Impact:** Verified offline-to-online transition integrity, zero data loss, guaranteed idempotency, and complete end-to-end regression defense in CI.
 
 ---

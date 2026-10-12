@@ -64,6 +64,7 @@
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <button 
                 type="button" 
+                id="btn-method-cash"
                 @click="selectedMethod = 'cash'; paidAmount = grandTotal"
                 :class="['p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold', selectedMethod === 'cash' ? 'bg-emerald-600 border-emerald-700 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700']"
               >
@@ -72,6 +73,7 @@
               </button>
               <button 
                 type="button" 
+                id="btn-method-card"
                 @click="selectedMethod = 'card'; paidAmount = grandTotal"
                 :class="['p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold', selectedMethod === 'card' ? 'bg-emerald-600 border-emerald-700 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700']"
               >
@@ -80,6 +82,7 @@
               </button>
               <button 
                 type="button" 
+                id="btn-method-mfs"
                 @click="selectedMethod = 'mobile_wallet'; paidAmount = grandTotal"
                 :class="['p-3 rounded-xl border flex flex-col items-center gap-1.5 transition-all text-xs font-bold', selectedMethod === 'mobile_wallet' ? 'bg-emerald-600 border-emerald-700 text-white shadow-md' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700']"
               >
@@ -352,9 +355,11 @@ watch(() => [props.grandTotal, props.presetTender, props.show], () => {
 const enableSplitMode = () => {
   isSplitPayment.value = true;
   if (paymentLines.value.length === 1) {
+    const half = Math.round((props.grandTotal / 2) * 100) / 100;
+    const remainder = Math.round((props.grandTotal - half) * 100) / 100;
     paymentLines.value = [
-      { method: 'cash', amount: Math.round(props.grandTotal / 2), reference_no: '' },
-      { method: 'card', amount: Math.round(props.grandTotal / 2), reference_no: '' }
+      { method: 'cash', amount: half, reference_no: '' },
+      { method: 'card', amount: remainder, reference_no: '' }
     ];
   }
 };

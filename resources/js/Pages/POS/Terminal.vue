@@ -757,17 +757,20 @@ import {
 const props = defineProps({
   stores: { type: Array, default: () => [] },
   currentStoreId: { type: Number, default: 1 },
+  activeStoreId: { type: Number, default: 1 },
   categories: { type: Array, default: () => [] },
   customers: { type: Array, default: () => [] },
   products: { type: Array, default: () => [] },
+  initialProducts: { type: Array, default: () => [] },
   parkedCount: { type: Number, default: 0 },
   isDemoMode: { type: Boolean, default: false },
   initialActiveShift: { type: Object, default: null },
+  activeShift: { type: Object, default: null },
 });
 
 const page = usePage();
 const mobileActiveTab = ref('catalog');
-const selectedStoreId = ref(props.currentStoreId || 1);
+const selectedStoreId = ref(props.activeStoreId || props.currentStoreId || 1);
 const selectedCustomerId = ref(props.customers?.[0]?.id || null);
 const selectedCategoryId = ref(null);
 const searchQuery = ref('');
@@ -839,7 +842,7 @@ const pinEntered = ref('');
 const latestReceipt = ref(null);
 const isSubmitting = ref(false);
 
-const activeShift = ref(props.initialActiveShift || null);
+const activeShift = ref(props.activeShift || props.initialActiveShift || null);
 const openingCashInput = ref(5000);
 const closingCashInput = ref(0);
 const isShiftProcessing = ref(false);
@@ -865,16 +868,24 @@ const customersList = computed(() => {
   return combined.length ? combined : [{ id: 1, name: 'Walk-in Customer', phone: '' }];
 });
 
+const effectiveProducts = computed(() => {
+  return (Array.isArray(props.products) && props.products.length > 0)
+    ? props.products
+    : ((Array.isArray(props.initialProducts) && props.initialProducts.length > 0)
+      ? props.initialProducts
+      : []);
+});
+
 // Use live Inertia props when online, fall back to IndexedDB cache when offline
 const allProducts = computed(() => {
-  return (Array.isArray(props.products) && props.products.length > 0) ? props.products : (cachedProducts.value || []);
+  return effectiveProducts.value.length > 0 ? effectiveProducts.value : (cachedProducts.value || []);
 });
 
 const filteredProducts = computed(() => {
   let list = allProducts.value;
 
   if (selectedCategoryId.value) {
-    list = list.filter(p => p.category_id === selectedCategoryId.value);
+    list = list.filter(p => (p.category_id || p.category?.id) === selectedCategoryId.value);
   }
 
   if (searchQuery.value.trim()) {
@@ -1760,8 +1771,8 @@ onMounted(async () => {
   await loadOfflineQueue();
 
   // 3. If online: cache product catalog to IndexedDB for future offline use
-  if (navigator.onLine && props.products && props.products.length > 0) {
-    cacheProductsToDB(props.products);
+  if (navigator.onLine && effectiveProducts.value && effectiveProducts.value.length > 0) {
+    cacheProductsToDB(effectiveProducts.value);
   }
 
   // 4. If offline on mount: load products from IndexedDB cache
@@ -1795,7 +1806,7 @@ onUnmounted(() => {
 });
 
 // Re-cache products when they update (e.g. after a page reload)
-watch(() => props.products, (newProducts) => {
+watch(effectiveProducts, (newProducts) => {
   if (newProducts && newProducts.length > 0 && navigator.onLine) {
     cacheProductsToDB(newProducts);
   }

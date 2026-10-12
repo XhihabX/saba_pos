@@ -125,7 +125,7 @@ test.describe('Offline Sales Queue & MySQL Synchronization E2E Gate', () => {
 
     // Checkout modal opens
     await expect(page.locator('#btn-single-mode')).toBeVisible();
-    await page.click('button:has-text("Card")');
+    await page.click('#btn-method-card');
     await page.click('#btn-confirm-checkout');
 
     // Verify queued count increases to 2
