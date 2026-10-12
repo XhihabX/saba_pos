@@ -1,6 +1,6 @@
 AUTHORIZATION MATRIX AUDIT REPORT
 =================================
-Generated: 2026-10-12 15:43:34
+Generated: 2026-10-12 16:16:30
 Target Engine: MySQL 8.4
 Total Routes Audited: 151
 

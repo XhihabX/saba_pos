@@ -72,7 +72,7 @@ jobs:
         with:
           php-version: '8.3'
           extensions: mbstring, dom, fileinfo, mysql, sqlite3, pdo_sqlite, pdo_mysql, gd
-          coverage: none
+          coverage: pcov
 
       - name: Copy .env
         shell: bash
@@ -121,7 +121,11 @@ jobs:
           DB_DATABASE: sabapos_test
           DB_USERNAME: root
           DB_PASSWORD: ''
-        run: php vendor/phpunit/phpunit/phpunit -c phpunit.mysql.xml --exclude-group backup 2>&1 | tee test_main.log
+        run: php vendor/phpunit/phpunit/phpunit -c phpunit.mysql.xml --exclude-group backup --coverage-clover=coverage.clover 2>&1 | tee test_main.log
+
+      - name: Enforce >= 60% Code Coverage on Core Domains
+        shell: bash
+        run: php scripts/check_coverage.php coverage.clover 60.0
 
       - name: Print Failure Log
         if: failure()

@@ -1,5 +1,27 @@
 # Changelog
 
+## [2026-10-12] — Core Domain Code Coverage Enforcement (>=60%) & Targeted Tests
+
+**What:** 
+1. **PCOV Coverage Driver & CI Quality Gate (`.github/workflows/tests.yml`):** Enabled `coverage: pcov` in `shivammathur/setup-php@v2`, configured PHPUnit with `--coverage-clover=coverage.clover`, and added an automated step running `php scripts/check_coverage.php coverage.clover 60.0` that fails CI if any class handling money, stock, auth, returns, or shifts falls below 60% line coverage.
+2. **Coverage Quality Gate Script (`scripts/check_coverage.php`):** Implemented an automated parser for Clover XML reports that maps all classes across 5 critical domains (Money: `PosController`, `ExpenseController`, `MfsWebhookController`, `EfdBridgeService`, `ReportController`; Stock: `StockAdjustmentController`, `StockAuditController`, `StockTransferController`, `ProductController`; Auth: `AuthController`, `TwoFactorController`, `TwoFactorService`, `EnsureActiveSubscription`, `EnsureStoreManager`, `EnsureMerchant`, `EnsureSuperAdmin`, `ThrottleFailedPinAttempts`; Returns: `ReturnController`; Shift: `ShiftController`), generates a domain coverage table, and exits with code 1 if any class fails to meet the threshold.
+3. **Targeted Feature Test Suite (`CoreDomainCoverageEnforcementTest.php`):** Added 10 high-density integration tests (122 assertions) testing edge cases across:
+   - `AuthController`: login redirects across 4 roles, invalid credentials, switchRole fallbacks, registration workflow with SaaS plans and pending approval.
+   - `TwoFactorController` & `TwoFactorService`: setup, unauthorized roles, OTP generation & verification, recovery codes generation & consumption.
+   - `ReturnController`: line gross paid price caps, order item validation, quantity limits, stock restoration, batch updates, customer points deduction, and shift return logging.
+   - `ShiftController`: shift status, open/close lifecycle, multi-tender sales aggregation (cash, card, mobile wallet), drawer cash variance, and day-end Z-report.
+   - `StockAdjustmentController`, `StockAuditController`, `StockTransferController`: additions, damages, inter-store transfers with stock pre-validation, audit starting, counting, and atomic approval.
+   - `ExpenseController` & `ProductController`: complete CRUD operations, category/brand/unit metadata creation, and soft deletion.
+   - `EfdBridgeService`: NBR statutory payload generation, security hash computation, and VAT registered BIN enforcement.
+4. **Local MySQL 8.4 Verification:** All 119 main tests (723 assertions) and 2 backup tests (9 assertions) passed with 0 failures on native MySQL 8.4. Larastan Level 5 static analysis passed with 0 errors.
+
+**Why:** Eliminate hidden regressions in critical financial, inventory, authentication, and shift reconciliation code paths by enforcing quantitative test coverage standards directly in CI.
+**How:** Created coverage parser script, authored comprehensive feature tests, configured PCOV in GitHub Actions workflow, and validated across MySQL 8.4 engine.
+**Where:** `scripts/check_coverage.php`, `tests/Feature/CoreDomainCoverageEnforcementTest.php`, `.github/workflows/tests.yml`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** Guaranteed >= 60% line coverage across all 19 domain classes; CI automatically prevents coverage degradation in money, stock, auth, returns, and shift modules.
+
+---
+
 ## [2026-10-12] — Larastan Level 5 Static Analysis, Model Relation Generics & Type Soundness
 
 **What:** 

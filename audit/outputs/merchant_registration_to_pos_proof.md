@@ -1,6 +1,6 @@
 # MERCHANT REGISTRATION TO LIVE POS CHECKOUT PROOF REPORT
 
-**Generated:** 2026-10-12 15:42:43
+**Generated:** 2026-10-12 16:15:52
 **Target Database Engine:** MySQL 8.4
 **Test Suite:** MerchantToPosWorkflowTest.php
 
@@ -8,30 +8,30 @@
 
 ### 1. Merchant SaaS Self-Service Registration
 - **Route:** `POST /register` -> HTTP 302
-- **Tenant Created:** `Apex Tech Superstore` (ID: `21`, Email: `jahidul@apextech.com`)
-- **Default Store Provisioned:** `Apex Tech Superstore Main Outlet` (ID: `27`, Code: `STORE-8EEA`)
-- **Merchant Owner Account:** `Jahidul Islam` (ID: `19`, Role: `merchant`)
+- **Tenant Created:** `Apex Tech Superstore` (ID: `32`, Email: `jahidul@apextech.com`)
+- **Default Store Provisioned:** `Apex Tech Superstore Main Outlet` (ID: `49`, Code: `STORE-062D`)
+- **Merchant Owner Account:** `Jahidul Islam` (ID: `60`, Role: `merchant`)
 
 ### 2. Super Admin Approval Queue
-- **Route:** `POST /super-admin/tenants/21/approve` -> HTTP 302
+- **Route:** `POST /super-admin/tenants/32/approve` -> HTTP 302
 - **Tenant Subscription Status:** `active` (Active)
 
 ### 3. Merchant HQ Store & Catalog Provisioning
-- **Category Created:** `Computers & Accessories` (ID: `1`)
+- **Category Created:** `Computers & Accessories` (ID: `2`)
 - **Product Created:** `Logitech Wireless Laser Mouse` (SKU: `LOG-WLS-M185`, Barcode: `890100998877`)
 - **Cost vs Selling Price:** Cost ৳650.00 \| Selling Price ৳1250.00
 - **Initial Store Stock Allocated:** 100 units
 - **Customer Profile Created:** `Rafiqul Islam` (`01811223344`)
-- **Cashier Staff Account Created:** `Tanvir (Counter 01)` (ID: `21`, Role: `cashier`)
+- **Cashier Staff Account Created:** `Tanvir (Counter 01)` (ID: `62`, Role: `cashier`)
 
 ### 4. Cashier Shift Opening
 - **Route:** `POST /pos/shift/open` -> HTTP 200 (SUCCESS)
 - **Opening Cash Float:** ৳5000.00
-- **Active Shift ID:** `14` (Status: Open)
+- **Active Shift ID:** `16` (Status: Open)
 
 ### 5. Live POS Counter Checkout Sale
 - **Route:** `POST /pos/checkout` -> HTTP 302 (SUCCESS)
-- **Order ID:** `16` (Invoice No: `INV-20261012-E5FD6`)
+- **Order ID:** `20` (Invoice No: `INV-20261012-1DCDD`)
 - **Subtotal:** ৳2500.00 | Discount: ৳100.00 | NBR VAT (15%): ৳360.00 | Grand Total: ৳2760.00
 - **Amount Paid:** ৳3000.00 (Cash) | Change Returned: ৳240.00
 - **Stock Deduction Verification:** Stock decremented atomically from **100 units** to **98.00 units**

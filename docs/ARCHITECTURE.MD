@@ -355,6 +355,17 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
   4. **CI Enforcement:** Automated step in `.github/workflows/tests.yml` running `vendor/bin/phpstan analyse --no-progress` on every push and pull request.
 - **Where it lives:** `phpstan.neon`, `.github/workflows/tests.yml`, all models in `app/Models/`, controllers in `app/Http/Controllers/`, services in `app/Services/`.
 - **Key design decisions:** No baselines and no broad ignore rules permitted; all underlying typing issues resolved at source code level.
+### 36. Core Domain Code Coverage Quality Gate & Enforcement
+- **What it does:** Enforces a strict >= 60% line coverage requirement across all classes handling critical platform business domains:
+  1. **Money Domain:** `PosController`, `ExpenseController`, `MfsWebhookController`, `EfdBridgeService`, `ReportController`.
+  2. **Stock Domain:** `StockAdjustmentController`, `StockAuditController`, `StockTransferController`, `ProductController`.
+  3. **Auth Domain:** `AuthController`, `TwoFactorController`, `TwoFactorService`, `EnsureActiveSubscription`, `EnsureStoreManager`, `EnsureMerchant`, `EnsureSuperAdmin`, `ThrottleFailedPinAttempts`.
+  4. **Returns Domain:** `ReturnController`.
+  5. **Shift Domain:** `ShiftController`.
+  6. **Automated CI Enforcement Script:** `scripts/check_coverage.php` parses the PHPUnit Clover XML report, computes line coverage for each tracked class, produces a domain coverage summary table, and fails the build (exit code 1) if any tracked class is below 60.0% line coverage.
+  7. **High-Density Feature Tests:** `tests/Feature/CoreDomainCoverageEnforcementTest.php` provides end-to-end integration test coverage for all uncovered controller methods, validation branches, and lifecycle events across native MySQL 8.4 engine.
+- **Where it lives:** `scripts/check_coverage.php`, `tests/Feature/CoreDomainCoverageEnforcementTest.php`, `.github/workflows/tests.yml`.
+- **Key design decisions:** PCOV driver enabled in CI via `shivammathur/setup-php@v2` with zero code pollution; explicit domain class mapping prevents unmonitored critical path degradation.
 - **Last updated:** 2026-10-12
 
 ## Data Model
