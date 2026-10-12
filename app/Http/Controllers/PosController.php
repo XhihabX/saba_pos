@@ -121,7 +121,7 @@ class PosController extends Controller
                 ->limit(50)
                 ->get()
                 ->map(function ($p) {
-                    $stock = $p->stocks ? $p->stocks->first() : null;
+                    $stock = $p->stocks->first();
 
                     return [
                         'id' => $p->id,
@@ -148,7 +148,7 @@ class PosController extends Controller
 
         $activeShiftData = $activeShift ? [
             'id' => $activeShift->id,
-            'opening_float' => (float) $activeShift->opening_float,
+            'opening_float' => (float) ($activeShift->opening_cash ?? 0),
             'opened_at' => (string) $activeShift->opened_at,
             'status' => $activeShift->status,
         ] : null;
@@ -370,8 +370,8 @@ class PosController extends Controller
                     }
                 }
 
-                $sellingPrice = $variant?->price ?? $product->selling_price;
-                $costPrice = $variant?->cost_price ?? $product->purchase_cost ?? 0.00;
+                $sellingPrice = $variant ? $variant->price : $product->selling_price;
+                $costPrice = $variant ? $variant->cost_price : ($product->purchase_cost ?? 0.00);
 
                 $unitPricePaisa = intval(round((float) $sellingPrice * 100));
                 $lineDiscountPaisa = intval(round((float) ($item['discount'] ?? 0) * 100));
@@ -800,7 +800,7 @@ class PosController extends Controller
             ->limit(30)
             ->get()
             ->map(function ($p) {
-                $stock = $p->stocks ? $p->stocks->first() : null;
+                $stock = $p->stocks->first();
                 $p->current_stock = $stock ? (float) $stock->quantity : 0;
 
                 return $p;

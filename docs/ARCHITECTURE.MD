@@ -347,8 +347,14 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
   5. **Daily Deficit Threshold Alerting:** When an outlet accumulates more than 5 flagged offline orders in a single day, an automated queued email notification (`FlaggedOrdersThresholdMail`) is dispatched to the store manager and merchant CEO.
   6. **Stock Invariant Allowed Exception:** Explicitly declared in `StockIntegrityConcurrencyTest.php` as the single permitted exception where stock may go negative in software to preserve transaction truth from offline counters pending physical reconciliation.
 - **Where it lives:** `database/migrations/2026_10_12_000042_add_flagged_for_review_to_orders_table.php`, `app/Models/Order.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/StoreManagerController.php`, `app/Mail/FlaggedOrdersThresholdMail.php`, `resources/js/Pages/Manager/NeedsReviewOrders.vue`, `resources/js/Pages/Manager/Dashboard.vue`, `routes/web.php`, `tests/Feature/OfflineStockReviewTest.php`, `tests/Feature/StockIntegrityConcurrencyTest.php`.
-- **Key design decisions:** Physical sales completed at offline retail counters must not be discarded upon reconnecting; strict 4-point validation prevents malicious online deficit spoofing; managerial resolve flow ensures stock discrepancies are acknowledged and restocked.
-- **Depends on:** `Order`, `Stock`, `Store`, `AuditLogger`, `FlaggedOrdersThresholdMail`, `EnsureStoreManager` middleware.
+### 35. Larastan Level 5 Static Analysis & Type Soundness
+- **What it does:** Enforces strict PHP static analysis and Laravel model relationship type contracts:
+  1. **Strict Level 5 Configuration:** Configured in `phpstan.neon` targeting `app/` at level 5 without baselines and without broad `ignoreErrors`.
+  2. **Model Relationship Generics:** Added explicit generic return types (`BelongsTo<Model, $this>`, `HasMany<Model, $this>`) across all 20+ Eloquent models, allowing Larastan to infer related model properties, collections, and relations without dynamic property lookup failures.
+  3. **Strict Type Coercions & Invariants:** Cleaned all nullsafe accesses preceding null coalesce operators (`?->` before `??`), typed carbon diff calculations, eliminated invalid static method calls, and ensured non-nullable sum return assertions.
+  4. **CI Enforcement:** Automated step in `.github/workflows/tests.yml` running `vendor/bin/phpstan analyse --no-progress` on every push and pull request.
+- **Where it lives:** `phpstan.neon`, `.github/workflows/tests.yml`, all models in `app/Models/`, controllers in `app/Http/Controllers/`, services in `app/Services/`.
+- **Key design decisions:** No baselines and no broad ignore rules permitted; all underlying typing issues resolved at source code level.
 - **Last updated:** 2026-10-12
 
 ## Data Model

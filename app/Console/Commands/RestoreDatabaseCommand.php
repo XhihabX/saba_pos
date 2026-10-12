@@ -119,12 +119,10 @@ class RestoreDatabaseCommand extends Command
                 DB::statement('SET FOREIGN_KEY_CHECKS=0;');
                 $statements = array_filter(array_map('trim', explode(";\n", $sqlContent)));
                 foreach ($statements as $stmt) {
-                    if (! empty($stmt)) {
-                        try {
-                            DB::unprepared($stmt);
-                        } catch (\Throwable $subEx) {
-                            // ignore temporary drop errors
-                        }
+                    try {
+                        DB::unprepared($stmt);
+                    } catch (\Throwable $subEx) {
+                        // ignore temporary drop errors
                     }
                 }
                 DB::statement('SET FOREIGN_KEY_CHECKS=1;');

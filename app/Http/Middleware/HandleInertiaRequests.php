@@ -44,7 +44,7 @@ class HandleInertiaRequests extends Middleware
             ]);
 
             foreach ($targetDirs as $dest) {
-                if (! $dest || $dest === base_path('public/build')) {
+                if ($dest === base_path('public/build')) {
                     continue;
                 }
                 $destManifest = $dest.'/manifest.json';

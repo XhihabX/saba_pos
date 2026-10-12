@@ -65,19 +65,19 @@ class ReportController extends Controller
 
         // Fallback for COGS if summary table is empty / not backfilled
         if ($cogs <= 0.0 && $totalSales > 0) {
-            $cogs = (float) (DB::table('orders')
+            $cogs = (float) DB::table('orders')
                 ->where('tenant_id', $tenantId)
                 ->whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59'])
-                ->sum('cogs') ?? 0.00);
+                ->sum('cogs');
         }
 
         // Gross Profit = Net Sales - COGS
         $grossProfit = $totalSales - $cogs;
 
         // Operating Expenses (Strict Tenant Scoped SQL Aggregation)
-        $totalExpenses = (float) (Expense::where('tenant_id', $tenantId)
+        $totalExpenses = (float) Expense::where('tenant_id', $tenantId)
             ->whereBetween('date', [$startDate, $endDate])
-            ->sum('amount') ?? 0.00);
+            ->sum('amount');
 
         // Net Profit = Gross Profit - Expenses
         $netProfit = $grossProfit - $totalExpenses;
@@ -333,8 +333,8 @@ class ReportController extends Controller
                 ->whereBetween('created_at', [$startDate.' 00:00:00', $endDate.' 23:59:59']);
 
             $totalOrders = (clone $ordersQuery)->count();
-            $grossRevenue = (float) ((clone $ordersQuery)->sum('grand_total') ?? 0);
-            $vatCollected = (float) ((clone $ordersQuery)->sum('tax_amount') ?? 0);
+            $grossRevenue = (float) (clone $ordersQuery)->sum('grand_total');
+            $vatCollected = (float) (clone $ordersQuery)->sum('tax_amount');
 
             $orderIds = (clone $ordersQuery)->pluck('id');
 

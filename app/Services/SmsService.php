@@ -18,8 +18,8 @@ class SmsService
         }
 
         $store = Store::find($storeId);
-        $gatewayUrl = $store?->sms_gateway_url ?? config('services.sms.gateway_url');
-        $apiKey = $store?->sms_api_key ?? config('services.sms.api_key');
+        $gatewayUrl = $store ? $store->sms_gateway_url : config('services.sms.gateway_url');
+        $apiKey = $store ? $store->sms_api_key : config('services.sms.api_key');
 
         if (! $gatewayUrl) {
             // Feature flag / fallback: Log SMS to system audit/application logs when gateway URL is not configured
@@ -49,7 +49,7 @@ class SmsService
     public static function sendDueReminder(int $storeId, string $customerName, string $phone, float $dueAmount): bool
     {
         $store = Store::find($storeId);
-        $storeName = $store?->name ?? 'Our Outlet';
+        $storeName = $store ? $store->name : 'Our Outlet';
         $formattedDue = number_format($dueAmount, 2);
 
         $msg = "Dear {$customerName}, your current outstanding balance at {$storeName} is BDT {$formattedDue}. Please clear your due at your earliest convenience. Thank you!";

@@ -65,7 +65,8 @@ class QuotationController extends Controller
 
         $user = auth()->user();
         $qNo = 'QT-'.strtoupper(substr(uniqid(), -6));
-        $storeId = $user->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
+        $firstStore = Store::where('tenant_id', $tenantId)->first();
+        $storeId = $user->store_id ?? ($firstStore ? $firstStore->id : 1);
 
         Quotation::create([
             'tenant_id' => $tenantId,

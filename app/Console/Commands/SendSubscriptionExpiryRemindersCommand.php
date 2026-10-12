@@ -74,7 +74,7 @@ class SendSubscriptionExpiryRemindersCommand extends Command
 
             // Find store owner (merchant) email
             $owner = $tenant->users()->where('role', 'merchant')->first();
-            $recipientEmail = $owner?->email ?? $tenant->email;
+            $recipientEmail = $owner ? $owner->email : $tenant->email;
 
             if (empty($recipientEmail)) {
                 $this->warn("Tenant #{$tenant->id} ({$tenant->name}): No valid recipient email found. Skipping.");

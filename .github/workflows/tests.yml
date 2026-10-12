@@ -37,6 +37,10 @@ jobs:
         shell: bash
         run: php artisan about
 
+      - name: Run Larastan Level 5 Static Analysis
+        shell: bash
+        run: vendor/bin/phpstan analyse --no-progress
+
   laravel-tests:
     name: MySQL 8.4 Test Suite
     runs-on: ubuntu-latest

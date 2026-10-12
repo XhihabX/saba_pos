@@ -10,6 +10,7 @@ use App\Models\RegisterShift;
 use App\Models\Store;
 use App\Services\AuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class ShiftController extends Controller
@@ -31,7 +32,9 @@ class ShiftController extends Controller
     {
         $userId = auth()->id();
         $tenantId = $this->getTenantId();
-        $storeId = (int) $request->input('store_id', auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1));
+        $firstStore = Store::where('tenant_id', $tenantId)->first();
+        $fallbackStoreId = auth()->user()->store_id ?? ($firstStore ? $firstStore->id : 1);
+        $storeId = (int) $request->input('store_id', $fallbackStoreId);
 
         $shift = RegisterShift::where('tenant_id', $tenantId)
             ->where('user_id', $userId)

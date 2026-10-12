@@ -6,6 +6,9 @@ use App\Traits\Tenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
 class StockAudit extends Model
 {
     use HasFactory, Tenantable;
@@ -25,22 +28,34 @@ class StockAudit extends Model
         'approved_at' => 'datetime',
     ];
 
-    public function store()
+    /**
+     * @return BelongsTo<Store, $this>
+     */
+    public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);
     }
 
-    public function creator()
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function approver()
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
     }
 
-    public function items()
+    /**
+     * @return HasMany<StockAuditItem, $this>
+     */
+    public function items(): HasMany
     {
         return $this->hasMany(StockAuditItem::class, 'stock_audit_id');
     }

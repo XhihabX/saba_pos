@@ -46,7 +46,8 @@ class ExpenseController extends Controller
 
         $tenantId = $this->getTenantId();
         $validated['tenant_id'] = $tenantId;
-        $validated['store_id'] = auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
+        $firstStore = Store::where('tenant_id', $tenantId)->first();
+        $validated['store_id'] = auth()->user()->store_id ?? ($firstStore ? $firstStore->id : 1);
 
         Expense::create($validated);
 

@@ -25,10 +25,22 @@ class StoreManagerController extends Controller
         return $user->tenant_id;
     }
 
+    private function getStoreId(int $tenantId): int
+    {
+        $userStoreId = auth()->user()->store_id;
+        if ($userStoreId) {
+            return (int) $userStoreId;
+        }
+
+        $store = Store::where('tenant_id', $tenantId)->first();
+
+        return $store ? (int) $store->id : 1;
+    }
+
     public function dashboard(Request $request)
     {
         $tenantId = $this->getTenantId();
-        $storeId = auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
+        $storeId = $this->getStoreId($tenantId);
 
         $todaySales = Order::where('tenant_id', $tenantId)
             ->where('store_id', $storeId)
@@ -68,7 +80,7 @@ class StoreManagerController extends Controller
     public function shiftReconciliation(Request $request)
     {
         $tenantId = $this->getTenantId();
-        $storeId = auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
+        $storeId = $this->getStoreId($tenantId);
 
         $shifts = RegisterShift::where('tenant_id', $tenantId)
             ->where('store_id', $storeId)
@@ -84,7 +96,7 @@ class StoreManagerController extends Controller
     public function auditLogsIndex(Request $request)
     {
         $tenantId = $this->getTenantId();
-        $storeId = auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
+        $storeId = $this->getStoreId($tenantId);
 
         $query = AuditLog::where('tenant_id', $tenantId)
             ->where(function ($q) use ($storeId) {
@@ -123,7 +135,7 @@ class StoreManagerController extends Controller
     public function needsReviewOrders(Request $request)
     {
         $tenantId = $this->getTenantId();
-        $storeId = auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
+        $storeId = $this->getStoreId($tenantId);
 
         $query = Order::where('tenant_id', $tenantId)
             ->where('flagged_for_review', true)
@@ -162,7 +174,7 @@ class StoreManagerController extends Controller
     public function resolveFlaggedOrder(Request $request, $id)
     {
         $tenantId = $this->getTenantId();
-        $storeId = auth()->user()->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
+        $storeId = $this->getStoreId($tenantId);
 
         $orderQuery = Order::where('tenant_id', $tenantId)
             ->where('id', $id)

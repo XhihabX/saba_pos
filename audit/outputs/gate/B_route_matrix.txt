@@ -1,8 +1,8 @@
 AUTHORIZATION MATRIX AUDIT REPORT
 =================================
-Generated: 2026-10-12 12:14:02
+Generated: 2026-10-12 15:43:34
 Target Engine: MySQL 8.4
-Total Routes Audited: 149
+Total Routes Audited: 151
 
 URI                                              | Method | Guest  | Cashier | StoreManager | Merchant | SuperAdmin | OtherTenantUser
 --------------------------------------------------------------------------------------------------------------------------------
@@ -139,6 +139,8 @@ URI                                              | Method | Guest  | Cashier | S
 /reports/sales-summary/recalculate               | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /reports/daily-summary/recalculate               | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /manager/shifts/{id}/z-report                    | GET    | 302    | 302     | 200          | 200      | 200        | 404            
+/manager/orders/needs-review                     | GET    | 302    | 302     | 200          | 200      | 403        | 200            
+/manager/orders/{id}/resolve                     | POST   | 302    | 302     | 404          | 404      | 403        | 404            
 /stock-audits                                    | GET    | 302    | 302     | 200          | 200      | 200        | 200            
 /stock-audits                                    | POST   | 302    | 302     | 302          | 302      | 302        | 302            
 /stock-audits/{audit}/items                      | POST   | 302    | 302     | 302          | 302      | 403        | 404            

@@ -6,6 +6,9 @@ use App\Traits\Tenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
 class Purchase extends Model
 {
     use HasFactory, Tenantable;
@@ -21,17 +24,26 @@ class Purchase extends Model
         'notes',
     ];
 
-    public function store()
+    /**
+     * @return BelongsTo<Store, $this>
+     */
+    public function store(): BelongsTo
     {
         return $this->belongsTo(Store::class);
     }
 
-    public function supplier()
+    /**
+     * @return BelongsTo<Supplier, $this>
+     */
+    public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
     }
 
-    public function items()
+    /**
+     * @return HasMany<PurchaseItem, $this>
+     */
+    public function items(): HasMany
     {
         return $this->hasMany(PurchaseItem::class);
     }

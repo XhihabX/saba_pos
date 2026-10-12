@@ -99,7 +99,7 @@ class StockTransferController extends Controller
                 ]);
 
                 $fromStore = Store::find($validated['from_store_id']);
-                $allowNegative = (bool) ($fromStore?->allow_negative_stock ?? false);
+                $allowNegative = $fromStore ? (bool) $fromStore->allow_negative_stock : false;
 
                 // Deduct from Source Store with DB lock
                 $fromStock = Stock::where('store_id', $validated['from_store_id'])
@@ -117,7 +117,8 @@ class StockTransferController extends Controller
                 }
 
                 if (! $allowNegative && (float) $fromStock->quantity < $item['quantity']) {
-                    $prodName = Product::find($item['product_id'])?->name ?? 'Product';
+                    $product = Product::find($item['product_id']);
+                    $prodName = $product ? $product->name : 'Product';
                     throw ValidationException::withMessages([
                         'items' => ["Insufficient stock in origin store for '{$prodName}'. Available: {$fromStock->quantity}, requested: {$item['quantity']}."],
                     ]);

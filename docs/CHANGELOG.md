@@ -1,5 +1,26 @@
 # Changelog
 
+## [2026-10-12] — Larastan Level 5 Static Analysis, Model Relation Generics & Type Soundness
+
+**What:** 
+1. **Larastan Level 5 Setup (`phpstan.neon`):** Installed `larastan/larastan:^3.13` and configured `phpstan.neon` at Level 5 targeting the `app/` directory with zero baseline files and zero broad `ignoreErrors`.
+2. **Generic Return Types on Eloquent Relationships:** Added typed generic return docblocks and return type hints (`BelongsTo<Model, $this>`, `HasMany<Model, $this>`) across all 20+ models (`Order`, `Store`, `User`, `Tenant`, `Product`, `Stock`, `OrderItem`, `OrderPayment`, `Attendance`, `AuditLog`, `Customer`, `ProductBatch`, `ProductReturn`, `Purchase`, `PurchaseItem`, `Quotation`, `RegisterShift`, `StockAdjustment`, `StockAudit`, `StockAuditItem`, `StockTransfer`, `StockTransferItem`, `Supplier`, `Category`, `ProductVariant`, `Expense`).
+3. **Type Hardening Across Controllers & Services:** 
+   - Replaced fragile nullsafe property accesses preceding null coalescing operators (`$var?->prop ?? default`) with clean ternary expressions across `PosController`, `StoreManagerController`, `AttendanceController`, `ExpenseController`, `QuotationController`, `MfsWebhookController`, `StockTransferController`, `StockAuditController`, `ThrottleFailedPinAttempts`, `AuditLogger`, `SmsService`, and `SendSubscriptionExpiryRemindersCommand`.
+   - Replaced direct `env()` calls outside config with `config('app.url')` and `config('services.efd.secret_key')` in `AppServiceProvider` and `EfdBridgeService`.
+   - Fixed missing `ValidationException` import in `ShiftController`.
+   - Fixed integer type conversion for TOTP timeslice in `TwoFactorService`.
+   - Cleaned redundant non-nullable sum coalescing expressions in `ReportController`.
+4. **CI Integration (`.github/workflows/tests.yml`):** Added a dedicated step running `vendor/bin/phpstan analyse --no-progress` during CI checks.
+5. **Local Verification:** Larastan Level 5 passes with 0 errors (`errors: 0`), and the full MySQL 8.4 test suite passed with 109/109 main tests (601 assertions) and 2/2 backup tests (9 assertions).
+
+**Why:** Eliminate runtime type errors, guarantee relation contract integrity, prevent silent bugs, and satisfy strict repository quality gate criteria without relying on suppressions or baselines.
+**How:** Configured `phpstan.neon`, annotated model relationships with generic types, refactored controller property accesses, and added CI test step.
+**Where:** `phpstan.neon`, `.github/workflows/tests.yml`, `app/Models/*`, `app/Http/Controllers/*`, `app/Services/*`, `app/Console/Commands/*`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** Zero static analysis errors at Level 5; robust IDE type completion; verified regression-free against MySQL 8.4 test suites.
+
+---
+
 ## [2026-10-12] — Offline Stock Deficit Review Engine, Manager Resolution & Threshold Alerts
 
 **What:** 

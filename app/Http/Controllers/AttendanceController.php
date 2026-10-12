@@ -72,7 +72,8 @@ class AttendanceController extends Controller
             return redirect()->back()->with('success', "Clocked out successfully! Total session: {$hours} hours.");
         } else {
             // Clock In
-            $storeId = $user->store_id ?? (Store::where('tenant_id', $tenantId)->first()?->id ?? 1);
+            $firstStore = Store::where('tenant_id', $tenantId)->first();
+            $storeId = $user->store_id ?? ($firstStore ? $firstStore->id : 1);
 
             Attendance::create([
                 'tenant_id' => $tenantId,

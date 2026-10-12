@@ -62,7 +62,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Product::class, ProductPolicy::class);
         Gate::policy(Order::class, OrderPolicy::class);
         Gate::policy(Customer::class, CustomerPolicy::class);
-        $rawAppUrl = (string) env('APP_URL', '');
+        $rawAppUrl = (string) (config('app.url') ?? '');
 
         // Enforce HTTPS scheme on production or when behind SSL / Reverse Proxies (cPanel, Nginx, Cloudflare)
         $isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||

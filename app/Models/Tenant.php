@@ -6,6 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+/**
+ * @property string|null $mfs_webhook_secret
+ * @property float|null $total_sales
+ */
 class Tenant extends Model
 {
     use HasFactory, SoftDeletes;
@@ -89,7 +95,7 @@ class Tenant extends Model
             return 0;
         }
 
-        return max(0, (int) ceil($now->floatDiffInDays($graceEndsAt, false)));
+        return max(0, (int) ceil(($graceEndsAt->getTimestamp() - $now->getTimestamp()) / 86400));
     }
 
     public function isGraceExpired(): bool
@@ -137,22 +143,34 @@ class Tenant extends Model
         return $this->currentTime()->lessThanOrEqualTo($readOnlyEndsAt);
     }
 
-    public function users()
+    /**
+     * @return HasMany<User, $this>
+     */
+    public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
 
-    public function stores()
+    /**
+     * @return HasMany<Store, $this>
+     */
+    public function stores(): HasMany
     {
         return $this->hasMany(Store::class);
     }
 
-    public function products()
+    /**
+     * @return HasMany<Product, $this>
+     */
+    public function products(): HasMany
     {
         return $this->hasMany(Product::class);
     }
 
-    public function orders()
+    /**
+     * @return HasMany<Order, $this>
+     */
+    public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
     }

@@ -373,7 +373,7 @@ class MerchantController extends Controller
 
         $store = Store::where('tenant_id', $tenantId)->first();
         $sent = SmsService::sendDueReminder(
-            $store?->id ?? 1,
+            $store ? $store->id : 1,
             $customer->name,
             $customer->phone,
             (float) $customer->due_balance

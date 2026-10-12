@@ -41,7 +41,7 @@ class TwoFactorService
             return false;
         }
 
-        $timeSlice = floor(time() / 30);
+        $timeSlice = (int) floor(time() / 30);
         for ($i = -$window; $i <= $window; $i++) {
             $calculatedOtp = $this->calculateOtp($secret, $timeSlice + $i);
             if (hash_equals($calculatedOtp, $otp)) {

@@ -14,7 +14,8 @@ class ThrottleFailedPinAttempts
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $userId = $request->user()?->id ?? 'guest';
+        $user = $request->user();
+        $userId = $user ? $user->id : 'guest';
         $ip = $request->ip() ?? '127.0.0.1';
         $key = "pos-pin-failed:{$userId}:{$ip}";
 

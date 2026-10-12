@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
 class StockAuditItem extends Model
 {
     use HasFactory;
@@ -26,17 +28,26 @@ class StockAuditItem extends Model
         'variance_value' => 'decimal:2',
     ];
 
-    public function audit()
+    /**
+     * @return BelongsTo<StockAudit, $this>
+     */
+    public function audit(): BelongsTo
     {
         return $this->belongsTo(StockAudit::class, 'stock_audit_id');
     }
 
-    public function product()
+    /**
+     * @return BelongsTo<Product, $this>
+     */
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
-    public function variant()
+    /**
+     * @return BelongsTo<ProductVariant, $this>
+     */
+    public function variant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class);
     }

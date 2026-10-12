@@ -14,14 +14,14 @@ class AuditLogger
     {
         $user = Auth::user();
 
-        $resolvedTenantId = $tenantId ?? ($user?->tenant_id);
-        $resolvedStoreId = $storeId ?? ($user?->store_id);
-        $userName = $user?->name ?? 'System Guest';
+        $resolvedTenantId = $tenantId ?? ($user ? $user->tenant_id : null);
+        $resolvedStoreId = $storeId ?? ($user ? $user->store_id : null);
+        $userName = $user ? $user->name : 'System Guest';
 
         return AuditLog::create([
             'tenant_id' => $resolvedTenantId,
             'store_id' => $resolvedStoreId,
-            'user_id' => $user?->id,
+            'user_id' => $user ? $user->id : null,
             'user_name' => $userName,
             'action' => $action,
             'description' => $description,

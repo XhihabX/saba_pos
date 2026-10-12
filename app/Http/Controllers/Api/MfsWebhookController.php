@@ -27,7 +27,7 @@ class MfsWebhookController extends Controller
             }
         }
 
-        $expectedSecret = (string) ($tenant?->mfs_webhook_secret ?? config('services.mfs.secret_key') ?? '');
+        $expectedSecret = (string) (($tenant ? $tenant->mfs_webhook_secret : null) ?? config('services.mfs.secret_key') ?? '');
 
         // Reject with 503 if no secret is configured (per-tenant or env)
         if (empty($expectedSecret)) {
@@ -90,10 +90,11 @@ class MfsWebhookController extends Controller
             'gateway' => 'nullable|string|in:bkash,nagad,rocket,upay,other',
         ]);
 
-        $targetTenantId = $tenant?->id ?? $request->user()?->tenant_id;
+        $user = $request->user();
+        $targetTenantId = ($tenant ? $tenant->id : null) ?? ($user ? $user->tenant_id : null);
         if (! $targetTenantId) {
             $firstTenant = Tenant::first();
-            $targetTenantId = $firstTenant?->id;
+            $targetTenantId = $firstTenant ? $firstTenant->id : null;
         }
 
         if (! $targetTenantId) {

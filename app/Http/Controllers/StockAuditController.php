@@ -57,7 +57,7 @@ class StockAuditController extends Controller
             ->get();
 
         foreach ($stocks as $stock) {
-            $unitCost = $stock->variant?->cost_price ?? $stock->product?->purchase_cost ?? 0;
+            $unitCost = $stock->variant ? $stock->variant->cost_price : ($stock->product ? $stock->product->purchase_cost : 0);
 
             StockAuditItem::create([
                 'stock_audit_id' => $audit->id,
