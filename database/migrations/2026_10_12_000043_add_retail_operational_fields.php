@@ -40,7 +40,7 @@ return new class extends Migration
         // 4. Expense payment source tracking (Register cash vs Bank)
         if (Schema::hasTable('expenses') && ! Schema::hasColumn('expenses', 'payment_source')) {
             Schema::table('expenses', function (Blueprint $table) {
-                $table->string('payment_source')->default('register_cash')->after('payment_method');
+                $table->string('payment_source')->default('register_cash')->after('amount');
             });
         }
 
