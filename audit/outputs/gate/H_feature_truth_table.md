@@ -3,7 +3,7 @@
 **Generated:** 2026-10-10  
 **Target Engine:** MySQL 8.4  
 **Audited Platform:** Saba POS / IOT Cloud ERP  
-**Total Features Audited:** 42  
+**Total Features Audited:** 43  
 
 ---
 
@@ -33,7 +33,7 @@
 | 22 | Web Audio API Cashier Scan Feedback Tone | VERIFIED REAL | `Terminal.vue` (`AudioContext`) | Synthesized 1200Hz Beep | Instant audio confirmation on valid scan. |
 | 23 | Split & Multi-Payment Tendermode | VERIFIED REAL | `PosController.php@checkout`, `CheckoutModal.vue` | `order_payments` table | Cash, Card, bKash, and Customer Credit. |
 | 24 | Parked Order Hold & Resume Modal | VERIFIED REAL | `PosController.php`, `ParkedOrder.php` | `parked_orders` table | Holds active cart with customer name for later resume. |
-| 25 | Register Shift Open/Close Float Audit | VERIFIED REAL | `ShiftController.php`, `RegisterShift.php` | `register_shifts` table | Cash drawer float calculation & over/short variance. |
+| 25 | Register Shift Open/Close Float Audit | VERIFIED REAL | `ShiftController.php`, `RegisterShift.php` | `register_shifts` table | Cash drawer float calculation & over/short variance in software. |
 | 26 | Supervisor PIN Override Verification | VERIFIED REAL | `PosController.php@verifyPin` | `users.pos_pin` (hashed) | Rate-limited PIN verification modal. |
 | 27 | Customer CRM, Loyalty Points & Credit Ledgers | VERIFIED REAL | `MerchantController.php@customersIndex`, `Customer.php` | `customers` (`due_balance`, `points`) | Tracks customer due ledgers & loyalty points. |
 | 28 | Customer Automated SMS Reminders | VERIFIED REAL | `SmsService.php`, `MerchantController.php` | `SmsService` integration | Dispatches SMS payment reminders for due balances. |
@@ -41,7 +41,7 @@
 | 30 | Sales Quotations & 1-Click Conversion | VERIFIED REAL | `QuotationController.php`, `Quotation.php` | `quotations` table | Converts quote to active order & deducts stock. |
 | 31 | HRM Staff Attendance & Shift Clocking | PARTIAL | `AttendanceController.php`, `Attendance.vue` | `attendances` table | Clock-in/out timestamp logging real; payroll calculations planned for future release. |
 | 32 | Real-Time Profit & Loss Financial BI | VERIFIED REAL | `ReportController.php`, `DailySalesSummary.php` | `daily_sales_summaries` table | Zero cache delay; pre-aggregated daily summaries. |
-| 33 | Statutory NBR Mushak-6.3 Tax Invoices | VERIFIED REAL | `PosController.php`, `views/pdf/mushak63.blade.php` | Stored itemized line VAT | 100% NBR Musak-6.3 tax invoice compliance. |
+| 33 | Statutory NBR Mushak-6.3 Tax Invoices | VERIFIED REAL | `PosController.php`, `views/pdf/mushak63.blade.php` | Stored itemized line VAT | NBR Musak-6.3 tax invoice compliance. |
 | 34 | Non-API Android MFS Webhook & TrxID Guard | VERIFIED REAL | `MfsWebhookController.php`, `MfsTransaction.php` | `mfs_transactions` table | HMAC signature validation & duplicate TrxID claim checks. |
 | 35 | Card POS Push-to-Terminal Simulator & Fallback | VERIFIED REAL | `CheckoutModal.vue`, `PosController.php` | `order_payments` table | Semi-integrated Push-to-terminal bridge simulator. |
 | 36 | Offline Sales Persistence & Idempotent Sync | VERIFIED REAL | `offlineStorage.js`, `PosController.php` | `orders.idempotency_key` | Client-side queue persistence & zero double stock deduction. |
@@ -51,12 +51,13 @@
 | 40 | Automated Database Backup & Gzip Restore | VERIFIED REAL | `BackupDatabaseCommand.php`, `RestoreDatabaseCommand.php` | Gzip archives & DB safety guards | Gzipped backups with strict non-test DB restore protection. |
 | 41 | Persistent Summary Drift Alerts & 1-Click Repair | VERIFIED REAL | `DiscrepancyAlert.php`, `VerifyDailySalesSummaryCommand.php` | `discrepancy_alerts` table | Nightly drift detection, email alerts & 1-click recalculation. |
 | 42 | 2FA TOTP Two-Factor Authentication | VERIFIED REAL | `TwoFactorService.php`, `TwoFactorController.php` | `users` (`two_factor_secret`, `two_factor_recovery_codes`) | 6-digit TOTP verification & 8 recovery codes. |
+| 43 | Cash Drawer Hardware Kick-out | NEEDS HARDWARE TEST | `PosController.php`, `Terminal.vue` | N/A (ESC/POS / driver) | Depends on the printer driver's open-drawer setting; NOT tested on hardware. |
 
 ---
 
 ### SUMMARY STATS:
-- **VERIFIED REAL:** 41 / 42 features (97.6%)
-- **PARTIAL:** 1 / 42 features (2.4% - HRM Attendance clock-in/out real; payroll calculations reserved for v2.0)
-- **MOCK / UNIMPLEMENTED:** 0 / 42 features (0.0%)
+- **VERIFIED REAL:** 41 / 43 features (95.3%)
+- **PARTIAL / NEEDS HARDWARE TEST:** 2 / 43 features (4.7% - HRM Attendance clock-in/out real; payroll calculations reserved for future release; Cash drawer kick-out depends on the printer driver's open-drawer setting; NOT tested on hardware)
+- **MOCK / UNIMPLEMENTED:** 0 / 43 features (0.0%)
 
-**Auditor Sign-off:** All 42 platform features audited with 100% empirical source code and database schema evidence.
+**Auditor Sign-off:** Platform features audited with empirical source code and database schema evidence.

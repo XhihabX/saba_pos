@@ -18,7 +18,7 @@
 | **E** | **Failure Paths & Recovery** | **PASS** | [`E_failure_paths.txt`](file:///d:/Projects/Saba%20POS/audit/outputs/gate/E_failure_paths.txt) | `FailurePathsTest.php` verified mid-checkout DB transaction rollback, offline sync idempotency deduplication, MFS TrxID race condition protection, shift closure guards, and clean error messages. |
 | **F** | **Offline Mode Resilience** | **PASS** | [`F_offline_mode.txt`](file:///d:/Projects/Saba%20POS/audit/outputs/gate/F_offline_mode.txt) | `OfflineSalesSyncTest.php` verified client queue sync batching (3 sales), database insertion, stock decrementing from 50 to 47, and network retry deduplication. |
 | **G** | **Security & Lockout Audit** | **PASS** | [`G_security_audit.txt`](file:///d:/Projects/Saba%20POS/audit/outputs/gate/G_security_audit.txt) | `SecurityHardeningGateTest.php` verified 5 failed POS PIN attempts trigger HTTP 429 lockout, 2FA TOTP flow, security headers, mass assignment protection, and zero `composer`/`npm` audit vulnerabilities. |
-| **H** | **Feature Truth Table** | **PASS** | [`H_feature_truth_table.md`](file:///d:/Projects/Saba%20POS/audit/outputs/gate/H_feature_truth_table.md) | Honest audit of 42 platform features: 41 VERIFIED REAL (97.6%), 1 PARTIAL (2.4% - HRM attendance clocking real, payroll reserved for v2.0), 0 MOCK. |
+| **H** | **Feature Truth Table** | **PASS** | [`H_feature_truth_table.md`](file:///d:/Projects/Saba%20POS/audit/outputs/gate/H_feature_truth_table.md) | Honest audit of 43 platform features: 41 VERIFIED REAL (95.3%), 2 PARTIAL / NEEDS HARDWARE TEST (4.7% - HRM attendance clocking real, payroll reserved for future release; cash drawer kick-out depends on the printer driver's open-drawer setting; NOT tested on hardware), 0 MOCK. |
 | **I** | **Static Quality & Readiness** | **PASS** | [`I_static_quality.txt`](file:///d:/Projects/Saba%20POS/audit/outputs/gate/I_static_quality.txt) | Verified 100% Pint PSR-12 code formatting, `npm run build` asset bundle, 0 debug functions (`dd`/`dump`/`var_dump`), 4/4 production caching commands, `/health` JSON status, and `Asia/Dhaka` timezone. |
 | **J** | **Master Gate & CI Parity** | **PASS** | [`GATE_REPORT.md`](file:///d:/Projects/Saba%20POS/audit/outputs/gate/GATE_REPORT.md) | Complete module coverage, 0 unresolved blockers, full MySQL 8.4 engine parity verified. |
 
@@ -47,8 +47,9 @@
 
 ## 3. REMAINING RISKS & HONEST DISCLOSURES
 
-1. **HRM Module Payroll Calculation:** Staff clock-in and clock-out timestamp tracking is 100% operational in `AttendanceController.php`. Advanced payroll deduction rules and automatic pay slip calculations are reserved for future major version updates.
+1. **HRM Module Payroll Calculation:** Staff clock-in and clock-out timestamp tracking is operational in `AttendanceController.php`. Advanced payroll deduction rules and automatic pay slip calculations are reserved for future major version updates.
 2. **Single Base Currency per Tenant:** Individual store outlets can set distinct display currency symbols (`$`, `৳`, `AED`), but tenant-level financial aggregates assume a 1:1 base currency without real-time dynamic FX conversion rates.
+3. **Cash Drawer Hardware Integration:** Physical drawer kick-out depends on the printer driver's open-drawer setting; NOT tested on hardware.
 
 ---
 
@@ -62,6 +63,6 @@
 
 ---
 
-**FINAL AUDIT VERDICT: FULL PASS — CODEBASE IS 100% PRODUCTION READY ON MYSQL 8.4**
+**FINAL AUDIT VERDICT: FULL PASS — CODEBASE IS PRODUCTION READY ON MYSQL 8.4**
 
 <!-- GOAL_COMPLETE -->

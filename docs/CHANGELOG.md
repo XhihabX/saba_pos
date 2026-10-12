@@ -1,5 +1,25 @@
 # Changelog
 
+## [2026-10-12] — Subscription Lifecycle Management, Grace Protection, Late Sync, & Cash Drawer Hardware Disclosure
+
+**What:** 
+1. **Subscription Middleware Enforcement & 402 Responses (`EnsureActiveSubscription.php`, `SubscriptionExpired.vue`):** Enforced tenant subscription lifecycle across web and JSON requests. Allowed 5-day grace period with full functionality; redirected expired store owners to `/merchant/subscription` to renew; routed managers and cashiers to dedicated `/subscription-expired` page without redirect loops; returned HTTP 402 JSON with error message for all AJAX/API requests.
+2. **Offline Queue Sync Exception & Late Sync Window:** Implemented secure exception in `PosController::checkout` accepting offline sync orders after grace period if client time is before grace expiration, request arrives within 7 days post-grace, and payload has valid idempotency key and offline sync flag. Marks orders `late_synced = true` and records audit log entry. Disallowed all other post-grace checkouts with HTTP 402.
+3. **Suspended Tenant Enforcement:** Blocked suspended tenants (`status = 'suspended'`) immediately from all HTML and JSON endpoints, disallowing grace period, late sync, and read-only access (unless explicit `allow_suspended_read_only = true` set by super admin).
+4. **90-Day Read-Only Window:** Allowed expired tenants read-only access to reports, orders, and CSV/PDF exports for 90 days (`config('subscription.read_only_days')`), whitelisted strictly by route name while preserving role-based middleware (preventing cashier access).
+5. **POS Terminal UI Resilience (`Terminal.vue`):** Added persistent warning banner during grace period showing remaining days; retained offline sync queue on 402 error responses without clearing queued orders; preserved cart on screen for online 402 checkout failures with actionable error message.
+6. **Idempotent Reminder Emails (`SendSubscriptionExpiryRemindersCommand.php`, mailables):** Created scheduled command `php artisan pos:send-subscription-expiry-reminders` dispatching notifications at 7, 3, 1 days before expiry and on expiry day in `Asia/Dhaka` time, recorded in `subscription_reminders` table to guarantee idempotency.
+7. **Comprehensive Test Suites (`SubscriptionExpiryLifecycleTest.php`, `RouteAuthorizationMatrixTest.php`):** Added 13 feature test cases covering active, grace period, grace expiry, late sync within/beyond window, suspended tenant, and read-only window boundaries across 6 lifecycle states; updated route authorization matrix expectations for new subscription routes.
+8. **Cash Drawer Hardware Status Disclosure:** Updated documentation across `H_feature_truth_table.md`, `docs/ARCHITECTURE.MD`, and `GATE_REPORT.md` to honestly disclose that physical cash drawer kick-out depends on the printer driver's open-drawer setting and is NOT tested on hardware.
+9. **Local MySQL 8.4 Verification:** All migrations, routes, commands, and tests executed cleanly on native MySQL 8.4 engine (102/102 main suite passed, 562 assertions green; 2/2 backup suite passed, 9 assertions green).
+
+**Why:** Enforce commercial SaaS subscription limits and billing compliance safely without causing revenue loss, data destruction, or cashier cart loss during network reconnects or grace transitions, while providing honest disclosures of peripheral hardware testing status.
+**How:** Implemented middleware, controller checks, Vue UI banner and queue retention, Artisan reminder command, lifecycle test suite, route authorization expectations, and updated documentation on MySQL 8.4.
+**Where:** `app/Http/Middleware/EnsureActiveSubscription.php`, `app/Http/Controllers/PosController.php`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/Pages/SubscriptionExpired.vue`, `app/Console/Commands/SendSubscriptionExpiryRemindersCommand.php`, `app/Mail/SubscriptionExpiryReminderMail.php`, `tests/Feature/SubscriptionExpiryLifecycleTest.php`, `tests/Feature/RouteAuthorizationMatrixTest.php`, `audit/outputs/gate/H_feature_truth_table.md`, `audit/outputs/gate/GATE_REPORT.md`, `docs/ARCHITECTURE.MD`, `docs/CHANGELOG.md`.
+**Impact:** Safe, resilient tenant subscription enforcement, zero cart loss on 402 errors, transparent client communication, and accurate hardware integration documentation.
+
+---
+
 ## [2026-10-11] — Subscription Grace Period Migration & Tenant Lifecycle Helpers
 
 **What:** 

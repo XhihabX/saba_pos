@@ -71,8 +71,9 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **What it does:** Manages cashier cash drawer float lifecycle: opening shift balance modal, closing physical cash count drawer reconciliation modal, and automatic cash over/short discrepancy calculation.
 - **Where it lives:** `app/Http/Controllers/ShiftController.php`, `app/Models/RegisterShift.php`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/Pages/Manager/Shifts.vue`
 - **Key design decisions:** Enforces that cashiers have an active open shift before allowing sales checkout in the POS terminal.
+- **Hardware Integration Status:** Physical cash drawer kick-out depends on the printer driver's open-drawer setting; NOT tested on hardware.
 - **Depends on:** `RegisterShift`, `User`, `Store`.
-- **Last updated:** 2026-10-05
+- **Last updated:** 2026-10-12
 
 ### 7. Multi-Tenant Data Isolation & Query Scoping Engine
 - **What it does:** Enforces strict multi-tenant data isolation across all merchant data (stores, products, orders, customers, users, inventory).
@@ -324,6 +325,19 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 
 
 
+### 33. Subscription Lifecycle, Grace Period, Idempotent Reminders & Read-Only Preservation Engine
+- **What it does:** Complete subscription lifecycle, grace period protection, idempotent automated email alerts, late sync queue handling, and read-only data retention:
+  1. **Grace Period Protection:** Configurable `tenants.grace_days` (default 5 days). Between `expires_at` and `expires_at + grace_days`, POS terminals, sales, and operations remain functional. A persistent banner warns owners, managers, and cashiers of remaining days.
+  2. **Post-Grace Enforcement & 402 Payment Required:** When grace expires, all web requests are blocked: store owners are redirected to `/merchant/subscription` to renew; managers and cashiers see a dedicated `/subscription-expired` page explaining expiration without redirect loops. All AJAX/JSON API requests receive HTTP 402 Payment Required with descriptive JSON error payload.
+  3. **Offline Sync Exception & Late Sync Window:** Offline queue sales created before grace expiration are safely accepted within a 7-day post-grace late sync window if submitted with an offline sync flag and unique idempotency key. Such orders are marked `late_synced = true` and logged in `audit_logs`. Non-offline or back-dated requests received after the window receive HTTP 402.
+  4. **Immediate Suspension:** Suspended tenants (`status = 'suspended'`) are immediately blocked from all routes and APIs with zero grace period, zero late sync, and zero read-only access (unless `allow_suspended_read_only = true` is explicitly granted by Super Admin).
+  5. **90-Day Read-Only Window:** Expired tenants retain read-only historical reporting and export access for a configurable period (`config('subscription.read_only_days')`, default 90 days). Routes are whitelisted by route name, while role-based middleware is preserved (cashiers remain strictly barred from managerial reports and exports).
+  6. **Idempotent Reminder Emails:** Artisan command `php artisan pos:send-subscription-expiry-reminders` evaluates tenant expiration in `Asia/Dhaka` time and dispatches reminders at 7 days, 3 days, 1 day before expiry, and on expiry day. Dispatches are recorded in `subscription_reminders` with a unique constraint `(tenant_id, expires_at, reminder_type)`, guaranteeing idempotency.
+- **Where it lives:** `app/Http/Middleware/EnsureActiveSubscription.php`, `app/Models/Tenant.php`, `app/Models/Order.php`, `config/subscription.php`, `database/migrations/2026_10_11_000041_add_subscription_lifecycle_and_grace_columns.php`, `app/Console/Commands/SendSubscriptionExpiryRemindersCommand.php`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/Pages/SubscriptionExpired.vue`, `tests/Feature/SubscriptionExpiryLifecycleTest.php`.
+- **Key design decisions:** 402 JSON responses keep POS client queue and unsubmitted carts intact on screen; timezone-aware expiration checks in `Asia/Dhaka` ensure precise boundary enforcement; late-sync exception prevents loss of cash transactions executed before grace expired; route-name based whitelist preserves existing role authorization boundaries during read-only access.
+- **Depends on:** `Tenant`, `Order`, `AuditLog`, `EnsureActiveSubscription`, `SendSubscriptionExpiryRemindersCommand`.
+- **Last updated:** 2026-10-12
+
 ## Data Model
 
 ```
@@ -333,6 +347,7 @@ Tenant (1) <---> (N) Supplier (1) <---> (N) Purchase (1) <---> (N) PurchaseItem
 Tenant (1) <---> (N) Customer
 Tenant (1) <---> (N) AuditLog
 Tenant (1) <---> (N) StockAdjustment
+Tenant (1) <---> (N) SubscriptionReminder
 Store  (1) <---> (N) RegisterShift
 Store  (1) <---> (N) Expense
 Store  (1) <---> (N) StockTransfer (Source / Destination)
@@ -343,3 +358,4 @@ Store  (1) <---> (N) StockTransfer (Source / Destination)
 - **HRM Module Extensibility**: Attendance tracking is currently limited to basic clock-in/out timestamps; full payroll calculations are flagged for future enhancement.
 - **Single Base Currency per Tenant**: Stores can set distinct currency display symbols (`$`, `৳`, `AED`), but overall tenant financial reporting assumes a 1:1 base currency exchange without real-time FX conversions.
 - **Tenant Impersonation Session Handling**: Super Admin impersonation uses session key swapping (`impersonated_by`).
+- **Cash Drawer Hardware**: Physical cash drawer kick-out depends on the printer driver's open-drawer setting; NOT tested on hardware.
