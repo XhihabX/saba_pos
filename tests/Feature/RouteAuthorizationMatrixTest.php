@@ -384,6 +384,63 @@ class RouteAuthorizationMatrixTest extends TestCase
         );
     }
 
+    public function test_route_authorization_matrix_for_subscription_states(): void
+    {
+        // 1. Expired state past grace period (within 90-day read-only window)
+        $this->tenantA->update([
+            'subscription_status' => 'active',
+            'expires_at' => now('Asia/Dhaka')->subDays(10), // Grace is 5 days, so 5 days past grace
+            'grace_days' => 5,
+        ]);
+        $this->cashierA->unsetRelation('tenant');
+        $this->merchantA->unsetRelation('tenant');
+
+        // Cashier accessing /subscription-expired gets 200 OK
+        $this->actingAs($this->cashierA)->get(route('subscription.expired'))->assertStatus(200);
+
+        // Cashier accessing /pos gets redirected to subscription.expired
+        $this->actingAs($this->cashierA)->get('/pos')->assertRedirect(route('subscription.expired'));
+
+        // Merchant accessing /merchant/dashboard gets redirected to merchant.subscription
+        $this->actingAs($this->merchantA)->get('/merchant/dashboard')->assertRedirect(route('merchant.subscription'));
+
+        // Merchant accessing read-only reports gets 200 OK
+        $this->actingAs($this->merchantA)->get('/reports/profit-loss')->assertStatus(200);
+
+        // Cashier accessing read-only reports is STILL blocked by EnsureStoreManager
+        $this->actingAs($this->cashierA)->get('/reports/profit-loss')->assertRedirect(route('login'));
+
+        // Cashier attempting checkout gets HTTP 402
+        $this->actingAs($this->cashierA)->postJson('/pos/checkout', [
+            'store_id' => $this->storeA->id,
+            'client_uuid' => 'UUID-TEST-402',
+            'items' => [['product_id' => $this->productA->id, 'quantity' => 1]],
+            'paid_amount' => 100,
+            'payment_method' => 'cash',
+        ])->assertStatus(402)->assertJson(['message' => 'Subscription expired. Please ask the store owner to renew.']);
+
+        // 2. Suspended state
+        $this->tenantA->update([
+            'subscription_status' => 'suspended',
+            'allow_suspended_read_only' => false,
+            'expires_at' => now('Asia/Dhaka')->addDays(30),
+        ]);
+        $this->cashierA->unsetRelation('tenant');
+        $this->merchantA->unsetRelation('tenant');
+
+        // Cashier attempting checkout gets HTTP 402 suspended message
+        $this->actingAs($this->cashierA)->postJson('/pos/checkout', [
+            'store_id' => $this->storeA->id,
+            'client_uuid' => 'UUID-TEST-SUSPENDED',
+            'items' => [['product_id' => $this->productA->id, 'quantity' => 1]],
+            'paid_amount' => 100,
+            'payment_method' => 'cash',
+        ])->assertStatus(402)->assertJson(['message' => 'Tenant subscription is suspended.']);
+
+        // Cashier accessing /pos gets redirected to subscription.expired
+        $this->actingAs($this->cashierA)->get('/pos')->assertRedirect(route('subscription.expired'));
+    }
+
     protected function isStatusExpectedForRole(string $uri, string $method, string $role, int $status): bool
     {
         // 1. Storage & Webhook endpoints with signature/payload guards
