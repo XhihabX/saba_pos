@@ -1,6 +1,6 @@
 TENANT ISOLATION RAW QUERY AUDIT REPORT
 =======================================
-Generated: 2026-10-11 23:49:59
+Generated: 2026-10-12 11:57:38
 Target Engine: MySQL 8.4
 User Context: Merchant B (tenant_id = 4)
 Total Queries Recorded: 11
