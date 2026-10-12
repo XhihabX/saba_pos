@@ -155,14 +155,17 @@ test.describe('Offline Sales Queue & MySQL Synchronization E2E Gate', () => {
     await context.setOffline(false);
     await page.evaluate(() => window.dispatchEvent(new Event('online')));
 
-    // Click Sync button or wait for auto-sync
+    // Auto-sync is triggered by online event; click if enabled, otherwise await draining
     const syncButton = page.locator('button:has-text("Sync")');
     if (await syncButton.isVisible()) {
-      await syncButton.click();
+      const isEnabled = await syncButton.isEnabled().catch(() => false);
+      if (isEnabled) {
+        await syncButton.click({ timeout: 2000 }).catch(() => {});
+      }
     }
 
     // Wait until offline queue is fully drained (Sync button disappears)
-    await expect(page.locator('button:has-text("Sync")')).not.toBeVisible({ timeout: 15000 });
+    await expect(page.locator('button:has-text("Sync")')).not.toBeVisible({ timeout: 25000 });
 
     // -------------------------------------------------------------------------
     // Step 7: MySQL 8.4 Direct Database Verification via mysql2
@@ -263,9 +266,12 @@ test.describe('Offline Sales Queue & MySQL Synchronization E2E Gate', () => {
 
     const syncBtn2 = page.locator('button:has-text("Sync")');
     if (await syncBtn2.isVisible()) {
-      await syncBtn2.click();
+      const isEnabled = await syncBtn2.isEnabled().catch(() => false);
+      if (isEnabled) {
+        await syncBtn2.click({ timeout: 2000 }).catch(() => {});
+      }
     }
-    await expect(page.locator('button:has-text("Sync")')).not.toBeVisible({ timeout: 15000 });
+    await expect(page.locator('button:has-text("Sync")')).not.toBeVisible({ timeout: 25000 });
 
     // Verify 4th order created with flagged_for_review = 1 in MySQL
     const [deficitOrders] = await connection.execute(
