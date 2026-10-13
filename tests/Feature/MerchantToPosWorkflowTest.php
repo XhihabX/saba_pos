@@ -275,7 +275,7 @@ class MerchantToPosWorkflowTest extends TestCase
         $proofOutput .= "- **Counted Cash:** ৳7760.00 (5000 opening + 2760 sales)\n";
         $proofOutput .= "- **Cash Variance:** ৳0.00 (Zero over/short discrepancy)\n\n";
 
-        $proofOutput .= "## VERDICT: 100% PROVED REAL & PRODUCTION READY\n";
+        $proofOutput .= "## VERDICT: END-TO-END WORKFLOW VERIFIED BY AUTOMATED TEST SUITE ON MYSQL 8.4\n";
 
         $proofPath = base_path('audit/outputs/merchant_registration_to_pos_proof.md');
         if (!is_dir(dirname($proofPath))) {

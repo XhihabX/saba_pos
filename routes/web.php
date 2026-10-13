@@ -133,6 +133,7 @@ Route::prefix('manager')->middleware(['auth', EnsureStoreManager::class, EnsureA
     Route::get('/audit-logs', [StoreManagerController::class, 'auditLogsIndex'])->name('manager.auditlogs');
     Route::get('/orders/needs-review', [StoreManagerController::class, 'needsReviewOrders'])->name('manager.orders.needs-review');
     Route::post('/orders/{id}/resolve', [StoreManagerController::class, 'resolveFlaggedOrder'])->name('manager.orders.resolve');
+    Route::get('/mfs-reconciliation', [StoreManagerController::class, 'mfsReconciliation'])->name('manager.mfs.reconciliation');
 });
 
 // 6. Cashier Terminal Layer & Operational ERP Operations (Protected)

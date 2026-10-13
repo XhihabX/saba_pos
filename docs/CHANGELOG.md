@@ -1,5 +1,25 @@
 # Changelog
 
+## [2026-10-13] — Counter-Verified MFS Reconciliation, Anti-Theft Shift Controls & Shelf Pickup Stock Deficit Policy
+
+**What:**
+1. **Manager-Only MFS Reconciliation Dashboard:** Added `GET /manager/mfs-reconciliation` route (`StoreManagerController::mfsReconciliation`) and Vue view (`resources/js/Pages/Manager/MfsReconciliation.vue`) listing all counter-verified MFS payments (`verification_status = 'counter_verified'`) with cashier name, invoice number, TrxID, amount, timestamp, and matched/unmatched status.
+2. **Late Webhook Auto-Matching Engine:** Enhanced `MfsWebhookController.php` to auto-match incoming late MFS webhooks (`/api/v1/mfs-webhook`) against previously recorded counter-verified order payments with identical TrxID and amount, upgrading status to `auto_verified`, claiming the transaction, and logging an audit log trail.
+3. **24-Hour Unmatched Alerting & Owner Email Notification:** Counter-verified payments remaining unmatched after 24 hours appear with a red badge in the manager portal. Created console command `php artisan pos:check-unmatched-mfs` (`CheckUnmatchedMfsPaymentsCommand.php`) to generate persistent `discrepancy_alerts` records and send `DiscrepancyAlertMail` to the tenant owner.
+4. **Supervisor PIN Anti-Theft Thresholds:** Enforced manager supervisor PIN in `PosController::processPaymentTender` when a counter-verified MFS payment exceeds `stores.max_counter_verified_amount` (default ৳5,000.00) or when cashier shift count reaches `stores.max_counter_verified_per_shift` (default 10).
+5. **Register Shift Z-Report Telemetry:** Updated `ShiftController::zReport` and `ZReport.vue` to compute and render `counter_verified_count` and `counter_verified_total` alongside cash drawer reconciliation.
+6. **Shelf Pickup Mode Stock Deficit Policy:** Preserved default `allow_negative_stock = false` to block live sales when stock is insufficient. When a store enables `shelf_pickup_mode = true`, both live POS checkouts and offline queued sync sales record the real inventory deficit into negative numbers (never clamped to 0.00), tag `zero_stock_sold = true`, and flag the order for manager review (`/manager/orders/needs-review`).
+7. **Database Migration:** Created migration `2026_10_13_000044_add_mfs_reconciliation_and_shelf_pickup_fields.php` adding `shelf_pickup_mode`, `max_counter_verified_amount`, and `max_counter_verified_per_shift` to `stores` table.
+8. **Automated Test Suites:** Authored comprehensive test suite `tests/Feature/MfsReconciliationAndStockPolicyTest.php` (8 tests, 49 assertions), updated `MoneyInvariantsPropertyTest.php` (500 property scenarios), and verified `ProductionHardeningVerificationTest.php`.
+9. **Static Analysis & Type Soundness:** Resolved all Larastan Level 5 static analysis issues across `app/`, achieving 0 errors without baselines.
+
+**Why:** Protect retail merchants against counter-verified MFS embezzlement, enable automated reconciliation when SMS webhooks are delayed, allow supermarkets operating in physical shelf pickup mode to track true inventory deficits without blocking checkouts, and maintain strict data integrity.
+**How:** Implemented database migrations, updated Eloquent models (`Store`, `OrderPayment`, `MfsTransaction`), updated backend controllers (`PosController`, `StoreManagerController`, `ShiftController`, `MfsWebhookController`), built Vue frontend components (`MfsReconciliation.vue`, `ZReport.vue`), added Artisan command, and verified tests.
+**Where:** `app/Http/Controllers/*`, `app/Models/Store.php`, `app/Console/Commands/CheckUnmatchedMfsPaymentsCommand.php`, `database/migrations/*`, `resources/js/Pages/Manager/*`, `tests/Feature/MfsReconciliationAndStockPolicyTest.php`, `DEPLOY.md`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** Eliminates cashier fraud vectors on manual MFS entries, auto-resolves delayed SMS transactions, provides clear manager visibility, and records accurate physical inventory deficits during shelf pickup operations.
+
+---
+
 ## [2026-10-12] — Full 27 Retail Operational Rules Implementation & Production Hardening
 
 **What:**

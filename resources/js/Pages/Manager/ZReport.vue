@@ -78,6 +78,10 @@
             <span>MOBILE WALLET (MFS):</span>
             <span>৳{{ zData.mobileSales.toFixed(2) }}</span>
           </div>
+          <div class="flex justify-between text-amber-600 dark:text-amber-400">
+            <span>COUNTER-VERIFIED MFS ({{ zData.counterVerifiedCount ?? zData.counter_verified_count ?? 0 }}):</span>
+            <span>৳{{ (parseFloat(zData.counterVerifiedTotal ?? zData.counter_verified_total) || 0).toFixed(2) }}</span>
+          </div>
         </div>
 
         <!-- Cash Drawer Reconciliation -->

@@ -76,6 +76,7 @@ class MoneyInvariantsPropertyTest extends TestCase
             'sku' => 'SKU-RND',
             'price' => 100.0,
             'cost_price' => 50.0,
+            'purchase_cost' => 50.0,
             'vat_rate' => 15.0,
             'is_active' => true,
         ]);
@@ -237,5 +238,40 @@ class MoneyInvariantsPropertyTest extends TestCase
         $this->assertEquals($scenariosCount, $passedScenarios, "All 500 money invariant scenarios must pass.");
         $this->assertEmpty($failures);
         $this->assertFileExists($proofPath);
+    }
+
+    public function test_shelf_pickup_negative_stock_preserves_money_invariants(): void
+    {
+        $this->store->update(['shelf_pickup_mode' => true, 'allow_negative_stock' => false]);
+
+        $stock = Stock::create([
+            'tenant_id' => $this->tenant->id,
+            'store_id' => $this->store->id,
+            'product_id' => $this->product->id,
+            'quantity' => 0.00,
+        ]);
+
+        $res = $this->actingAs($this->cashier)->postJson('/pos/checkout', [
+            'client_uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'store_id' => $this->store->id,
+            'items' => [['product_id' => $this->product->id, 'quantity' => 4]],
+            'paid_amount' => 460.00,
+            'payment_method' => 'cash',
+        ]);
+
+        $res->assertStatus(200)->assertJson(['success' => true]);
+
+        // Real deficit recorded: 0.00 - 4 = -4.00 (Never clamped)
+        $stock->refresh();
+        $this->assertEquals(-4.00, (float) $stock->quantity);
+
+        $order = Order::latest()->firstOrFail();
+        $this->assertTrue((bool) $order->flagged_for_review);
+
+        // Assert financial invariants on deficit order
+        $this->assertEquals(400.00, (float) $order->subtotal);
+        $this->assertEquals(60.00, (float) $order->tax_amount);
+        $this->assertEquals(460.00, (float) $order->grand_total);
+        $this->assertEquals(200.00, (float) $order->cogs);
     }
 }

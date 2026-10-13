@@ -393,7 +393,7 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
   2. **Counter-Verified bKash / Nagad Mode (Rule 6):** Supports fast counter checkout when telecom SMS webhooks are delayed; checks for duplicate TrxID reuse across tenant orders and records transactions as `counter_verified` on shift Z-reports.
   3. **Cashier Discount Allowance Limits (Rule 3):** Stores configure `stores.max_cashier_discount_percent` (default 5.00%); discounts within threshold process without PIN, while discounts exceeding threshold strictly require supervisor PIN.
   4. **Negotiable Price Overrides (Rule 2):** Fixed catalog pricing by default; counter overrides require supervisor PIN, record `original_price` and `price_override_reason` on `order_items`, log `audit_logs` entries, and flag order for manager review.
-  5. **Zero-Stock Selling without Negative Inventory Distortion (Rule 13):** Allows checkouts when shelf items mistakenly have 0 recorded stock without blocking lines; clamps stock at 0.0 (never negative), flags `order_items.zero_stock_sold = true`, and queues order for manager purchase reconciliation.
+  5. **Real Physical Deficit in Shelf Pickup Mode (Stock Policy):** When a store enables `shelf_pickup_mode = true`, both live POS sales and offline queued sync sales record the real inventory deficit into negative stock numbers (e.g. 2 in stock, 5 sold -> -3.00 deficit, never clamped to 0.00), tag `zero_stock_sold = true`, and flag the order for manager review (`/manager/orders/needs-review`). When `shelf_pickup_mode` is disabled and `allow_negative_stock` is false, live sales with insufficient stock are blocked with HTTP 422.
   6. **Expired Stock Batch Disposal & FEFO Deductions (Rule 14):** Deducts earliest expiring batches (`ProductBatch` ordered by `expiry_date`) on sales and stock adjustments.
   7. **Cashier Refunds with Supervisor PIN & Variant Restocking (Rules 15 & 16):** Cashiers require supervisor PIN to process refunds; returns accurately restock the exact product variant row (`variant_id`).
   8. **Blind Cash Shift Close & Register Petty Cash Deduction (Rules 12 & 23):** Hides expected drawer balances and variances from cashiers during closing count; expenses paid from register drawer (`payment_source = 'register_cash'`) deduct from register expected balance; parked orders auto-discard on shift close (Rule 5).
@@ -401,7 +401,18 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
   10. **Staff Security PIN Management (Rule 27):** Mandatory 4-digit numeric PIN configured on staff creation/edit and self-service PIN updates via `POST /profile/pin`.
 - **Where it lives:** `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ShiftController.php`, `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/MerchantController.php`, `app/Http/Controllers/AuthController.php`, `resources/js/Pages/POS/Terminal.vue`, `resources/js/Components/POS/ShiftModal.vue`, `resources/js/Components/POS/ReceiptModal.vue`, `resources/js/Pages/Merchant/Users.vue`.
 - **Key design decisions:** Defense-in-depth with server-side PIN verification; atomic inventory and payment logging inside database transactions; transparent front-of-house operational resilience.
-- **Last updated:** 2026-10-12
+- **Last updated:** 2026-10-13
+
+### 40. Counter-Verified MFS Payments Reconciliation & Anti-Fraud Shift Controls
+- **What it does:** Complete anti-fraud, supervisor PIN control, and reconciliation architecture for counter-verified mobile financial service (bKash/Nagad/Rocket/Upay) transactions:
+  1. **Manager-Only MFS Reconciliation Dashboard:** Route `GET /manager/mfs-reconciliation` (`StoreManagerController::mfsReconciliation`, `MfsReconciliation.vue`) lists every counter-verified transaction with cashier name, order invoice number, TrxID, amount, timestamp, and matched/unmatched status.
+  2. **Late Webhook Auto-Matching Engine:** When telecom SMS webhooks arrive subsequently at `/api/v1/mfs-webhook`, the system claims the `mfs_transactions` record, updates `order_payments.verification_status` to `'auto_verified'`, and writes an audit log trail.
+  3. **24-Hour Unmatched Alerting & Owner Email Notification:** Payments remaining unmatched after 24 hours appear in a high-visibility red badge, and the console command `php artisan pos:check-unmatched-mfs` creates a persistent `discrepancy_alerts` record and sends `DiscrepancyAlertMail` to the tenant owner.
+  4. **Supervisor PIN Anti-Theft Thresholds:** Checkout rejects counter-verified tender without a valid manager supervisor PIN if amount exceeds `stores.max_counter_verified_amount` (default ৳5,000.00) or if shift counter-verified transaction count exceeds `stores.max_counter_verified_per_shift` (default 10).
+  5. **Shift Z-Report Telemetry:** Cashier shift closing Z-reports (`ShiftController::zReport`, `ZReport.vue`) calculate and display `counter_verified_count` and `counter_verified_total`.
+- **Where it lives:** `app/Http/Controllers/StoreManagerController.php`, `app/Http/Controllers/Api/MfsWebhookController.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ShiftController.php`, `app/Console/Commands/CheckUnmatchedMfsPaymentsCommand.php`, `resources/js/Pages/Manager/MfsReconciliation.vue`, `resources/js/Pages/Manager/ZReport.vue`, `tests/Feature/MfsReconciliationAndStockPolicyTest.php`.
+- **Key design decisions:** Multi-tier fraud detection combines client thresholds with automated server-side webhook matching and daily cron alerting.
+- **Last updated:** 2026-10-13
 
 ## Data Model
 

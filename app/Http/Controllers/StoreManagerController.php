@@ -2,12 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\DiscrepancyAlertMail;
 use App\Models\AuditLog;
+use App\Models\DiscrepancyAlert;
 use App\Models\Order;
+use App\Models\OrderPayment;
 use App\Models\RegisterShift;
 use App\Models\StockTransfer;
 use App\Models\Store;
+use App\Models\Tenant;
+use App\Models\User;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 class StoreManagerController extends Controller
@@ -193,7 +201,7 @@ class StoreManagerController extends Controller
         $order->notes = ($order->notes ? $order->notes.' | ' : '').'Resolution: '.$resolutionNotes;
         $order->save();
 
-        \App\Services\AuditLogger::log(
+        AuditLogger::log(
             'order_review_resolved',
             "Order {$order->invoice_no} review resolved by ".auth()->user()->name,
             [
@@ -215,5 +223,145 @@ class StoreManagerController extends Controller
         }
 
         return redirect()->back()->with('success', "Order {$order->invoice_no} resolved successfully.");
+    }
+
+    public function mfsReconciliation(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+        $storeId = $this->getStoreId($tenantId);
+
+        $mfsMethods = ['bkash', 'nagad', 'rocket', 'upay', 'mobile_wallet', 'mfs'];
+
+        $query = OrderPayment::where('tenant_id', $tenantId)
+            ->whereIn('payment_method', $mfsMethods)
+            ->where(function ($q) {
+                $q->where('verification_status', 'counter_verified')
+                    ->orWhere('verification_status', 'auto_verified');
+            })
+            ->with(['order.user', 'order.store']);
+
+        if (auth()->user()->role === 'store_manager') {
+            $query->whereHas('order', fn ($q) => $q->where('store_id', $storeId));
+        } elseif ($request->filled('store_id')) {
+            $query->whereHas('order', fn ($q) => $q->where('store_id', (int) $request->input('store_id')));
+        }
+
+        if ($request->input('status') === 'unmatched') {
+            $query->where('verification_status', 'counter_verified');
+        } elseif ($request->input('status') === 'matched') {
+            $query->where('verification_status', 'auto_verified');
+        }
+
+        $payments = $query->latest()->paginate(25)->withQueryString();
+
+        // Check for 24h expired unmatched payments to generate discrepancy alerts and notifications
+        $expiredUnmatched = OrderPayment::where('tenant_id', $tenantId)
+            ->where('verification_status', 'counter_verified')
+            ->where('created_at', '<=', now()->subHours(24))
+            ->with(['order.store', 'order.user'])
+            ->get();
+
+        foreach ($expiredUnmatched as $unmatchedPayment) {
+            $this->createMfsDiscrepancyAlertAndNotify($unmatchedPayment);
+        }
+
+        // Transform payment records to include matched/unmatched status and 24h expired indicator
+        $transformedPayments = $payments->through(function ($payment) {
+            $isMatched = ($payment->verification_status === 'auto_verified');
+            $isExpired24h = (! $isMatched && $payment->created_at <= now()->subHours(24));
+
+            return [
+                'id' => $payment->id,
+                'order_id' => $payment->order_id,
+                'invoice_no' => $payment->order->invoice_no ?? ('ORD-'.$payment->order_id),
+                'cashier_name' => $payment->order->user->name ?? 'Unknown Cashier',
+                'store_name' => $payment->order->store->name ?? 'Main Outlet',
+                'payment_method' => strtoupper($payment->payment_method),
+                'trx_id' => $payment->reference_no ?? 'N/A',
+                'amount' => (float) $payment->amount,
+                'created_at' => $payment->created_at->format('Y-m-d H:i:s'),
+                'time_ago' => $payment->created_at->diffForHumans(),
+                'status' => $isMatched ? 'matched' : 'unmatched',
+                'is_matched' => $isMatched,
+                'is_unmatched_24h' => $isExpired24h,
+            ];
+        });
+
+        $unmatchedCount = OrderPayment::where('tenant_id', $tenantId)
+            ->where('verification_status', 'counter_verified')
+            ->when(auth()->user()->role === 'store_manager', fn ($q) => $q->whereHas('order', fn ($sq) => $sq->where('store_id', $storeId)))
+            ->count();
+
+        $expired24hCount = OrderPayment::where('tenant_id', $tenantId)
+            ->where('verification_status', 'counter_verified')
+            ->where('created_at', '<=', now()->subHours(24))
+            ->when(auth()->user()->role === 'store_manager', fn ($q) => $q->whereHas('order', fn ($sq) => $sq->where('store_id', $storeId)))
+            ->count();
+
+        return Inertia::render('Manager/MfsReconciliation', [
+            'payments' => $transformedPayments,
+            'unmatchedCount' => $unmatchedCount,
+            'expired24hCount' => $expired24hCount,
+            'filters' => $request->only(['status', 'store_id']),
+        ]);
+    }
+
+    public function createMfsDiscrepancyAlertAndNotify(OrderPayment $payment): ?DiscrepancyAlert
+    {
+        $storeId = $payment->order->store_id ?? 1;
+        $tenantId = $payment->tenant_id;
+        $date = $payment->created_at->toDateString();
+        $trxId = (string) $payment->reference_no;
+        $amount = (float) $payment->amount;
+
+        // Check if an alert already exists for this unmatched payment TrxID
+        $existingAlert = DiscrepancyAlert::where('tenant_id', $tenantId)
+            ->where('store_id', $storeId)
+            ->where('expected->trx_id', $trxId)
+            ->first();
+
+        if ($existingAlert) {
+            return $existingAlert;
+        }
+
+        $alert = DiscrepancyAlert::create([
+            'tenant_id' => $tenantId,
+            'store_id' => $storeId,
+            'date' => $date,
+            'expected' => [
+                'type' => 'mfs_unmatched_24h',
+                'trx_id' => $trxId,
+                'amount' => $amount,
+                'order_id' => $payment->order_id,
+                'invoice_no' => $payment->order?->invoice_no,
+                'cashier' => $payment->order->user->name ?? 'Cashier',
+                'description' => "Unmatched counter-verified MFS payment ৳{$amount} (TrxID: {$trxId}) after 24h",
+            ],
+            'actual' => [
+                'status' => 'unmatched',
+                'verification_status' => 'counter_verified',
+                'elapsed_hours' => round(now()->diffInHours($payment->created_at)),
+            ],
+        ]);
+
+        // Email the owner
+        try {
+            $tenant = Tenant::find($tenantId);
+            $ownerEmail = $tenant?->email;
+            if (! $ownerEmail) {
+                $owner = User::where('tenant_id', $tenantId)
+                    ->whereIn('role', ['merchant', 'super_admin'])
+                    ->first();
+                $ownerEmail = $owner?->email;
+            }
+
+            if ($ownerEmail) {
+                Mail::to($ownerEmail)->send(new DiscrepancyAlertMail($alert));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Could not send MFS DiscrepancyAlertMail: '.$e->getMessage());
+        }
+
+        return $alert;
     }
 }

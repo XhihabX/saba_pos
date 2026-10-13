@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\ExportSalesCsvJob;
+use App\Mail\FlaggedOrdersThresholdMail;
 use App\Models\Category;
 use App\Models\Customer;
 use App\Models\DailySalesSummary;
@@ -17,7 +18,6 @@ use App\Models\ProductVariant;
 use App\Models\RegisterShift;
 use App\Models\Stock;
 use App\Models\Store;
-use App\Mail\FlaggedOrdersThresholdMail;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\AuditLogger;
@@ -26,6 +26,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -275,7 +276,7 @@ class PosController extends Controller
             ]);
         }
 
-        return DB::transaction(function () use ($request, $validated, $tenantId, $store, $paidAmount, $discountAmount, $supervisorPin) {
+        return DB::transaction(function () use ($request, $validated, $tenantId, $store, $paidAmount, $discountAmount, $supervisorPin, $activeShift) {
             $tenant = Tenant::find($tenantId);
             $isLateSynced = false;
             if ($tenant && $tenant->isGraceExpired() && $request->boolean('is_offline_sync')) {
@@ -370,17 +371,18 @@ class PosController extends Controller
 
                 $available = (float) $stock->quantity;
                 $allowNegative = (bool) ($store->allow_negative_stock ?? false);
+                $shelfPickup = (bool) ($store->shelf_pickup_mode ?? false);
 
                 $itemName = $product->name.($variant ? " ({$variant->name})" : '');
 
                 $isZeroStockSold = false;
                 if ($available < $item['quantity']) {
-                    if (! $allowNegative && ! $canBypassStockDeficit) {
+                    if (! $allowNegative && ! $canBypassStockDeficit && ! $shelfPickup) {
                         throw ValidationException::withMessages([
                             'cart' => ["Insufficient stock for '{$itemName}'. Recorded stock: {$available}, requested: {$item['quantity']}."],
                         ]);
                     }
-                    if ($available <= 0.001) {
+                    if ($available <= 0.001 || $shelfPickup) {
                         $isZeroStockSold = true;
                     }
                     $isFlaggedForReview = true;
@@ -545,17 +547,8 @@ class PosController extends Controller
                     'total' => $item['line_total'],
                 ]);
 
-                // Deduct stock (decrement on offline sync to record deficit, clamp at 0 on live counter zero-stock sale)
-                if ($isOfflineSync) {
-                    $item['stock']->decrement('quantity', $item['quantity']);
-                } elseif ($item['zero_stock_sold']) {
-                    $item['stock']->update(['quantity' => 0.0]);
-                } elseif ($store->allow_negative_stock) {
-                    $item['stock']->decrement('quantity', $item['quantity']);
-                } else {
-                    $newQty = max(0.0, (float) $item['stock']->quantity - (float) $item['quantity']);
-                    $item['stock']->update(['quantity' => $newQty]);
-                }
+                // Deduct stock (decrement to record real physical deficit for live sales with shelf_pickup_mode, offline sync, or allow_negative_stock; never clamp)
+                $item['stock']->decrement('quantity', $item['quantity']);
 
                 // FEFO Batch Stock Deduction
                 $batches = ProductBatch::where('tenant_id', $tenantId)
@@ -585,7 +578,10 @@ class PosController extends Controller
                         $order->id,
                         (string) $payment['method'],
                         (float) $payment['amount'],
-                        isset($payment['reference_no']) ? (string) $payment['reference_no'] : null
+                        isset($payment['reference_no']) ? (string) $payment['reference_no'] : null,
+                        $supervisorPin,
+                        $store,
+                        $activeShift
                     );
                 }
             } else {
@@ -595,7 +591,10 @@ class PosController extends Controller
                     $order->id,
                     (string) $validated['payment_method'],
                     $paidAmount,
-                    $ref ? (string) $ref : null
+                    $ref ? (string) $ref : null,
+                    $supervisorPin,
+                    $store,
+                    $activeShift
                 );
             }
 
@@ -690,7 +689,7 @@ class PosController extends Controller
                                 ->queue(new FlaggedOrdersThresholdMail($store, $todayFlaggedCount, now()->toDateString()));
                         }
                     } catch (\Throwable $mailErr) {
-                        \Illuminate\Support\Facades\Log::warning('Could not dispatch flagged orders threshold email: '.$mailErr->getMessage());
+                        Log::warning('Could not dispatch flagged orders threshold email: '.$mailErr->getMessage());
                     }
                 }
             }
@@ -1030,8 +1029,16 @@ class PosController extends Controller
      *
      * @throws ValidationException
      */
-    private function processPaymentTender(int $tenantId, int $orderId, string $method, float $amount, ?string $referenceNo = null): OrderPayment
-    {
+    private function processPaymentTender(
+        int $tenantId,
+        int $orderId,
+        string $method,
+        float $amount,
+        ?string $referenceNo = null,
+        ?string $supervisorPin = null,
+        ?Store $store = null,
+        ?RegisterShift $activeShift = null
+    ): OrderPayment {
         $methodLower = strtolower(trim($method));
         $isMfs = in_array($methodLower, ['bkash', 'nagad', 'rocket', 'upay', 'mobile_wallet', 'mfs'], true);
         $isCard = in_array($methodLower, ['card', 'credit_card', 'debit_card', 'pos_terminal', 'visa', 'mastercard'], true);
@@ -1082,6 +1089,37 @@ class PosController extends Controller
                     throw ValidationException::withMessages([
                         'payment' => ["MFS Transaction ID '{$trxId}' is invalid."],
                     ]);
+                }
+
+                // Check supervisor PIN requirements for counter_verified payment
+                $maxCounterAmount = (float) ($store->max_counter_verified_amount ?? 5000.00);
+                if ($amount > ($maxCounterAmount + 0.001)) {
+                    if (! $this->verifySupervisorPin($supervisorPin, $tenantId)) {
+                        throw ValidationException::withMessages([
+                            'payment' => ['A valid supervisor PIN is required for counter-verified MFS payments exceeding ৳'.number_format($maxCounterAmount, 2).'.'],
+                        ]);
+                    }
+                }
+
+                $maxShiftCount = (int) ($store->max_counter_verified_per_shift ?? 10);
+                $shiftCounterCount = 0;
+                if ($activeShift) {
+                    $shiftCounterCount = OrderPayment::where('tenant_id', $tenantId)
+                        ->where('verification_status', 'counter_verified')
+                        ->whereHas('order', function ($q) use ($activeShift) {
+                            $q->where('store_id', $activeShift->store_id)
+                                ->where('user_id', $activeShift->user_id)
+                                ->where('created_at', '>=', $activeShift->opened_at);
+                        })
+                        ->count();
+                }
+
+                if ($shiftCounterCount >= $maxShiftCount) {
+                    if (! $this->verifySupervisorPin($supervisorPin, $tenantId)) {
+                        throw ValidationException::withMessages([
+                            'payment' => ["A valid supervisor PIN is required when exceeding {$maxShiftCount} counter-verified MFS payments in a shift."],
+                        ]);
+                    }
                 }
 
                 $verificationStatus = 'counter_verified';

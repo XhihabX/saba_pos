@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\MfsTransaction;
+use App\Models\OrderPayment;
 use App\Models\Tenant;
+use App\Services\AuditLogger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -112,6 +114,38 @@ class MfsWebhookController extends Controller
             ->first();
 
         if ($existing) {
+            if ($existing->status === 'unclaimed') {
+                $counterPayment = OrderPayment::where('tenant_id', $targetTenantId)
+                    ->where('reference_no', $trxId)
+                    ->where('verification_status', 'counter_verified')
+                    ->whereRaw('ABS(amount - ?) < 0.01', [(float) $existing->amount])
+                    ->first();
+
+                if ($counterPayment) {
+                    $existing->update([
+                        'status' => 'claimed',
+                        'order_id' => $counterPayment->order_id,
+                    ]);
+
+                    $counterPayment->update([
+                        'verification_status' => 'auto_verified',
+                    ]);
+
+                    AuditLogger::log(
+                        'mfs_webhook_auto_matched',
+                        "Counter-verified MFS payment auto-matched for order #{$counterPayment->order_id} (TrxID: {$trxId})",
+                        [
+                            'order_id' => $counterPayment->order_id,
+                            'order_payment_id' => $counterPayment->id,
+                            'trx_id' => $trxId,
+                            'amount' => (float) $existing->amount,
+                        ],
+                        $counterPayment->order->store_id ?? 1,
+                        $targetTenantId
+                    );
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'MFS Transaction already logged',
@@ -127,6 +161,37 @@ class MfsWebhookController extends Controller
             'gateway' => strtolower($validated['gateway'] ?? 'bkash'),
             'status' => 'unclaimed',
         ]);
+
+        // Auto-match counter-verified payment if it already arrived at the counter
+        $counterPayment = OrderPayment::where('tenant_id', $targetTenantId)
+            ->where('reference_no', $trxId)
+            ->where('verification_status', 'counter_verified')
+            ->whereRaw('ABS(amount - ?) < 0.01', [(float) $validated['amount']])
+            ->first();
+
+        if ($counterPayment) {
+            $transaction->update([
+                'status' => 'claimed',
+                'order_id' => $counterPayment->order_id,
+            ]);
+
+            $counterPayment->update([
+                'verification_status' => 'auto_verified',
+            ]);
+
+            AuditLogger::log(
+                'mfs_webhook_auto_matched',
+                "Counter-verified MFS payment auto-matched via late webhook for order #{$counterPayment->order_id} (TrxID: {$trxId}, Amount: ৳{$validated['amount']})",
+                [
+                    'order_id' => $counterPayment->order_id,
+                    'order_payment_id' => $counterPayment->id,
+                    'trx_id' => $trxId,
+                    'amount' => (float) $validated['amount'],
+                ],
+                $counterPayment->order->store_id ?? 1,
+                $targetTenantId
+            );
+        }
 
         Log::info("MFS Webhook Logged: TrxID {$trxId}, Tenant {$targetTenantId}, Amount {$validated['amount']}, Gateway {$transaction->gateway}");
 

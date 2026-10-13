@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\Expense;
 use App\Models\Order;
 use App\Models\OrderPayment;
+use App\Models\ParkedOrder;
 use App\Models\ProductReturn;
 use App\Models\RegisterShift;
 use App\Models\Store;
@@ -165,7 +167,7 @@ class ShiftController extends Controller
                 return (float) ($log->payload['amount'] ?? 0);
             });
 
-        $registerExpenses = (float) \App\Models\Expense::where('store_id', $shift->store_id)
+        $registerExpenses = (float) Expense::where('store_id', $shift->store_id)
             ->where('payment_source', 'register_cash')
             ->whereBetween('created_at', [$shift->opened_at, now()])
             ->sum('amount');
@@ -186,7 +188,7 @@ class ShiftController extends Controller
         ]);
 
         // Discard any suspended/parked orders on shift close (Rule 5)
-        \App\Models\ParkedOrder::where('tenant_id', $tenantId)
+        ParkedOrder::where('tenant_id', $tenantId)
             ->where('store_id', $shift->store_id)
             ->delete();
 
@@ -231,6 +233,13 @@ class ShiftController extends Controller
             ->whereBetween('created_at', [$shift->opened_at, $shift->closed_at ?? now()])
             ->get();
 
+        $counterVerifiedPayments = OrderPayment::whereIn('order_id', $orders->pluck('id'))
+            ->where('verification_status', 'counter_verified')
+            ->get();
+
+        $counterVerifiedCount = $counterVerifiedPayments->count();
+        $counterVerifiedTotal = (float) $counterVerifiedPayments->sum('amount');
+
         $zData = [
             'shift' => $shift,
             'totalOrders' => $orders->count(),
@@ -241,6 +250,10 @@ class ShiftController extends Controller
             'cashSales' => (float) $shift->total_cash_sales,
             'cardSales' => (float) $shift->total_card_sales,
             'mobileSales' => (float) $shift->total_mobile_sales,
+            'counterVerifiedCount' => $counterVerifiedCount,
+            'counterVerifiedTotal' => $counterVerifiedTotal,
+            'counter_verified_count' => $counterVerifiedCount,
+            'counter_verified_total' => $counterVerifiedTotal,
             'expectedCash' => (float) $shift->expected_cash,
             'actualCash' => (float) $shift->closing_cash_counted,
             'variance' => (float) $shift->cash_difference,

@@ -1242,9 +1242,9 @@ class ProductionHardeningVerificationTest extends TestCase
     }
 
     /** @test */
-    public function test_30_zero_stock_selling_completes_sale_clamps_at_zero_and_flags_order()
+    public function test_30_shelf_pickup_mode_records_real_negative_deficit_and_flags_order()
     {
-        $this->store->update(['allow_negative_stock' => true]);
+        $this->store->update(['shelf_pickup_mode' => true, 'allow_negative_stock' => false]);
 
         $product = Product::create([
             'tenant_id' => $this->tenant->id,
@@ -1281,7 +1281,7 @@ class ProductionHardeningVerificationTest extends TestCase
         $res->assertStatus(200)->assertJson(['success' => true]);
 
         $stock->refresh();
-        $this->assertEquals(0.0, (float) $stock->quantity);
+        $this->assertEquals(-2.0, (float) $stock->quantity);
 
         $order = Order::latest()->first();
         $this->assertTrue((bool) $order->flagged_for_review);
