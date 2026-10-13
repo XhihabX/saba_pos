@@ -442,7 +442,20 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
      - Documented in Section 13 of `DEPLOY_CPANEL.md` with explicit tagging of checks verified in local/CI automated tests versus those requiring a live server run.
 - **Where it lives:** `bootstrap/app.php`, `app/Http/Middleware/ThrottleFailedPinAttempts.php`, `app/Mail/SupervisorPinLockoutAlertMail.php`, `app/Providers/AppServiceProvider.php`, `routes/web.php`, `app/Http/Controllers/SuperAdminController.php`, `database/migrations/2026_10_13_000046_add_unique_index_to_subscription_payments_reference.php`, `scripts/smoke_prod.sh`, `DEPLOY_CPANEL.md`, `tests/Feature/SecurityHardeningV3Test.php`.
 - **Key design decisions:** Defense-in-depth where identity-based locks cannot be bypassed by IP rotation; pessimistic concurrency eliminates double-spending / multi-approval bugs; smoke script provides rapid operational validation after deployment.
-- **Depends on:** `SubscriptionPayment`, `Tenant`, `ThrottleFailedPinAttempts`, `SupervisorPinLockoutAlertMail`.
+### 43. Payment Logic Harmonization, Register Drawer Integrity, Due Returns & Tenant Approval Concurrency
+- **What it does:** Systematically harmonizes payment tender logic across registers, reports, and administrative actions:
+  1. **Shift Register Tender Grouping (`ShiftController`):** Replaced hardcoded single-method assumptions (`where('payment_method', 'bkash')`, `where('payment_method', 'card')`) with canonical tender method lists in `closeShift` and `zReport`:
+     - Mobile Financial Services (MFS): `['bkash', 'nagad', 'rocket', 'upay', 'mobile_wallet', 'mfs']`.
+     - Cards / Terminals: `['card', 'credit_card', 'debit_card', 'pos_terminal', 'visa', 'mastercard']`.
+  2. **SuperAdmin Tenant Approval Synchronization (`SuperAdminController`):** Wrapped `approveTenant` and `rejectTenant` inside `DB::transaction` with row-level `Tenant::lockForUpdate()`. Validates current status before extending subscriptions by 30 days (`now()->addDays(30)`) to prevent accidental double-extensions. Synchronizes pending `SubscriptionPayment` records associated with the tenant (`approved` with timestamp and super admin ID or `rejected` with rejection notes).
+  3. **Due Returns vs Cash Register Drawer Isolation (`ReturnController` & `ShiftController`):**
+     - When processing returns on unpaid/due invoices (`payment_status === 'due'` or zero cash paid), the system assigns `refund_method = 'due_adjustment'`. It allows returning items up to their invoice line value to cancel the outstanding customer balance without blocking due to zero paid cash.
+     - In `ShiftController`, cash refund deductions (`cashRefunds`) are strictly restricted to `refund_method === 'cash'`, ensuring that due balance adjustments and store credits do not erroneously deduct physical currency from the register cash drawer during shift reconciliation.
+  4. **Daily Sales Summary Multi-Tender Bucketing (`DailySalesSummary`):** Normalizes diverse payment alias names (`credit_card`, `pos_terminal`, `visa`, `mastercard` into `card_total`; `due`, `credit` into `due_total`; `mobile_wallet` into MFS totals) across all daily sales rollups.
+  5. **Customer Due Settlement Drawer Sync & Audit Logging (`MerchantController`):** Wrapped `payCustomerDue` in a database transaction with pessimistic locking, created structured `AuditLog` entry (`action = 'customer_due_paid'`), and harmonized `ShiftController` to only add settled customer dues into cash drawer expectations when paid via cash (`payment_method === 'cash'`).
+- **Where it lives:** `app/Http/Controllers/ShiftController.php`, `app/Http/Controllers/SuperAdminController.php`, `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/MerchantController.php`, `app/Models/DailySalesSummary.php`, `tests/Feature/PaymentLogicHarmonizationTest.php`.
+- **Key design decisions:** Separation of cash movement from accounting adjustments; strict tender method array inclusion rather than single-name string equality; concurrency guards against tenant double-extension.
+- **Depends on:** `RegisterShift`, `ProductReturn`, `Order`, `DailySalesSummary`, `Customer`, `Tenant`, `SubscriptionPayment`, `AuditLog`.
 - **Last updated:** 2026-10-13
 
 ## Data Model

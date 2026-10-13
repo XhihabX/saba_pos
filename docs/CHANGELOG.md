@@ -1,5 +1,41 @@
 # Changelog
 
+## [2026-10-13] — Payment Logic Harmonization, Register Drawer Integrity, Due Returns & Tenant Approval Concurrency
+
+**What:**
+1. **Shift Register Tender Harmonization (`ShiftController`):**
+   - Replaced single-tender hardcoded queries (`where('payment_method', 'bkash')`, `where('payment_method', 'card')`) in `closeShift` and `zReport` with canonical tender lists:
+     - MFS: `['bkash', 'nagad', 'rocket', 'upay', 'mobile_wallet', 'mfs']` aggregated into `mfs_sales` / `bkash_sales`.
+     - Cards / Terminals: `['card', 'credit_card', 'debit_card', 'pos_terminal', 'visa', 'mastercard']` aggregated into `card_sales`.
+2. **Super Admin Tenant Approval Subscription Synchronization (`SuperAdminController`):**
+   - Wrapped `approveTenant` and `rejectTenant` inside `DB::transaction` with row-level `Tenant::lockForUpdate()`.
+   - Prevented accidental double-extension when approving already-active tenants, extending `subscription_expires_at` by 30 days (`now()->addDays(30)`) only upon genuine activation.
+   - Synchronized all pending `SubscriptionPayment` records for the tenant, marking them `approved` with timestamp and super admin ID or `rejected` with rejection notes.
+3. **Due Returns vs Cash Register Drawer Isolation (`ReturnController` & `ShiftController`):**
+   - Enhanced `ReturnController` to assign `refund_method = 'due_adjustment'` when an order is unpaid or due. Maximum returnable value is calculated from the item's line total, allowing debt cancellation without requiring upfront paid cash.
+   - In `ShiftController`, restricted register cash refund deductions (`cashRefunds`) strictly to `refund_method === 'cash'`, guaranteeing that due adjustments or store credits never reduce physical cash drawer expectations during shift reconciliation.
+4. **Daily Sales Summary Multi-Tender Bucketing (`DailySalesSummary`):**
+   - Introduced `normalizePaymentBuckets` mapping tender aliases (`credit_card`, `pos_terminal`, `visa`, `mastercard` to `card_total`; `due`, `credit` to `due_total`; `mobile_wallet` to MFS buckets).
+5. **Customer Due Settlement Drawer Sync & Audit Logging (`MerchantController`):**
+   - Wrapped `payCustomerDue` in a database transaction with customer lock and generated structured `AuditLog` entry (`action = 'customer_due_paid'`).
+   - Restricted cash drawer addition in `ShiftController` to `payment_method === 'cash'`.
+6. **Automated Verification:**
+   - Authored `tests/Feature/PaymentLogicHarmonizationTest.php` with 6 feature tests (57 assertions) validating:
+     - Shift closing MFS & Card aggregation across Nagad, Rocket, and POS terminals.
+     - Z-Report tender breakdowns across all supported methods.
+     - Due return debt cancellations and drawer non-deduction.
+     - Customer due payment drawer sync and audit logging.
+     - Daily sales summary multi-tender normalization.
+     - Super Admin tenant approval transaction safety and subscription payment synchronization.
+   - Full test suite verified green: 162 tests, 999 assertions passing. Larastan Level 5 passing with 0 errors.
+
+**Why:** Eliminate incorrect payment type assumptions (such as treating bKash as the sole MFS method, ignoring other card aliases, deducting non-cash returns from cash drawers, and desynchronizing tenant approvals from pending subscription records).
+**How:** Updated `app/Http/Controllers/ShiftController.php`, `app/Http/Controllers/SuperAdminController.php`, `app/Http/Controllers/ReturnController.php`, `app/Http/Controllers/MerchantController.php`, `app/Models/DailySalesSummary.php`, created test suite `tests/Feature/PaymentLogicHarmonizationTest.php`, and updated documentation.
+**Where:** `app/Http/Controllers/*`, `app/Models/DailySalesSummary.php`, `tests/Feature/PaymentLogicHarmonizationTest.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** 100% accurate shift register cash reconciliations, audit-logged due settlements, clean multi-MFS accounting, and race-condition-free tenant onboarding approvals.
+
+---
+
 ## [2026-10-13] — Trusted Proxy Hardening, Multi-Tier Throttling, Pessimistic Concurrency & Smoke Test Suite
 
 **What:**

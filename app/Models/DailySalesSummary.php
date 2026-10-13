@@ -52,6 +52,52 @@ class DailySalesSummary extends Model
     ];
 
     /**
+     * Normalize payment array into standard daily sales summary buckets.
+     *
+     * @param array<string, float|int|numeric-string> $payments
+     * @return array<string, float>
+     */
+    public static function normalizePaymentBuckets(array $payments): array
+    {
+        $paymentTotals = [
+            'cash_total' => 0.0,
+            'card_total' => 0.0,
+            'bkash_total' => 0.0,
+            'nagad_total' => 0.0,
+            'rocket_total' => 0.0,
+            'upay_total' => 0.0,
+            'due_total' => 0.0,
+            'other_total' => 0.0,
+        ];
+
+        $cardAliases = ['card', 'credit_card', 'debit_card', 'pos_terminal', 'visa', 'mastercard'];
+        $mfsGeneric = ['mobile_wallet', 'mfs'];
+        $dueAliases = ['due', 'credit', 'customer_credit'];
+
+        foreach ($payments as $method => $amount) {
+            $methodClean = strtolower(trim((string) $method));
+            if ($methodClean === 'cash') {
+                $paymentTotals['cash_total'] += (float) $amount;
+            } elseif (in_array($methodClean, $cardAliases, true)) {
+                $paymentTotals['card_total'] += (float) $amount;
+            } elseif (in_array($methodClean, $dueAliases, true)) {
+                $paymentTotals['due_total'] += (float) $amount;
+            } elseif (in_array($methodClean, $mfsGeneric, true)) {
+                $paymentTotals['bkash_total'] += (float) $amount;
+            } else {
+                $key = $methodClean . '_total';
+                if (array_key_exists($key, $paymentTotals)) {
+                    $paymentTotals[$key] += (float) $amount;
+                } else {
+                    $paymentTotals['other_total'] += (float) $amount;
+                }
+            }
+        }
+
+        return $paymentTotals;
+    }
+
+    /**
      * Atomically record a completed sale in the daily summary.
      */
     public static function recordSale(
@@ -64,25 +110,7 @@ class DailySalesSummary extends Model
         float $cogs,
         array $payments = []
     ): void {
-        $paymentTotals = [
-            'cash_total' => 0.0,
-            'card_total' => 0.0,
-            'bkash_total' => 0.0,
-            'nagad_total' => 0.0,
-            'rocket_total' => 0.0,
-            'upay_total' => 0.0,
-            'due_total' => 0.0,
-            'other_total' => 0.0,
-        ];
-
-        foreach ($payments as $method => $amount) {
-            $key = strtolower((string) $method).'_total';
-            if (array_key_exists($key, $paymentTotals)) {
-                $paymentTotals[$key] += (float) $amount;
-            } else {
-                $paymentTotals['other_total'] += (float) $amount;
-            }
-        }
+        $paymentTotals = static::normalizePaymentBuckets($payments);
 
         $now = now()->toDateTimeString();
         $driver = DB::getDriverName();
@@ -212,25 +240,7 @@ class DailySalesSummary extends Model
         float $cogs,
         array $payments = []
     ): void {
-        $paymentTotals = [
-            'cash_total' => 0.0,
-            'card_total' => 0.0,
-            'bkash_total' => 0.0,
-            'nagad_total' => 0.0,
-            'rocket_total' => 0.0,
-            'upay_total' => 0.0,
-            'due_total' => 0.0,
-            'other_total' => 0.0,
-        ];
-
-        foreach ($payments as $method => $amount) {
-            $key = strtolower((string) $method).'_total';
-            if (array_key_exists($key, $paymentTotals)) {
-                $paymentTotals[$key] += (float) $amount;
-            } else {
-                $paymentTotals['other_total'] += (float) $amount;
-            }
-        }
+        $paymentTotals = static::normalizePaymentBuckets($payments);
 
         $now = now()->toDateTimeString();
         $driver = DB::getDriverName();

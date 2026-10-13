@@ -340,14 +340,39 @@ class MerchantController extends Controller
             'notes' => 'nullable|string',
         ]);
 
-        $payAmount = (float) $validated['amount'];
-        $customer->decrement('due_balance', $payAmount);
+        return DB::transaction(function () use ($customer, $validated, $tenantId) {
+            $payAmount = (float) $validated['amount'];
+            $methodClean = strtolower(trim((string) $validated['payment_method']));
 
-        if ($customer->due_balance < 0) {
-            $customer->update(['due_balance' => 0]);
-        }
+            $customer->decrement('due_balance', $payAmount);
 
-        return redirect()->back()->with('success', "Collected payment of ৳{$payAmount} for customer '{$customer->name}'. Updated due balance: ৳{$customer->due_balance}.");
+            if ($customer->due_balance < 0) {
+                $customer->update(['due_balance' => 0]);
+            }
+
+            $user = auth()->user();
+            $userStoreId = $user ? $user->store_id : null;
+            $defaultStore = Store::where('tenant_id', $tenantId)->first();
+            $storeId = (int) ($userStoreId ?? ($defaultStore ? $defaultStore->id : 1));
+            $userName = $user ? $user->name : 'Merchant';
+
+            AuditLog::create([
+                'tenant_id' => $tenantId,
+                'store_id' => $storeId,
+                'user_name' => $userName,
+                'action' => 'customer_due_paid',
+                'description' => "Collected due payment of ৳{$payAmount} for customer '{$customer->name}' via {$methodClean}.",
+                'payload' => [
+                    'customer_id' => $customer->id,
+                    'customer_name' => $customer->name,
+                    'amount' => $payAmount,
+                    'payment_method' => $methodClean,
+                    'notes' => $validated['notes'] ?? null,
+                ],
+            ]);
+
+            return redirect()->back()->with('success', "Collected payment of ৳{$payAmount} for customer '{$customer->name}'. Updated due balance: ৳{$customer->due_balance}.");
+        });
     }
 
     public function customersIndex()

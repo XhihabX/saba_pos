@@ -150,37 +150,88 @@ class SuperAdminController extends Controller
 
     public function approveTenant($id)
     {
-        $tenant = Tenant::findOrFail($id);
-        $tenant->update([
-            'subscription_status' => 'active',
-            'expires_at' => now()->addDays(30),
-        ]);
+        if (! Auth::check() || Auth::user()->role !== 'super_admin') {
+            abort(403, 'Unauthorized.');
+        }
 
-        AuditLog::create([
-            'tenant_id' => $tenant->id,
-            'user_name' => auth()->user()->name ?? 'Super Admin',
-            'action' => 'tenant_approved',
-            'description' => "Verified payment (TrxID: {$tenant->transaction_id}) and approved tenant account '{$tenant->name}'.",
-        ]);
+        return DB::transaction(function () use ($id) {
+            /** @var Tenant $tenant */
+            $tenant = Tenant::where('id', $id)->lockForUpdate()->firstOrFail();
 
-        return redirect()->back()->with('success', "Merchant account '{$tenant->name}' has been verified and activated!");
+            if ($tenant->subscription_status === 'active') {
+                return redirect()->back()->with('info', "Merchant account '{$tenant->name}' is already active.");
+            }
+
+            $currentExpiry = $tenant->expires_at ? Carbon::parse($tenant->expires_at) : null;
+            $baseDate = ($currentExpiry && $currentExpiry->isFuture()) ? $currentExpiry : now();
+            $newExpiry = $baseDate->copy()->addDays(30);
+
+            $tenant->update([
+                'subscription_status' => 'active',
+                'expires_at' => $newExpiry,
+            ]);
+
+            // Synchronize any pending initial SubscriptionPayment for this tenant
+            SubscriptionPayment::where('tenant_id', $tenant->id)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->update([
+                    'status' => 'approved',
+                    'reviewed_by' => Auth::id(),
+                    'reviewed_at' => now(),
+                ]);
+
+            $adminUser = Auth::user();
+            $adminName = $adminUser ? $adminUser->name : 'Super Admin';
+
+            AuditLog::create([
+                'tenant_id' => $tenant->id,
+                'user_name' => $adminName,
+                'action' => 'tenant_approved',
+                'description' => "Verified payment (TrxID: {$tenant->transaction_id}) and approved tenant account '{$tenant->name}'. Subscription active until {$newExpiry->toDateString()}.",
+            ]);
+
+            return redirect()->back()->with('success', "Merchant account '{$tenant->name}' has been verified and activated!");
+        });
     }
 
     public function rejectTenant($id)
     {
-        $tenant = Tenant::findOrFail($id);
-        $tenant->update([
-            'subscription_status' => 'rejected',
-        ]);
+        if (! Auth::check() || Auth::user()->role !== 'super_admin') {
+            abort(403, 'Unauthorized.');
+        }
 
-        AuditLog::create([
-            'tenant_id' => $tenant->id,
-            'user_name' => auth()->user()->name ?? 'Super Admin',
-            'action' => 'tenant_rejected',
-            'description' => "Rejected payment verification for merchant account '{$tenant->name}'.",
-        ]);
+        return DB::transaction(function () use ($id) {
+            /** @var Tenant $tenant */
+            $tenant = Tenant::where('id', $id)->lockForUpdate()->firstOrFail();
 
-        return redirect()->back()->with('success', "Merchant account '{$tenant->name}' payment verification rejected.");
+            $tenant->update([
+                'subscription_status' => 'rejected',
+            ]);
+
+            // Synchronize any pending initial SubscriptionPayment for this tenant
+            SubscriptionPayment::where('tenant_id', $tenant->id)
+                ->where('status', 'pending')
+                ->lockForUpdate()
+                ->update([
+                    'status' => 'rejected',
+                    'reviewed_by' => Auth::id(),
+                    'reviewed_at' => now(),
+                    'notes' => 'Tenant application rejected by Super Admin.',
+                ]);
+
+            $adminUser = Auth::user();
+            $adminName = $adminUser ? $adminUser->name : 'Super Admin';
+
+            AuditLog::create([
+                'tenant_id' => $tenant->id,
+                'user_name' => $adminName,
+                'action' => 'tenant_rejected',
+                'description' => "Rejected payment verification for merchant account '{$tenant->name}'.",
+            ]);
+
+            return redirect()->back()->with('success', "Merchant account '{$tenant->name}' payment verification rejected.");
+        });
     }
 
     public function deleteTenant($id)

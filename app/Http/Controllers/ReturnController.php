@@ -110,6 +110,8 @@ class ReturnController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            $storeId = (int) $order->store_id;
+
             // Verify product belongs to tenant
             $product = Product::where('id', $validated['product_id'])
                 ->where('tenant_id', $tenantId)
@@ -145,19 +147,33 @@ class ReturnController extends Controller
                 ]);
             }
 
-            // 3. Cap refund amount at paid price of returned items (including proportional VAT)
+            // Determine refund method: if order was unpaid/due, it is a due adjustment; otherwise cash or requested method
+            $requestedRefundMethod = $request->input('refund_method');
+            $refundMethod = 'cash';
+            if (! empty($requestedRefundMethod)) {
+                $refundMethod = strtolower(trim((string) $requestedRefundMethod));
+            } elseif ($order->payment_status === 'due' || (float) $order->paid_amount <= 0.0) {
+                $refundMethod = 'due_adjustment';
+            }
+
+            // 3. Cap refund amount: for due adjustments/store credit cap at item price; for cash refunds cap at actual paid cash
             $isExclusive = ($orderItem->vat_mode ?? 'exclusive') === 'exclusive';
             $lineGrossPaid = (float) $orderItem->total + ($isExclusive ? (float) $orderItem->vat_amount : 0.0);
             $itemPaidPrice = ($lineGrossPaid / (float) $orderItem->quantity) * (float) $validated['quantity'];
             $alreadyRefundedAmount = (float) ProductReturn::where('order_id', $order->id)->sum('refund_amount');
-            $maxRefundableAmount = min($itemPaidPrice, max(0, (float) $order->paid_amount - $alreadyRefundedAmount));
-            if ((float) $validated['refund_amount'] > $maxRefundableAmount + 0.01) {
-                throw ValidationException::withMessages([
-                    'refund_amount' => ["Refund amount (৳{$validated['refund_amount']}) exceeds maximum refundable paid price for these items (৳".number_format($maxRefundableAmount, 2).').'],
-                ]);
+
+            $isDueOrCreditReturn = ($order->payment_status === 'due' || $refundMethod === 'due_adjustment' || $refundMethod === 'store_credit');
+            if ($isDueOrCreditReturn) {
+                $maxRefundableAmount = $itemPaidPrice;
+            } else {
+                $maxRefundableAmount = min($itemPaidPrice, max(0, (float) $order->paid_amount - $alreadyRefundedAmount));
             }
 
-            $storeId = $order->store_id;
+            if ((float) $validated['refund_amount'] > $maxRefundableAmount + 0.01) {
+                throw ValidationException::withMessages([
+                    'refund_amount' => ["Refund amount (৳{$validated['refund_amount']}) exceeds maximum returnable value for these items (৳".number_format($maxRefundableAmount, 2).').'],
+                ]);
+            }
 
             $returnRecord = ProductReturn::create([
                 'tenant_id' => $tenantId,
@@ -169,6 +185,7 @@ class ReturnController extends Controller
                 'product_name' => $product->name,
                 'quantity' => $validated['quantity'],
                 'refund_amount' => $validated['refund_amount'],
+                'refund_method' => $refundMethod,
                 'reason' => $validated['reason'],
                 'approved_by' => $approvedBy,
             ]);
@@ -227,7 +244,7 @@ class ReturnController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if ($activeShift && Schema::hasColumn('register_shifts', 'total_refunds')) {
+            if ($refundMethod === 'cash' && $activeShift && Schema::hasColumn('register_shifts', 'total_refunds')) {
                 $activeShift->increment('total_refunds', $validated['refund_amount']);
             }
 

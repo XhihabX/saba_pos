@@ -130,6 +130,10 @@ class ShiftController extends Controller
             return redirect()->back()->withErrors(['shift_id' => 'Active register shift record not found.']);
         }
 
+        // Canonical payment method groups
+        $cardMethods = ['card', 'credit_card', 'debit_card', 'pos_terminal', 'visa', 'mastercard'];
+        $mfsMethods = ['bkash', 'nagad', 'rocket', 'upay', 'mobile_wallet', 'mfs'];
+
         // Calculate sales during this shift period, specific to the cashier (user_id), using OrderPayments for accurate splits.
         $cashSales = OrderPayment::whereHas('order', function ($q) use ($shift) {
             $q->where('store_id', $shift->store_id)
@@ -141,30 +145,37 @@ class ShiftController extends Controller
             $q->where('store_id', $shift->store_id)
                 ->where('user_id', $shift->user_id)
                 ->whereBetween('created_at', [$shift->opened_at, now()]);
-        })->where('payment_method', 'card')->sum('amount');
+        })->whereIn('payment_method', $cardMethods)->sum('amount');
 
         $mobileSales = OrderPayment::whereHas('order', function ($q) use ($shift) {
             $q->where('store_id', $shift->store_id)
                 ->where('user_id', $shift->user_id)
                 ->whereBetween('created_at', [$shift->opened_at, now()]);
-        })->where('payment_method', 'mobile_wallet')->sum('amount');
+        })->whereIn('payment_method', $mfsMethods)->sum('amount');
 
         $totalChangeReturn = (float) Order::where('store_id', $shift->store_id)
             ->where('user_id', $shift->user_id)
             ->whereBetween('created_at', [$shift->opened_at, now()])
             ->sum('change_return');
 
+        // Only physical cash refunds deduct from register drawer (store_credit or due reductions do not affect cash float)
         $cashRefunds = (float) ProductReturn::where('store_id', $shift->store_id)
+            ->where(function ($q) {
+                $q->where('refund_method', 'cash')
+                    ->orWhereNull('refund_method');
+            })
             ->whereBetween('created_at', [$shift->opened_at, now()])
             ->sum('refund_amount');
 
+        // Only cash customer due collections add to register drawer float
         $cashDuePayments = (float) AuditLog::where('tenant_id', $tenantId)
             ->where('store_id', $shift->store_id)
             ->where('action', 'customer_due_paid')
             ->whereBetween('created_at', [$shift->opened_at, now()])
             ->get()
             ->sum(function ($log) {
-                return (float) ($log->payload['amount'] ?? 0);
+                $method = strtolower((string) ($log->payload['payment_method'] ?? 'cash'));
+                return $method === 'cash' ? (float) ($log->payload['amount'] ?? 0) : 0.0;
             });
 
         $registerExpenses = (float) Expense::where('store_id', $shift->store_id)
@@ -240,6 +251,19 @@ class ShiftController extends Controller
         $counterVerifiedCount = $counterVerifiedPayments->count();
         $counterVerifiedTotal = (float) $counterVerifiedPayments->sum('amount');
 
+        $cardMethods = ['card', 'credit_card', 'debit_card', 'pos_terminal', 'visa', 'mastercard'];
+        $mfsMethods = ['bkash', 'nagad', 'rocket', 'upay', 'mobile_wallet', 'mfs'];
+
+        $orderIds = $orders->pluck('id');
+        $calculatedCash = (float) OrderPayment::whereIn('order_id', $orderIds)->where('payment_method', 'cash')->sum('amount');
+        $calculatedCard = (float) OrderPayment::whereIn('order_id', $orderIds)->whereIn('payment_method', $cardMethods)->sum('amount');
+        $calculatedMobile = (float) OrderPayment::whereIn('order_id', $orderIds)->whereIn('payment_method', $mfsMethods)->sum('amount');
+
+        $isClosed = $shift->status === 'closed';
+        $cashSales = $isClosed ? (float) $shift->total_cash_sales : $calculatedCash;
+        $cardSales = $isClosed ? (float) $shift->total_card_sales : $calculatedCard;
+        $mobileSales = $isClosed ? (float) $shift->total_mobile_sales : $calculatedMobile;
+
         $zData = [
             'shift' => $shift,
             'totalOrders' => $orders->count(),
@@ -247,9 +271,9 @@ class ShiftController extends Controller
             'discountTotal' => (float) $orders->sum('discount_amount'),
             'taxTotal' => (float) $orders->sum('tax_amount'),
             'grandTotal' => (float) $orders->sum('grand_total'),
-            'cashSales' => (float) $shift->total_cash_sales,
-            'cardSales' => (float) $shift->total_card_sales,
-            'mobileSales' => (float) $shift->total_mobile_sales,
+            'cashSales' => $cashSales,
+            'cardSales' => $cardSales,
+            'mobileSales' => $mobileSales,
             'counterVerifiedCount' => $counterVerifiedCount,
             'counterVerifiedTotal' => $counterVerifiedTotal,
             'counter_verified_count' => $counterVerifiedCount,
