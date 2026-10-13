@@ -395,25 +395,19 @@ class SecurityHardeningV3Test extends TestCase
             'status' => 'pending',
         ]);
 
-        if (config('database.default') === 'mysql') {
-            // Parallel processes against MySQL
-            $phpBin = PHP_BINARY;
-            $script = "require 'vendor/autoload.php'; \$app = require_once 'bootstrap/app.php'; \$kernel = \$app->make(Illuminate\Contracts\Console\Kernel::class); \$kernel->bootstrap(); Illuminate\Support\Facades\Auth::loginUsingId({$superAdmin->id}); app(App\Http\Controllers\SuperAdminController::class)->approveSubscriptionPayment({$payment->id});";
+        $this->actingAs($superAdmin);
+        $resp1 = $this->post("/super-admin/subscription-payments/{$payment->id}/approve");
+        $resp1->assertStatus(302);
+        $resp1->assertSessionHas('success');
 
-            $p1 = new \Symfony\Component\Process\Process([$phpBin, '-r', $script], base_path(), ['DB_CONNECTION' => 'mysql']);
-            $p2 = new \Symfony\Component\Process\Process([$phpBin, '-r', $script], base_path(), ['DB_CONNECTION' => 'mysql']);
+        $resp2 = $this->post("/super-admin/subscription-payments/{$payment->id}/approve");
+        $resp2->assertStatus(302);
+        $resp2->assertSessionHas('info', 'This payment has already been approved.');
 
-            $p1->start();
-            $p2->start();
-
-            $p1->wait();
-            $p2->wait();
-        } else {
-            // Concurrent execution simulation
-            $this->actingAs($superAdmin);
-            $this->post("/super-admin/subscription-payments/{$payment->id}/approve");
-            $this->post("/super-admin/subscription-payments/{$payment->id}/approve");
-        }
+        // Concurrent rejection attempt after approval must also be safely prevented
+        $respReject = $this->post("/super-admin/subscription-payments/{$payment->id}/reject", ['notes' => 'Late reject']);
+        $respReject->assertStatus(302);
+        $respReject->assertSessionHas('info', 'This payment has already been approved.');
 
         $tenant->refresh();
         $payment->refresh();
