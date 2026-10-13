@@ -360,6 +360,7 @@ class PaymentLogicHarmonizationTest extends TestCase
             'payment_status' => 'due',
         ]);
         OrderItem::create([
+            'tenant_id' => $tenant->id,
             'order_id' => $order->id,
             'product_id' => $product->id,
             'product_name' => $product->name,
