@@ -75,6 +75,14 @@ class AppServiceProvider extends ServiceProvider
         }
 
         if ($appUrl = config('app.url')) {
+            if (! app()->environment('production') && ! empty($_SERVER['HTTP_HOST'])) {
+                $reqHost = parse_url($_SERVER['HTTP_HOST'], PHP_URL_HOST) ?? $_SERVER['HTTP_HOST'];
+                $reqHost = preg_replace('/:\d+$/', '', $reqHost);
+                if (in_array($reqHost, ['localhost', '127.0.0.1'], true)) {
+                    $scheme = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                    $appUrl = $scheme.'://'.$_SERVER['HTTP_HOST'];
+                }
+            }
             URL::forceRootUrl($appUrl);
         }
 

@@ -17,11 +17,21 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
-        $middleware->trustHosts(at: fn () => array_values(array_filter([
-            '^pos\.sababilling\.net$',
-            '^sababilling\.net$',
-            parse_url(config('app.url'), PHP_URL_HOST) ? '^'.preg_quote(parse_url(config('app.url'), PHP_URL_HOST)).'$' : null,
-        ])), subdomains: false);
+        $middleware->trustHosts(at: function () {
+            $hosts = [
+                '^pos\.sababilling\.net$',
+                '^sababilling\.net$',
+            ];
+            if ($appHost = parse_url((string) config('app.url'), PHP_URL_HOST)) {
+                $hosts[] = '^'.preg_quote($appHost).'$';
+            }
+            if (! app()->environment('production')) {
+                $hosts[] = '^localhost$';
+                $hosts[] = '^127\.0\.0\.1$';
+            }
+
+            return array_values(array_filter($hosts));
+        }, subdomains: false);
         $middleware->alias([
             'throttle.pin' => ThrottleFailedPinAttempts::class,
         ]);

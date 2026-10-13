@@ -1,6 +1,6 @@
 # MERCHANT REGISTRATION TO LIVE POS CHECKOUT PROOF REPORT
 
-**Generated:** 2026-10-13 13:23:42
+**Generated:** 2026-10-13 13:59:05
 **Target Database Engine:** MySQL 8.4
 **Test Suite:** MerchantToPosWorkflowTest.php
 
@@ -9,7 +9,7 @@
 ### 1. Merchant SaaS Self-Service Registration
 - **Route:** `POST /register` -> HTTP 302
 - **Tenant Created:** `Apex Tech Superstore` (ID: `1`, Email: `jahidul@apextech.com`)
-- **Default Store Provisioned:** `Apex Tech Superstore Main Outlet` (ID: `1`, Code: `STORE-41F9`)
+- **Default Store Provisioned:** `Apex Tech Superstore Main Outlet` (ID: `1`, Code: `STORE-32DD`)
 - **Merchant Owner Account:** `Jahidul Islam` (ID: `1`, Role: `merchant`)
 
 ### 2. Super Admin Approval Queue
@@ -31,7 +31,7 @@
 
 ### 5. Live POS Counter Checkout Sale
 - **Route:** `POST /pos/checkout` -> HTTP 302 (SUCCESS)
-- **Order ID:** `1` (Invoice No: `INV-20261013-37CC2`)
+- **Order ID:** `1` (Invoice No: `INV-20261013-76F16`)
 - **Subtotal:** ৳2500.00 | Discount: ৳100.00 | NBR VAT (15%): ৳360.00 | Grand Total: ৳2760.00
 - **Amount Paid:** ৳3000.00 (Cash) | Change Returned: ৳240.00
 - **Stock Deduction Verification:** Stock decremented atomically from **100 units** to **98 units**

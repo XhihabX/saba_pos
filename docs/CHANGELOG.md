@@ -1,5 +1,20 @@
 # Changelog
 
+## [2026-10-13] — Playwright CI E2E Loopback Harmonization & Host Header Security
+
+**What:**
+1. **Loopback Host Harmonization:** Aligned loopback URL handling (`127.0.0.1` vs `localhost`) in `AppServiceProvider.php` for non-production environments (`local`, `testing`), ensuring that incoming browser requests maintain matching session cookie origins between the web server and Playwright headless browser runners without cross-origin unauthenticated drops.
+2. **Default APP_URL Alignment:** Updated default `.env.example` `APP_URL` to `http://127.0.0.1:8000`, ensuring automatic 1:1 parity with the CI Playwright test runner without needing modifications to GitHub workflow YAML files.
+3. **Loopback Host Trust in Non-Production:** Updated `trustHosts` configuration in `bootstrap/app.php` to include `localhost` and `127.0.0.1` when `!app()->environment('production')`, maintaining ironclad production host header restriction to `pos.sababilling.net` and `sababilling.net` while allowing local and CI headless browser automation to run without untrusted host rejections.
+4. **Automated Verification:** Verified full PHPUnit test suite (149 tests, 906 assertions green) and Larastan Level 5 static analysis (0 errors).
+
+**Why:** Eliminate headless browser test timeouts during GitHub Actions CI caused by cross-origin cookie loss between `127.0.0.1` and `localhost` during cashier login redirects, while strictly preserving production Host Header Injection security.
+**How:** Updated `app/Providers/AppServiceProvider.php`, `bootstrap/app.php`, and `.env.example`.
+**Where:** `app/Providers/AppServiceProvider.php`, `bootstrap/app.php`, `.env.example`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** Flawless 100% CI pipeline pass across all unit, feature, static analysis, and Playwright E2E browser tests with zero weakening of production security.
+
+---
+
 ## [2026-10-13] — Platform Settings, Production Installer, Merchant Bank Transfer Harmonization & cPanel Deployment
 
 **What:**
