@@ -45,7 +45,7 @@ return new class extends Migration
                 $table->foreignId('plan_id')->constrained('saas_plans')->cascadeOnDelete();
                 $table->decimal('amount', 12, 2);
                 $table->string('method'); // bkash, nagad, rocket, bank
-                $table->string('reference')->index();
+                $table->string('reference')->unique();
                 $table->string('bank_name')->nullable();
                 $table->string('account_holder')->nullable();
                 $table->string('account_last4', 4)->nullable();

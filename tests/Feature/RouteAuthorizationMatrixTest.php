@@ -311,6 +311,7 @@ class RouteAuthorizationMatrixTest extends TestCase
                 auth()->logout();
                 $this->flushSession();
                 $this->app['auth']->forgetGuards();
+                \Illuminate\Support\Facades\Cache::flush();
 
                 DB::beginTransaction();
                 try {

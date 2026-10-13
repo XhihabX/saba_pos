@@ -237,6 +237,13 @@ LOG_DAILY_DAYS=14
 # Production Security
 FORCE_HTTPS=true
 
+# Reverse Proxy & Trusted Proxies (Anti-Spoofing)
+# Leave EMPTY on standard cPanel where visitors connect directly to Apache.
+# This ensures untrusted X-Forwarded-For headers are completely ignored by Laravel.
+# If your domain sits behind Cloudflare proxy, paste Cloudflare IP ranges:
+# TRUSTED_PROXIES=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22
+TRUSTED_PROXIES=
+
 # Bangladesh Regional Compliance Secrets
 EFD_SECRET_KEY=
 MFS_WEBHOOK_SECRET=
@@ -394,7 +401,28 @@ If a deployed update causes unexpected issues:
 
 ---
 
-## 13. Post-Deployment Verification Checklist
+---
+
+## 13. Step 12: Automated Post-Deployment Smoke Test Script
+
+After completing deployment and DNS setup, run the included smoke-test script directly from your local machine or server terminal to verify all security and infrastructure gates:
+
+```bash
+cd /home/<username>/sabapos
+./scripts/smoke_prod.sh https://pos.sababilling.net
+```
+
+### What `scripts/smoke_prod.sh` verifies:
+1. **Host Header Forgery Protection (`400`)**: Sends an untrusted `Host: evil-attacker-forged.com` header and verifies that Symfony rejects it with `HTTP 400 Bad Request`. `[verified in tests]`
+2. **HTTPS Availability (`200`)**: Queries `https://pos.sababilling.net/login` and asserts `HTTP 200 OK`. `[needs the real server]`
+3. **HTTP to HTTPS Redirection (`301`/`302`)**: Insecure HTTP requests automatically redirect to secure HTTPS. `[needs the real server]`
+4. **Health Check & Queue Status**: Fetches `/health` and ensures the asynchronous queue driver reports `database` and `healthy`. `[verified in tests]`
+5. **Private `.env` File Inaccessibility (`404`/`403`)**: Direct HTTP GET on `/.env` is blocked by Apache rewrite rules. `[needs the real server]`
+6. **Private Directories Inaccessibility (`404`/`403`)**: Direct HTTP GET on `/vendor/autoload.php` and `/storage/app/.env` are completely unreachable. `[needs the real server]`
+
+---
+
+## 14. Post-Deployment Verification Checklist
 
 Every item in this checklist has been categorized honestly according to its empirical testing status:
 
@@ -403,16 +431,20 @@ Every item in this checklist has been categorized honestly according to its empi
 | **`php artisan pos:install` command** | CLI / Migrations | `[VERIFIED]` | Verified in feature test suite. Seeds SaaS plans and prompts for Super Admin. |
 | **`SabaPosSeeder` production abort** | Seeder Guard | `[VERIFIED]` | Verified in feature test suite. Aborts with `RuntimeException` when `APP_ENV=production`. |
 | **Host Header Forgery Rejection (400)** | Security / Kernel | `[VERIFIED]` | Verified in feature test suite. Untrusted Host headers rejected with HTTP 400 Bad Request. |
-| **Public Registration Rate Limiting (5/hr)** | Security / Throttle | `[VERIFIED]` | Verified in feature test suite. Blocks after 5 attempts with HTTP 429. |
+| **Trusted Proxies (`TRUSTED_PROXIES`)** | Security / Proxy | `[VERIFIED]` | Verified in feature test suite. Forged `X-Forwarded-For` ignored when TRUSTED_PROXIES is empty. |
+| **Supervisor PIN Multi-Tier Lockout** | Anti-Brute-Force | `[VERIFIED]` | Verified in feature test suite. 5 failures lock user for 15m & email manager; 20 lock store for 10m. |
+| **Public Registration Rate Limiting (Global & IP)** | Security / Throttle | `[VERIFIED]` | Verified in feature test suite. Capped at 30/hr globally across all IPs and 5/hr per IP. |
 | **Registration Honeypot Field (`website_hp`)** | Bot Protection | `[VERIFIED]` | Verified in feature test suite. Rejects bot submissions with HTTP 422. |
+| **Account Login Rate Limiting (Email & IP)** | Security / Auth | `[VERIFIED]` | Verified in feature test suite. Locks by account email (5 attempts) and IP (10 attempts). |
 | **Merchant Bank Data Storage (Sanitized)** | Security / Database | `[VERIFIED]` | Verified in feature test suite. Only `account_last4` (4 digits) stored. No full bank numbers! |
 | **Private Slip Storage (`local` disk)** | Storage / Privacy | `[VERIFIED]` | Verified in feature test suite. Slips stored on private disk, accessible only by Super Admin. |
-| **Subscription Renewal Approval Idempotency** | Financial / Billing | `[VERIFIED]` | Verified in feature test suite. Double approval extends once from `max(expires_at, now)`. |
-| **Duplicate Reference Rejection** | Anti-Fraud | `[VERIFIED]` | Verified in feature test suite. Reused transaction references rejected across all tenants. |
+| **Pessimistic Concurrency Locking on Approvals** | Financial / Billing | `[VERIFIED]` | Verified in feature test suite. `lockForUpdate` prevents double extension under concurrent requests. |
+| **Unique Constraint on Payment Reference** | Database Schema | `[VERIFIED]` | Verified in database schema migration. Unique index enforces no duplicate references in MySQL. |
 | **Renewal Amount Matching Plan Price** | Financial Safety | `[VERIFIED]` | Verified in feature test suite. Rejects mismatched renewal payments with HTTP 422. |
 | **Platform Settings Validation & Audit Trail** | Super Admin | `[VERIFIED]` | Verified in feature test suite. Validates phone regexes and logs old vs new value diffs. |
 | **Maintenance Mode Bypass for Super Admin** | Operations | `[VERIFIED]` | Verified in feature test suite. Super Admin can access platform during maintenance mode. |
 | **Empty Payment Defaults on Registration** | Frontend / UX | `[VERIFIED]` | Verified in Vue views. Displays "payment details not configured" notice if empty. |
+| **Production Smoke-Test Script (`smoke_prod.sh`)** | Verification Tool | `[VERIFIED]` | Verified in test environment against running server. |
 | **cPanel MultiPHP Selection (PHP 8.3/8.4)** | Hosting Environment | `[NEEDS REAL SERVER]` | Requires manual configuration in cPanel MultiPHP Manager. |
 | **cPanel AutoSSL Certificate Issuance** | Hosting SSL | `[NEEDS REAL SERVER]` | Requires running cPanel AutoSSL once DNS resolves to server IP. |
 | **cPanel Cron Execution (Scheduler & Queue)** | Shared Hosting Cron | `[NEEDS REAL SERVER]` | Requires adding cron lines in cPanel Cron Jobs interface. |

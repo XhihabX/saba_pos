@@ -33,8 +33,11 @@ class PinThrottleTest extends TestCase
             'role' => 'cashier',
         ]);
 
-        $key = "pos-pin-failed:{$user->id}:127.0.0.1";
-        RateLimiter::clear($key);
+        $storeId = (int) ($user->store_id ?? 1);
+        $userLockKey = "pos-pin:user:lock:{$user->id}:{$storeId}";
+        $userAttemptsKey = "pos-pin:user:attempts:{$user->id}:{$storeId}";
+        RateLimiter::clear($userLockKey);
+        RateLimiter::clear($userAttemptsKey);
 
         $this->actingAs($user);
 
@@ -55,7 +58,8 @@ class PinThrottleTest extends TestCase
         $responseCorrectLocked->assertStatus(429);
 
         // Clear limiter state and verify correct PIN succeeds with HTTP 200
-        RateLimiter::clear($key);
+        RateLimiter::clear($userLockKey);
+        RateLimiter::clear($userAttemptsKey);
         $responseSuccess = $this->postJson('/pos/verify-pin', ['pin' => '1234']);
         $responseSuccess->assertStatus(200)
             ->assertJson(['success' => true]);

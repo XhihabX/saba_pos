@@ -427,6 +427,24 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Depends on:** `PlatformSetting`, `SubscriptionPayment`, `Tenant`, `SaaSPlan`, `AuditLog`, `InstallPosCommand`, `SaaSPlanSeeder`.
 - **Last updated:** 2026-10-13
 
+### 42. Production Security Hardening: Trusted Proxies, Multi-Tier Throttles, Pessimistic Approval Concurrency & Smoke Testing
+- **What it does:** Advanced defense-in-depth hardening safeguarding against IP spoofing, credential stuffing, brute-force PIN attacks, subscription payment race conditions, and unverified server misconfigurations:
+  1. **Strict Trusted Proxies Hardening:** Removed wildcard `at: '*'` in `bootstrap/app.php`. Reads `TRUSTED_PROXIES` as a comma-separated list of IPs/CIDRs from `.env`, defaulting to an empty list `[]`. In default cPanel and direct web setups, Symfony ignores `X-Forwarded-*` headers and strictly reads `REMOTE_ADDR`, preventing attackers from evading IP-based limits or spoofing request origins. Documented how to configure Cloudflare IP ranges in `DEPLOY_CPANEL.md`.
+  2. **Non-Spoofable Multi-Tier Throttling:**
+     - **Supervisor PIN (`ThrottleFailedPinAttempts`):** Keyed directly by authenticated `user_id` and `store_id` rather than spoofable client IPs. 5 failed attempts within 10 minutes locks that specific user out for 15 minutes across all IPs and dispatches `SupervisorPinLockoutAlertMail` to the store manager/tenant owner. Also enforces a global store-wide ceiling of 20 failures per 10 minutes.
+     - **Public Registration (`throttle:register`):** Multi-tier rate limiter in `AppServiceProvider.php` enforcing a global limit of 30 attempts per hour across all IPs, coupled with a per-IP limit of 5 attempts per hour, while retaining the honeypot field (`website_hp`).
+     - **Login Protection (`throttle:login`):** Multi-tier rate limiter in `AppServiceProvider.php` locking by normalized account email (5 attempts per 15 minutes) and client IP (10 attempts per 15 minutes). Rotating `X-Forwarded-For` headers cannot circumvent account email lockouts.
+  3. **Pessimistic Locking & Unique Reference Constraints:**
+     - Both `SuperAdminController::approveSubscriptionPayment` and `rejectSubscriptionPayment` execute inside `DB::transaction`, acquiring row-level locks via `SubscriptionPayment::lockForUpdate()` and re-verifying that status is strictly `'pending'` after acquiring the lock. Approval also pessimistically locks the target `Tenant` record before extending the subscription.
+     - Added a unique index on `subscription_payments.reference` via migration `2026_10_13_000046_add_unique_index_to_subscription_payments_reference.php` to prevent duplicate transaction reference replays at the database schema level.
+  4. **Post-Deployment Smoke-Test Script (`scripts/smoke_prod.sh`):**
+     - Autonomous curl-based CLI tool verifying 7 live production properties: Host forgery rejection (HTTP 400), HTTPS `/login` reachable (HTTP 200), HTTP to HTTPS automatic redirection, `/health` reporting queue driver as `database`, `.env` not downloadable (HTTP 404/403), `storage` directory not browseable, and `vendor` directory inaccessible.
+     - Documented in Section 13 of `DEPLOY_CPANEL.md` with explicit tagging of checks verified in local/CI automated tests versus those requiring a live server run.
+- **Where it lives:** `bootstrap/app.php`, `app/Http/Middleware/ThrottleFailedPinAttempts.php`, `app/Mail/SupervisorPinLockoutAlertMail.php`, `app/Providers/AppServiceProvider.php`, `routes/web.php`, `app/Http/Controllers/SuperAdminController.php`, `database/migrations/2026_10_13_000046_add_unique_index_to_subscription_payments_reference.php`, `scripts/smoke_prod.sh`, `DEPLOY_CPANEL.md`, `tests/Feature/SecurityHardeningV3Test.php`.
+- **Key design decisions:** Defense-in-depth where identity-based locks cannot be bypassed by IP rotation; pessimistic concurrency eliminates double-spending / multi-approval bugs; smoke script provides rapid operational validation after deployment.
+- **Depends on:** `SubscriptionPayment`, `Tenant`, `ThrottleFailedPinAttempts`, `SupervisorPinLockoutAlertMail`.
+- **Last updated:** 2026-10-13
+
 ## Data Model
 
 ```

@@ -16,7 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->trustProxies(at: '*');
+        $rawProxies = env('TRUSTED_PROXIES');
+        $trustedProxies = is_string($rawProxies) && trim($rawProxies) !== ''
+            ? array_values(array_filter(array_map('trim', explode(',', $rawProxies))))
+            : [];
+        $middleware->trustProxies(at: $trustedProxies);
         $middleware->trustHosts(at: function () {
             $hosts = [
                 '^pos\.sababilling\.net$',

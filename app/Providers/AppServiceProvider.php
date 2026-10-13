@@ -10,8 +10,11 @@ use App\Policies\CustomerPolicy;
 use App\Policies\OrderPolicy;
 use App\Policies\ProductPolicy;
 use App\Policies\StorePolicy;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Console\AboutCommand;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
@@ -94,5 +97,22 @@ class AppServiceProvider extends ServiceProvider
                     : 'OK (Async Queue Driver Active)',
             ]);
         }
+
+        RateLimiter::for('register', function (Request $request) {
+            return [
+                Limit::perHour(30),
+                Limit::perHour(5)->by($request->ip() ?: '127.0.0.1'),
+            ];
+        });
+
+        RateLimiter::for('login', function (Request $request) {
+            $email = strtolower(trim((string) $request->input('email', '')));
+            $ip = $request->ip() ?: '127.0.0.1';
+
+            return [
+                Limit::perMinutes(15, 5)->by($email ? "email:{$email}" : "ip:{$ip}"),
+                Limit::perMinutes(15, 10)->by("ip:{$ip}"),
+            ];
+        });
     }
 }

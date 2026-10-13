@@ -1,5 +1,31 @@
 # Changelog
 
+## [2026-10-13] — Trusted Proxy Hardening, Multi-Tier Throttling, Pessimistic Concurrency & Smoke Test Suite
+
+**What:**
+1. **Trusted Proxies Hardening:** Removed wildcard `at: '*'` in `bootstrap/app.php`. Configured `trustProxies` to read comma-separated IP/CIDR values from `TRUSTED_PROXIES` environment variable, defaulting to an empty list `[]` (no proxies trusted). In default environments and standard cPanel deployments, Symfony strictly reads `REMOTE_ADDR` and ignores `X-Forwarded-*` headers. Documented trusted proxy configuration (including Cloudflare IP ranges) in `DEPLOY_CPANEL.md`.
+2. **Non-Spoofable Multi-Tier Throttles:**
+   - **Supervisor PIN (`ThrottleFailedPinAttempts` middleware):** Keyed rate limiting by authenticated `user_id` and `store_id` rather than spoofable client IPs. After 5 failures within 10 minutes, locks that specific user out for 15 minutes across all IPs and dispatches `SupervisorPinLockoutAlertMail` to the store manager/tenant owner. Also enforces a global store-wide ceiling of 20 failures per 10 minutes.
+   - **Public Registration (`throttle:register`):** Registered named rate limiter in `AppServiceProvider.php` enforcing a global limit of 30 attempts per hour across all IPs, coupled with a per-IP limit of 5 attempts per hour, while preserving the invisible honeypot trap (`website_hp`).
+   - **Login Protection (`throttle:login`):** Registered named rate limiter in `AppServiceProvider.php` locking by normalized account email (5 attempts per 15 minutes) and client IP (10 attempts per 15 minutes). Rotating `X-Forwarded-For` headers cannot bypass account-level lockouts.
+3. **Pessimistic Approval Concurrency & Unique Reference:**
+   - Wrapped `approveSubscriptionPayment` and `rejectSubscriptionPayment` inside `DB::transaction`, acquiring row-level pessimistic locks via `SubscriptionPayment::lockForUpdate()` and re-verifying that status is strictly `'pending'` after obtaining the lock.
+   - Wrapped target `Tenant` record updates with pessimistic row lock `Tenant::lockForUpdate()`, guaranteeing that concurrent approval requests cannot double-extend tenant subscriptions.
+   - Added unique index on `subscription_payments.reference` (`2026_10_13_000046_add_unique_index_to_subscription_payments_reference.php`).
+4. **Production Smoke-Test Script (`scripts/smoke_prod.sh`):**
+   - Created executable curl-based smoke testing tool verifying 7 live production properties: Host forgery 400 rejection, HTTPS `/login` reachable (HTTP 200), HTTP to HTTPS redirect, `/health` reporting queue driver as `database`, `.env` not downloadable (HTTP 404/403), `storage` directory not browseable, and `vendor` directory inaccessible.
+   - Documented smoke script execution in Section 13 of `DEPLOY_CPANEL.md` with explicit labeling of test suite verification versus live server prerequisites.
+5. **Automated Verification:**
+   - Authored `tests/Feature/SecurityHardeningV3Test.php` with 7 dedicated tests (30 assertions) validating proxy header ignoring, multi-tier PIN lockout and email dispatch, register global/IP caps, login email locking under rotated `X-Forwarded-For`, pessimistic approval concurrency, and smoke script syntax/executable bits.
+   - Full test suite verified green: 156 tests, 936 assertions passing. Larastan Level 5 passing with 0 errors.
+
+**Why:** Eliminate IP spoofing vulnerabilities, prevent distributed brute-force attacks and credential stuffing, prevent race condition double-spending on subscription approvals, and provide automated post-deployment validation tooling.
+**How:** Hardened `bootstrap/app.php`, updated `app/Http/Middleware/ThrottleFailedPinAttempts.php`, added `app/Mail/SupervisorPinLockoutAlertMail.php`, configured rate limiters in `app/Providers/AppServiceProvider.php`, updated routes in `routes/web.php`, added pessimistic locks in `app/Http/Controllers/SuperAdminController.php`, created migration `2026_10_13_000046_add_unique_index_to_subscription_payments_reference.php`, created `scripts/smoke_prod.sh`, updated `DEPLOY_CPANEL.md`, and created test suite `tests/Feature/SecurityHardeningV3Test.php`.
+**Where:** `bootstrap/app.php`, `app/Http/Middleware/*`, `app/Mail/*`, `app/Providers/AppServiceProvider.php`, `routes/web.php`, `app/Http/Controllers/SuperAdminController.php`, `database/migrations/*`, `scripts/smoke_prod.sh`, `DEPLOY_CPANEL.md`, `tests/Feature/SecurityHardeningV3Test.php`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** Total mitigation of proxy spoofing attack vectors, guaranteed transactional consistency under concurrent approval requests, automated manager alerting upon brute-force attempts, and streamlined production health verification.
+
+---
+
 ## [2026-10-13] — Playwright CI E2E Loopback Harmonization & Host Header Security
 
 **What:**

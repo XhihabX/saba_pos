@@ -476,33 +476,37 @@ class SuperAdminController extends Controller
             abort(403, 'Unauthorized.');
         }
 
-        $payment = SubscriptionPayment::with(['tenant', 'plan'])->findOrFail($id);
-        $tenant = $payment->tenant;
-        if (! $tenant) {
-            abort(404, 'Tenant record not found.');
-        }
+        return DB::transaction(function () use ($id) {
+            /** @var SubscriptionPayment $payment */
+            $payment = SubscriptionPayment::where('id', $id)->lockForUpdate()->firstOrFail();
 
-        // Idempotency: double approval extends once
-        if ($payment->status === 'approved') {
-            return redirect()->back()->with('info', 'This payment has already been approved.');
-        }
+            // Re-check status AFTER acquiring pessimistic row lock
+            if ($payment->status === 'approved') {
+                return redirect()->back()->with('info', 'This payment has already been approved.');
+            }
 
-        // Check if reference was already approved in another record
-        $alreadyApproved = SubscriptionPayment::where('reference', $payment->reference)
-            ->where('id', '!=', $payment->id)
-            ->where('status', 'approved')
-            ->exists();
+            if ($payment->status === 'rejected') {
+                return redirect()->back()->with('error', 'This payment has already been rejected.');
+            }
 
-        if ($alreadyApproved) {
-            return redirect()->back()->with('error', 'This payment reference has already been approved for another transaction.');
-        }
+            // Check if reference was already approved in another record
+            $alreadyApproved = SubscriptionPayment::where('reference', $payment->reference)
+                ->where('id', '!=', $payment->id)
+                ->where('status', 'approved')
+                ->exists();
 
-        // Base date: max(expires_at, now)
-        $currentExpiry = $tenant->expires_at ? Carbon::parse($tenant->expires_at) : null;
-        $baseDate = ($currentExpiry && $currentExpiry->isFuture()) ? $currentExpiry : now();
-        $newExpiry = $baseDate->copy()->addDays(30);
+            if ($alreadyApproved) {
+                return redirect()->back()->with('error', 'This payment reference has already been approved for another transaction.');
+            }
 
-        DB::transaction(function () use ($payment, $tenant, $newExpiry) {
+            /** @var Tenant $tenant */
+            $tenant = Tenant::where('id', $payment->tenant_id)->lockForUpdate()->firstOrFail();
+
+            // Base date: max(expires_at, now) computed inside locked transaction
+            $currentExpiry = $tenant->expires_at ? Carbon::parse($tenant->expires_at) : null;
+            $baseDate = ($currentExpiry && $currentExpiry->isFuture()) ? $currentExpiry : now();
+            $newExpiry = $baseDate->copy()->addDays(30);
+
             $payment->update([
                 'status' => 'approved',
                 'reviewed_by' => Auth::id(),
@@ -516,15 +520,18 @@ class SuperAdminController extends Controller
                 'mrr_amount' => $payment->amount,
             ]);
 
+            $adminUser = Auth::user();
+            $adminName = $adminUser ? $adminUser->name : 'Super Admin';
+
             AuditLog::create([
                 'tenant_id' => $tenant->id,
-                'user_name' => Auth::user()->name ?? 'Super Admin',
+                'user_name' => $adminName,
                 'action' => 'subscription_payment_approved',
                 'description' => "Approved renewal payment #{$payment->id} ({$payment->method}, Ref: {$payment->reference}, ৳{$payment->amount}). Extended {$tenant->name} expiry to {$newExpiry->toDateString()}.",
             ]);
-        });
 
-        return redirect()->back()->with('success', "Renewal payment for '{$tenant->name}' approved! Subscription extended to {$newExpiry->toDateString()}.");
+            return redirect()->back()->with('success', "Renewal payment for '{$tenant->name}' approved! Subscription extended to {$newExpiry->toDateString()}.");
+        });
     }
 
     public function rejectSubscriptionPayment(Request $request, $id)
@@ -533,23 +540,35 @@ class SuperAdminController extends Controller
             abort(403, 'Unauthorized.');
         }
 
-        $payment = SubscriptionPayment::with('tenant')->findOrFail($id);
+        return DB::transaction(function () use ($request, $id) {
+            /** @var SubscriptionPayment $payment */
+            $payment = SubscriptionPayment::where('id', $id)->lockForUpdate()->firstOrFail();
 
-        $payment->update([
-            'status' => 'rejected',
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-            'notes' => $request->input('notes'),
-        ]);
+            // Re-check status AFTER acquiring pessimistic row lock
+            if ($payment->status !== 'pending') {
+                return redirect()->back()->with('info', "This payment has already been {$payment->status}.");
+            }
 
-        AuditLog::create([
-            'tenant_id' => $payment->tenant_id,
-            'user_name' => Auth::user()->name ?? 'Super Admin',
-            'action' => 'subscription_payment_rejected',
-            'description' => "Rejected renewal payment #{$payment->id} (Ref: {$payment->reference}) for '{$payment->tenant?->name}'.",
-        ]);
+            $payment->update([
+                'status' => 'rejected',
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+                'notes' => $request->input('notes'),
+            ]);
 
-        return redirect()->back()->with('success', "Renewal payment #{$payment->id} marked as rejected.");
+            $adminUser = Auth::user();
+            $adminName = $adminUser ? $adminUser->name : 'Super Admin';
+            $tenantName = $payment->tenant ? $payment->tenant->name : 'Tenant';
+
+            AuditLog::create([
+                'tenant_id' => $payment->tenant_id,
+                'user_name' => $adminName,
+                'action' => 'subscription_payment_rejected',
+                'description' => "Rejected renewal payment #{$payment->id} (Ref: {$payment->reference}) for '{$tenantName}'.",
+            ]);
+
+            return redirect()->back()->with('success', "Renewal payment #{$payment->id} marked as rejected.");
+        });
     }
 
     public function downloadSubscriptionProof($id)

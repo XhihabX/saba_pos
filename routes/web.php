@@ -27,9 +27,9 @@ use Illuminate\Support\Facades\Route;
 
 // 1. Authentication Routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:30,1');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:login');
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,60');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:register');
 Route::get('/pending-approval', [AuthController::class, 'showPendingApproval'])->middleware('auth')->name('pending.approval');
 Route::get('/subscription-expired', [AuthController::class, 'showSubscriptionExpired'])->middleware('auth')->name('subscription.expired');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
