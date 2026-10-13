@@ -37,12 +37,18 @@
         </div>
       </div>
 
-      <!-- Action Button -->
-      <div class="pt-2">
+      <!-- Action Buttons -->
+      <div class="pt-2 space-y-2">
+        <Link
+          href="/merchant/subscription"
+          class="block w-full py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-98 text-white font-black text-xs uppercase tracking-wider transition-all duration-150 shadow-lg shadow-emerald-600/20 text-center"
+        >
+          Renew Subscription Now →
+        </Link>
         <form @submit.prevent="logout">
           <button
             type="submit"
-            class="w-full py-3.5 px-4 rounded-xl bg-slate-700 hover:bg-slate-600 active:scale-98 text-white font-bold text-xs uppercase tracking-wider transition-all duration-150 shadow-lg"
+            class="w-full py-3 px-4 rounded-xl bg-slate-700 hover:bg-slate-600 active:scale-98 text-slate-300 font-bold text-xs uppercase tracking-wider transition-all duration-150"
           >
             Sign Out
           </button>
@@ -58,7 +64,7 @@
 </template>
 
 <script setup>
-import { router } from '@inertiajs/vue3';
+import { router, Link } from '@inertiajs/vue3';
 
 defineProps({
   tenant: Object,

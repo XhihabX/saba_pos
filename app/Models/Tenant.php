@@ -31,6 +31,10 @@ class Tenant extends Model
         'payment_method',
         'sender_number',
         'transaction_id',
+        'bank_name',
+        'account_holder',
+        'account_last4',
+        'proof_path',
         'currency_symbol',
         'default_tax_rate',
         'receipt_header',
@@ -173,5 +177,13 @@ class Tenant extends Model
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
+    }
+
+    /**
+     * @return HasMany<SubscriptionPayment, $this>
+     */
+    public function subscriptionPayments(): HasMany
+    {
+        return $this->hasMany(SubscriptionPayment::class);
     }
 }

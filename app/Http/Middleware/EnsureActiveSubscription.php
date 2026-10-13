@@ -16,6 +16,7 @@ class EnsureActiveSubscription
     protected array $exemptRoutes = [
         'subscription.expired',
         'merchant.subscription',
+        'merchant.subscription.renew',
         'logout',
         'pending.approval',
         '2fa.setup',

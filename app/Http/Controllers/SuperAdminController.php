@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
 use App\Models\Order;
+use App\Models\PlatformSetting;
 use App\Models\Product;
 use App\Models\SaaSPlan;
 use App\Models\Store;
+use App\Models\SubscriptionPayment;
 use App\Models\Tenant;
 use App\Models\User;
 use Carbon\Carbon;
@@ -14,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class SuperAdminController extends Controller
@@ -43,6 +46,8 @@ class SuperAdminController extends Controller
             'uptime' => '99.99%',
         ];
 
+        $pendingSubscriptionPayments = SubscriptionPayment::with(['tenant', 'plan'])->where('status', 'pending')->latest()->get();
+
         return Inertia::render('SuperAdmin/Dashboard', [
             'totalTenants' => $totalTenants,
             'activeTenants' => $activeTenants,
@@ -54,6 +59,7 @@ class SuperAdminController extends Controller
             'totalProducts' => $totalProducts,
             'tenants' => $tenants,
             'pendingTenants' => $pendingTenants,
+            'pendingSubscriptionPayments' => $pendingSubscriptionPayments,
             'plans' => $plans,
             'auditLogs' => $auditLogs,
             'systemHealth' => $systemHealth,
@@ -307,15 +313,21 @@ class SuperAdminController extends Controller
     public function settingsIndex()
     {
         $settings = [
-            'app_name' => config('app.name', 'IOT POS'),
-            'bkash_number' => '01711000111',
-            'nagad_number' => '01811000222',
-            'bank_details' => "Bank: Dutch Bangla Bank Ltd\nA/C: 101-120-99882\nBranch: Banani, Dhaka",
-            'support_phone' => '+880 1700 000000',
-            'support_email' => 'support@iotpos.com',
-            'currency_symbol' => '৳',
-            'default_tax_rate' => 15.00,
-            'maintenance_mode' => false,
+            'app_name' => PlatformSetting::get('app_name', config('app.name', 'IOT POS')),
+            'bkash_number' => PlatformSetting::get('bkash_number', ''),
+            'nagad_number' => PlatformSetting::get('nagad_number', ''),
+            'rocket_number' => PlatformSetting::get('rocket_number', ''),
+            'bank_name' => PlatformSetting::get('bank_name', ''),
+            'bank_account_name' => PlatformSetting::get('bank_account_name', ''),
+            'bank_account_number' => PlatformSetting::get('bank_account_number', ''),
+            'bank_branch_name' => PlatformSetting::get('bank_branch_name', ''),
+            'bank_routing_number' => PlatformSetting::get('bank_routing_number', ''),
+            'bank_instructions' => PlatformSetting::get('bank_instructions', ''),
+            'support_phone' => PlatformSetting::get('support_phone', ''),
+            'support_email' => PlatformSetting::get('support_email', ''),
+            'currency_symbol' => PlatformSetting::get('currency_symbol', '৳'),
+            'default_tax_rate' => (float) PlatformSetting::get('default_tax_rate', '15.00'),
+            'maintenance_mode' => (bool) PlatformSetting::get('maintenance_mode', '0'),
         ];
 
         return Inertia::render('SuperAdmin/Settings', [
@@ -325,23 +337,49 @@ class SuperAdminController extends Controller
 
     public function updateSettings(Request $request)
     {
+        if (Auth::user()?->role !== 'super_admin') {
+            abort(403, 'Unauthorized.');
+        }
+
         $validated = $request->validate([
             'app_name' => 'required|string|max:255',
-            'bkash_number' => 'required|string|max:20',
-            'nagad_number' => 'nullable|string|max:20',
-            'bank_details' => 'nullable|string',
+            'bkash_number' => ['nullable', 'string', 'regex:/^01[3-9]\d{8}$/'],
+            'nagad_number' => ['nullable', 'string', 'regex:/^01[3-9]\d{8}$/'],
+            'rocket_number' => ['nullable', 'string', 'regex:/^01[3-9]\d{9,10}$/'],
+            'bank_name' => 'nullable|string|max:100',
+            'bank_account_name' => 'nullable|string|max:100',
+            'bank_account_number' => 'nullable|string|max:50',
+            'bank_branch_name' => 'nullable|string|max:100',
+            'bank_routing_number' => 'nullable|string|max:50',
+            'bank_instructions' => 'nullable|string|max:1000',
             'support_phone' => 'nullable|string|max:50',
             'support_email' => 'nullable|email|max:255',
             'currency_symbol' => 'required|string|max:10',
-            'default_tax_rate' => 'required|numeric|min:0',
+            'default_tax_rate' => 'required|numeric|min:0|max:100',
             'maintenance_mode' => 'required|boolean',
         ]);
 
-        AuditLog::create([
-            'user_name' => auth()->user()->name ?? 'Super Admin',
-            'action' => 'platform_settings_updated',
-            'description' => "Updated master platform configuration and payment receive numbers (bKash: {$validated['bkash_number']}).",
-        ]);
+        $changes = [];
+        foreach ($validated as $key => $newValue) {
+            $currentValue = PlatformSetting::get($key, '');
+            $newValStr = is_bool($newValue) ? ($newValue ? '1' : '0') : (string) ($newValue ?? '');
+            $currValStr = (string) ($currentValue ?? '');
+
+            if ($currValStr !== $newValStr) {
+                PlatformSetting::set($key, $newValStr);
+                $oldDisplay = $currValStr === '' ? '(empty)' : $currValStr;
+                $newDisplay = $newValStr === '' ? '(empty)' : $newValStr;
+                $changes[] = "{$key}: changed from '{$oldDisplay}' to '{$newDisplay}'";
+            }
+        }
+
+        if (! empty($changes)) {
+            AuditLog::create([
+                'user_name' => Auth::user()->name ?? 'Super Admin',
+                'action' => 'platform_settings_updated',
+                'description' => 'Updated master platform configuration: '.implode('; ', $changes),
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Master platform settings updated successfully!');
     }
@@ -424,8 +462,124 @@ class SuperAdminController extends Controller
     public function transactionsIndex()
     {
         $tenants = Tenant::whereNotNull('transaction_id')->orWhereNotNull('payment_method')->latest()->get();
+        $subscriptionPayments = SubscriptionPayment::with(['tenant', 'plan', 'reviewer'])->latest()->get();
 
-        return Inertia::render('SuperAdmin/Transactions', ['tenants' => $tenants]);
+        return Inertia::render('SuperAdmin/Transactions', [
+            'tenants' => $tenants,
+            'subscriptionPayments' => $subscriptionPayments,
+        ]);
+    }
+
+    public function approveSubscriptionPayment($id)
+    {
+        if (Auth::user()?->role !== 'super_admin') {
+            abort(403, 'Unauthorized.');
+        }
+
+        $payment = SubscriptionPayment::with(['tenant', 'plan'])->findOrFail($id);
+        $tenant = $payment->tenant;
+        if (! $tenant) {
+            abort(404, 'Tenant record not found.');
+        }
+
+        // Idempotency: double approval extends once
+        if ($payment->status === 'approved') {
+            return redirect()->back()->with('info', 'This payment has already been approved.');
+        }
+
+        // Check if reference was already approved in another record
+        $alreadyApproved = SubscriptionPayment::where('reference', $payment->reference)
+            ->where('id', '!=', $payment->id)
+            ->where('status', 'approved')
+            ->exists();
+
+        if ($alreadyApproved) {
+            return redirect()->back()->with('error', 'This payment reference has already been approved for another transaction.');
+        }
+
+        // Base date: max(expires_at, now)
+        $currentExpiry = $tenant->expires_at ? Carbon::parse($tenant->expires_at) : null;
+        $baseDate = ($currentExpiry && $currentExpiry->isFuture()) ? $currentExpiry : now();
+        $newExpiry = $baseDate->copy()->addDays(30);
+
+        DB::transaction(function () use ($payment, $tenant, $newExpiry) {
+            $payment->update([
+                'status' => 'approved',
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+            ]);
+
+            $tenant->update([
+                'subscription_status' => 'active',
+                'expires_at' => $newExpiry,
+                'plan_name' => $payment->plan ? $payment->plan->name : $tenant->plan_name,
+                'mrr_amount' => $payment->amount,
+            ]);
+
+            AuditLog::create([
+                'tenant_id' => $tenant->id,
+                'user_name' => Auth::user()->name ?? 'Super Admin',
+                'action' => 'subscription_payment_approved',
+                'description' => "Approved renewal payment #{$payment->id} ({$payment->method}, Ref: {$payment->reference}, ৳{$payment->amount}). Extended {$tenant->name} expiry to {$newExpiry->toDateString()}.",
+            ]);
+        });
+
+        return redirect()->back()->with('success', "Renewal payment for '{$tenant->name}' approved! Subscription extended to {$newExpiry->toDateString()}.");
+    }
+
+    public function rejectSubscriptionPayment(Request $request, $id)
+    {
+        if (Auth::user()?->role !== 'super_admin') {
+            abort(403, 'Unauthorized.');
+        }
+
+        $payment = SubscriptionPayment::with('tenant')->findOrFail($id);
+
+        $payment->update([
+            'status' => 'rejected',
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+            'notes' => $request->input('notes'),
+        ]);
+
+        AuditLog::create([
+            'tenant_id' => $payment->tenant_id,
+            'user_name' => Auth::user()->name ?? 'Super Admin',
+            'action' => 'subscription_payment_rejected',
+            'description' => "Rejected renewal payment #{$payment->id} (Ref: {$payment->reference}) for '{$payment->tenant?->name}'.",
+        ]);
+
+        return redirect()->back()->with('success', "Renewal payment #{$payment->id} marked as rejected.");
+    }
+
+    public function downloadSubscriptionProof($id)
+    {
+        if (Auth::user()?->role !== 'super_admin') {
+            abort(403, 'Unauthorized.');
+        }
+
+        $payment = SubscriptionPayment::findOrFail($id);
+
+        if (! $payment->proof_path || ! Storage::disk('local')->exists($payment->proof_path)) {
+            abort(404, 'Proof file not found.');
+        }
+
+        return Storage::disk('local')->download($payment->proof_path);
+    }
+
+    public function downloadTenantProof($id)
+    {
+        if (Auth::user()?->role !== 'super_admin') {
+            abort(403, 'Unauthorized.');
+        }
+
+        $tenant = Tenant::findOrFail($id);
+
+        if (! $tenant->proof_path || ! Storage::disk('local')->exists($tenant->proof_path)) {
+            abort(404, 'Proof file not found.');
+        }
+
+        return Storage::disk('local')->download($tenant->proof_path);
     }
 
     public function extendSubscription(Request $request, $id)

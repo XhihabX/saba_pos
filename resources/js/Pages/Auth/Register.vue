@@ -327,25 +327,19 @@
               </div>
             </div>
 
-            <!-- STEP 4: MANUAL BKASH/NAGAD PAYMENT & TRXID VERIFICATION -->
+            <!-- STEP 4: MANUAL PAYMENT VERIFICATION (bKash / Nagad / Rocket / Bank) -->
             <div v-if="currentStep === 4" class="space-y-4 animate-fade-in">
               <h3 class="text-base sm:text-lg font-black font-heading text-slate-900 border-b border-slate-100 pb-2 flex items-center justify-between">
-                <span>4. Manual Payment Verification</span>
-                <span class="text-xs font-bold text-pink-600 bg-pink-50 px-2.5 py-1 rounded-lg border border-pink-200">bKash / Nagad / Rocket</span>
+                <span>4. Subscription Payment Verification</span>
+                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200 uppercase">
+                  {{ form.payment_method }} Transfer
+                </span>
               </h3>
 
-              <!-- Payment Instruction Card -->
-              <div class="bg-gradient-to-r from-pink-50 via-slate-50 to-emerald-50 border border-pink-200 rounded-2xl p-4 text-xs space-y-2 text-slate-800">
-                <div class="flex items-center justify-between">
-                  <span class="font-extrabold text-pink-700">bKash / Nagad Merchant Number:</span>
-                  <span class="font-mono font-black text-sm text-slate-950 bg-white px-2 py-0.5 rounded border border-slate-300">01700-000000</span>
-                </div>
-                <p class="text-[11px] text-slate-600">
-                  Please send <strong>{{ getPlanAmount() }}</strong> for your selected plan ({{ form.plan_name }}) to the bKash/Nagad number above, then submit your Sender Phone Number and Transaction ID below.
-                </p>
-              </div>
+              <!-- Honeypot Field (Hidden from real users) -->
+              <input type="text" name="website_hp" v-model="form.website_hp" class="hidden" tabindex="-1" autocomplete="off" />
 
-              <!-- Payment Method Selection -->
+              <!-- Payment Channel Tabs -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Select Payment Channel *</label>
                 <div class="grid grid-cols-4 gap-2">
@@ -380,9 +374,53 @@
                 </div>
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Unconfigured Notice -->
+              <div v-if="!isPaymentConfigured" class="bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-xs space-y-1">
+                <div class="flex items-center gap-2 font-bold text-amber-800">
+                  <AlertTriangle class="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>Payment Details Not Configured</span>
+                </div>
+                <p class="text-[11px] text-amber-700">
+                  The platform administrator has not yet configured receive details for this payment method. Please choose another method or contact support.
+                </p>
+              </div>
+
+              <!-- Configured Instruction Card for MFS -->
+              <div v-else-if="form.payment_method !== 'bank'" class="bg-gradient-to-r from-pink-50 via-slate-50 to-indigo-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2 text-slate-800">
+                <div class="flex items-center justify-between">
+                  <span class="font-extrabold text-slate-900 uppercase">{{ form.payment_method }} Receive Account:</span>
+                  <span class="font-mono font-black text-sm text-slate-950 bg-white px-2.5 py-1 rounded-lg border border-slate-300">
+                    {{ currentMfsNumber }}
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-600">
+                  Please send <strong>{{ getPlanAmount() }}</strong> for your selected plan ({{ form.plan_name }}) to the number above, then submit your sender phone number and Transaction ID (TrxID) below.
+                </p>
+              </div>
+
+              <!-- Configured Instruction Card for Bank -->
+              <div v-else class="bg-gradient-to-r from-emerald-50 via-slate-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 text-xs space-y-2 text-slate-800">
+                <div class="flex items-center justify-between border-b border-emerald-100 pb-2">
+                  <span class="font-extrabold text-emerald-900">Platform Bank Wire Details:</span>
+                  <span class="font-bold text-xs text-emerald-700 bg-white px-2.5 py-0.5 rounded border border-emerald-200">
+                    Amount: {{ getPlanAmount() }}
+                  </span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[11px]">
+                  <div><strong class="text-slate-500">Bank:</strong> {{ settings?.bank_name || 'N/A' }}</div>
+                  <div><strong class="text-slate-500">A/C Name:</strong> {{ settings?.bank_account_name || 'N/A' }}</div>
+                  <div><strong class="text-slate-500">A/C Number:</strong> {{ settings?.bank_account_number || 'N/A' }}</div>
+                  <div><strong class="text-slate-500">Branch:</strong> {{ settings?.bank_branch_name || 'N/A' }}</div>
+                </div>
+                <p v-if="settings?.bank_instructions" class="text-[10px] text-slate-600 italic">
+                  {{ settings.bank_instructions }}
+                </p>
+              </div>
+
+              <!-- Input Fields for MFS -->
+              <div v-if="form.payment_method !== 'bank'" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label class="block text-xs font-bold text-slate-700 mb-1">Sender Mobile / Phone Number *</label>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">Sender Mobile Number *</label>
                   <div class="relative">
                     <Phone class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input 
@@ -390,7 +428,7 @@
                       v-model="form.sender_number" 
                       placeholder="017XXXXXXXX"
                       required 
-                      class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-pink-500 focus:bg-white"
+                      class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-indigo-500 focus:bg-white"
                     />
                   </div>
                 </div>
@@ -404,10 +442,72 @@
                       v-model="form.transaction_id" 
                       placeholder="e.g. BK89X72901"
                       required 
-                      class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-mono font-bold text-slate-900 uppercase focus:outline-none focus:border-pink-500 focus:bg-white"
+                      class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-mono font-bold text-slate-900 uppercase focus:outline-none focus:border-indigo-500 focus:bg-white"
                     />
                   </div>
                 </div>
+              </div>
+
+              <!-- Input Fields for Bank -->
+              <div v-else class="space-y-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Sender Bank Name *</label>
+                    <input 
+                      type="text" 
+                      v-model="form.bank_name" 
+                      placeholder="e.g. Dutch-Bangla Bank, City Bank"
+                      required 
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 font-medium focus:outline-none focus:border-emerald-600 focus:bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Account Holder Full Name *</label>
+                    <input 
+                      type="text" 
+                      v-model="form.account_holder" 
+                      placeholder="e.g. Rahul Chowdhury"
+                      required 
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-900 font-medium focus:outline-none focus:border-emerald-600 focus:bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Account Number (Last 4 Digits) *</label>
+                    <input 
+                      type="text" 
+                      maxlength="4"
+                      v-model="form.account_last4" 
+                      placeholder="e.g. 9882"
+                      required 
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-emerald-600 focus:bg-white"
+                    />
+                    <span class="text-[10px] text-slate-500">For privacy & security, enter only last 4 digits</span>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-700 mb-1">Transfer Reference / Voucher ID *</label>
+                    <input 
+                      type="text" 
+                      v-model="form.transaction_id" 
+                      placeholder="e.g. TXN-998823"
+                      required 
+                      class="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-300 text-xs font-mono font-bold text-slate-900 uppercase focus:outline-none focus:border-emerald-600 focus:bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Proof Slip Upload (Optional) -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Deposit Slip / Transfer Screenshot (Optional, max 3MB)</label>
+                <input 
+                  type="file" 
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  @change="handleFileChange" 
+                  class="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-300 text-xs text-slate-700 focus:outline-none"
+                />
               </div>
 
               <div class="flex items-center justify-between pt-4">
@@ -442,7 +542,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { router, Link } from '@inertiajs/vue3';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import { 
@@ -462,18 +562,21 @@ import {
   Wallet,
   CreditCard,
   Eye, 
-  EyeOff 
+  EyeOff,
+  AlertTriangle 
 } from 'lucide-vue-next';
 
 const props = defineProps({
   selectedPlan: String,
   plans: Array,
+  settings: { type: Object, default: () => ({}) },
 });
 
 const currentStep = ref(1);
 const showPassword = ref(false);
 
 const form = ref({
+  website_hp: '',
   business_name: '',
   owner_name: '',
   email: '',
@@ -481,16 +584,39 @@ const form = ref({
   currency_symbol: '৳',
   store_name: '',
   city: 'Dhaka',
-  default_tax_rate: 5.00,
+  default_tax_rate: 15.00,
   plan_name: props.selectedPlan === 'starter' ? 'Starter POS' : (props.selectedPlan === 'enterprise' ? 'Enterprise ERP' : 'Growth Multi-Store'),
   payment_method: 'bkash',
   sender_number: '',
   transaction_id: '',
+  bank_name: '',
+  account_holder: '',
+  account_last4: '',
+  proof_file: null,
   password: '',
   password_confirmation: '',
 });
 
 const isSubmitting = ref(false);
+
+const isPaymentConfigured = computed(() => {
+  if (form.value.payment_method === 'bkash') return !!props.settings?.bkash_number;
+  if (form.value.payment_method === 'nagad') return !!props.settings?.nagad_number;
+  if (form.value.payment_method === 'rocket') return !!props.settings?.rocket_number;
+  if (form.value.payment_method === 'bank') return !!(props.settings?.bank_name || props.settings?.bank_account_number);
+  return false;
+});
+
+const currentMfsNumber = computed(() => {
+  if (form.value.payment_method === 'bkash') return props.settings?.bkash_number || '';
+  if (form.value.payment_method === 'nagad') return props.settings?.nagad_number || '';
+  if (form.value.payment_method === 'rocket') return props.settings?.rocket_number || '';
+  return '';
+});
+
+const handleFileChange = (e) => {
+  form.value.proof_file = e.target.files[0] || null;
+};
 
 const getPlanAmount = () => {
   if (form.value.plan_name === 'Starter POS') return '৳1,499.00';
@@ -506,6 +632,7 @@ const submitRegister = () => {
 
   isSubmitting.value = true;
   router.post('/register', form.value, {
+    forceFormData: true,
     onFinish: () => {
       isSubmitting.value = false;
     }

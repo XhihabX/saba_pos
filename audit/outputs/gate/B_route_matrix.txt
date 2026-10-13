@@ -1,8 +1,8 @@
 AUTHORIZATION MATRIX AUDIT REPORT
 =================================
-Generated: 2026-10-13 08:49:15
+Generated: 2026-10-13 13:23:46
 Target Engine: MySQL 8.4
-Total Routes Audited: 154
+Total Routes Audited: 159
 
 URI                                              | Method | Guest  | Cashier | StoreManager | Merchant | SuperAdmin | OtherTenantUser
 --------------------------------------------------------------------------------------------------------------------------------
@@ -55,6 +55,10 @@ URI                                              | Method | Guest  | Cashier | S
 /super-admin/announcements                       | GET    | 302    | 302     | 302          | 302      | 200        | 302            
 /super-admin/settings                            | GET    | 302    | 302     | 302          | 302      | 200        | 302            
 /super-admin/settings                            | POST   | 302    | 302     | 302          | 302      | 302        | 302            
+/super-admin/subscription-payments/{id}/approve  | POST   | 302    | 302     | 302          | 302      | 404        | 302            
+/super-admin/subscription-payments/{id}/reject   | POST   | 302    | 302     | 302          | 302      | 404        | 302            
+/super-admin/subscription-payments/{id}/proof    | GET    | 302    | 302     | 302          | 302      | 404        | 302            
+/super-admin/tenants/{id}/proof                  | GET    | 302    | 302     | 302          | 302      | 404        | 302            
 /merchant                                        | GET    | 302    | 302     | 302          | 302      | 302        | 302            
 /merchant/dashboard                              | GET    | 302    | 302     | 302          | 200      | 403        | 200            
 /merchant/stores                                 | GET    | 302    | 302     | 302          | 200      | 403        | 200            
@@ -75,6 +79,7 @@ URI                                              | Method | Guest  | Cashier | S
 /merchant/purchases                              | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /merchant/purchases/{id}                         | DELETE | 302    | 302     | 302          | 302      | 403        | 404            
 /merchant/subscription                           | GET    | 302    | 302     | 302          | 200      | 403        | 200            
+/merchant/subscription/renew                     | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /merchant/settings                               | GET    | 302    | 302     | 302          | 200      | 403        | 200            
 /merchant/settings                               | POST   | 302    | 302     | 302          | 302      | 403        | 302            
 /merchant/customers                              | GET    | 302    | 302     | 302          | 200      | 403        | 200            

@@ -34,12 +34,11 @@ class AppServiceProvider extends ServiceProvider
             // 2. Auto-detect paths in user's home directory
             $baseDir = dirname($this->app->basePath());
             $possiblePaths = [
-                $baseDir.'/public_html',
-                $baseDir.'/sabapos',
-                $baseDir.'/xhihab.com',
-                $baseDir.'/public_html/sabapos',
                 $baseDir.'/pos.sababilling.net',
+                $baseDir.'/public_html/pos.sababilling.net',
                 $baseDir.'/pos',
+                $baseDir.'/public_html',
+                $baseDir.'/public_html/sabapos',
             ];
 
             foreach ($possiblePaths as $path) {
@@ -75,32 +74,8 @@ class AppServiceProvider extends ServiceProvider
             URL::forceScheme('https');
         }
 
-        // Hardened auto-healing for APP_URL to prevent broken asset URLs or malformed Ziggy routes (e.g. http://: or localhost:8000)
-        $host = $_SERVER['HTTP_HOST'] ?? 'xhihab.com';
-        if (str_contains($host, ':') && ! preg_match('/:\d+$/', $host)) {
-            $host = preg_replace('/:.*$/', '', $host);
-        }
-        if (empty($host)) {
-            $host = 'xhihab.com';
-        }
-
-        $scheme = $isHttps ? 'https' : 'http';
-        $targetUrl = $scheme.'://'.$host;
-
-        if (! app()->environment('testing')) {
-            $currentConfigUrl = (string) config('app.url');
-            if (
-                empty($currentConfigUrl) ||
-                str_contains($currentConfigUrl, 'localhost') ||
-                str_contains($currentConfigUrl, '127.0.0.1') ||
-                str_contains($currentConfigUrl, 'http://:') ||
-                str_contains($currentConfigUrl, '://:') ||
-                ! empty($_SERVER['HTTP_HOST'])
-            ) {
-                config(['app.url' => $targetUrl]);
-            }
-
-            URL::forceRootUrl(config('app.url') ?: $targetUrl);
+        if ($appUrl = config('app.url')) {
+            URL::forceRootUrl($appUrl);
         }
 
         if (class_exists(AboutCommand::class)) {

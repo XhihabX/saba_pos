@@ -412,6 +412,19 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
   5. **Shift Z-Report Telemetry:** Cashier shift closing Z-reports (`ShiftController::zReport`, `ZReport.vue`) calculate and display `counter_verified_count` and `counter_verified_total`.
 - **Where it lives:** `app/Http/Controllers/StoreManagerController.php`, `app/Http/Controllers/Api/MfsWebhookController.php`, `app/Http/Controllers/PosController.php`, `app/Http/Controllers/ShiftController.php`, `app/Console/Commands/CheckUnmatchedMfsPaymentsCommand.php`, `resources/js/Pages/Manager/MfsReconciliation.vue`, `resources/js/Pages/Manager/ZReport.vue`, `tests/Feature/MfsReconciliationAndStockPolicyTest.php`.
 - **Key design decisions:** Multi-tier fraud detection combines client thresholds with automated server-side webhook matching and daily cron alerting.
+### 41. Platform Settings, Production Installer, Merchant Bank Harmonization & cPanel Deployment Architecture
+- **What it does:** Complete SaaS production readiness, payment option harmonization, security guards, and cPanel shared hosting infrastructure:
+  1. **Dynamic Platform Settings & Empty Defaults:** Replaced hardcoded dummy company receive numbers with database-persisted `PlatformSetting` model (`platform_settings` table). Payment numbers and bank details default to empty strings; registration page dynamically displays a "Payment details not configured" notice if unconfigured. Super Admin settings form validates phone regexes (`01[3-9]\d{8}` for bKash/Nagad, 12 digits for Rocket), records granular audit log diffs (old value vs new value), and configures structured bank wire fields (`bank_name`, `bank_account_name`, `bank_account_number`, `bank_branch_name`, `bank_routing_number`, `bank_instructions`).
+  2. **Production Installer Command (`php artisan pos:install`):** CLI command migrating tables, seeding only official SaaS subscription tiers via `SaaSPlanSeeder` (`STARTER`, `GROWTH`, `ENTERPRISE`), and prompting interactively for Super Admin email and password (minimum 12 characters).
+  3. **Demo Seeder Abort Guard:** `SabaPosSeeder` contains demo retailer accounts and enforces an automated environment guard (`app()->environment('production') || config('app.env') === 'production'`) throwing a `RuntimeException` with exit code 1 to strictly prevent accidental demo data seeding in live production.
+  4. **Host Header Forgery Rejection:** Configured `trustHosts` in `bootstrap/app.php` with regex patterns matching `pos.sababilling.net` and `sababilling.net`, and added exception handler returning HTTP 400 Bad Request on Symfony `SuspiciousOperationException`.
+  5. **Public Registration Security & Rate Limiting:** Enforces `throttle:5,60` (5 requests/hr per IP) on `POST /register`, an invisible honeypot trap field (`website_hp`) rejecting bots with HTTP 422, and unique business email validation.
+  6. **Merchant Bank Transfer Harmonization & Sanitized Data:** Supports both MFS (bKash, Nagad, Rocket) and structured Bank Transfers during self-service onboarding and subscription renewals. Stores only sanitized bank data (`bank_name`, `account_holder`, `account_last4` 4 digits, `reference`), strictly forbidding full merchant bank account numbers. Uploaded deposit slips (PNG/JPG/PDF, max 3 MB) are stored on private disk (`storage/app/subscription_proofs/`) off the public web root, downloadable only by Super Admin.
+  7. **Subscription Renewals & Idempotent Approvals:** Dedicated `subscription_payments` ledger tracking renewals without modifying tenant `subscription_status` or `expires_at` on submission. Rejects duplicate transaction references across any tenant and enforces that renewal amounts match exact plan pricing. Super Admin approval is idempotent, extending subscription cycles by 30 days from `max(expires_at, now)`, and logs an audit log trail.
+  8. **cPanel Shared Hosting Deployment Manual (`DEPLOY_CPANEL.md`):** Comprehensive guide for `pos.sababilling.net` and `~/sabapos` covering MultiPHP selection (PHP 8.3/8.4), CLI PHP path in crons, private `.env` permissions (`chmod 600`), storage permissions (`775`), composer `--no-dev`, queue worker cron with `--stop-when-empty`, AutoSSL, `mysqldump` tests, rollback steps, and post-deploy checklist with honest `[VERIFIED]` and `[NEEDS REAL SERVER]` tags.
+- **Where it lives:** `app/Console/Commands/InstallPosCommand.php`, `database/seeders/SaaSPlanSeeder.php`, `database/seeders/SabaPosSeeder.php`, `app/Models/PlatformSetting.php`, `app/Models/SubscriptionPayment.php`, `app/Http/Middleware/CheckPlatformMaintenanceMode.php`, `app/Http/Controllers/AuthController.php`, `app/Http/Controllers/MerchantController.php`, `app/Http/Controllers/SuperAdminController.php`, `resources/js/Pages/Auth/Register.vue`, `resources/js/Pages/Merchant/Subscription.vue`, `resources/js/Pages/SuperAdmin/Settings.vue`, `resources/js/Pages/SuperAdmin/Dashboard.vue`, `resources/js/Pages/SuperAdmin/Transactions.vue`, `DEPLOY_CPANEL.md`, `tests/Feature/MerchantRegistrationAndPlatformSettingsTest.php`.
+- **Key design decisions:** 100% private proof storage; zero full bank account numbers; renewal submissions never alter tenant status; idempotent approvals extend from max of expiry or today; demo seeder aborts in production.
+- **Depends on:** `PlatformSetting`, `SubscriptionPayment`, `Tenant`, `SaaSPlan`, `AuditLog`, `InstallPosCommand`, `SaaSPlanSeeder`.
 - **Last updated:** 2026-10-13
 
 ## Data Model
@@ -420,6 +433,7 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 Tenant (1) <---> (N) Store (1) <---> (N) Stock (N) <---> (1) Product
 Tenant (1) <---> (N) User (1) <---> (N) Order (1) <---> (N) OrderItem
 Tenant (1) <---> (N) Supplier (1) <---> (N) Purchase (1) <---> (N) PurchaseItem
+Tenant (1) <---> (N) SubscriptionPayment (N) <---> (1) SaaSPlan
 Tenant (1) <---> (N) Customer
 Tenant (1) <---> (N) AuditLog
 Tenant (1) <---> (N) StockAdjustment
@@ -427,6 +441,7 @@ Tenant (1) <---> (N) SubscriptionReminder
 Store  (1) <---> (N) RegisterShift
 Store  (1) <---> (N) Expense
 Store  (1) <---> (N) StockTransfer (Source / Destination)
+PlatformSetting (Global System Configurations)
 ```
 
 ## Known Issues / Flagged Inferences

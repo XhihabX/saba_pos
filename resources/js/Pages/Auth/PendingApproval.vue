@@ -32,14 +32,37 @@
           <span class="text-slate-400">Payment Gateway</span>
           <span class="font-bold uppercase text-emerald-400 tracking-wider">{{ tenant.payment_method || 'bKash / Nagad' }}</span>
         </div>
-        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-          <span class="text-slate-400">Sender Phone / Account</span>
-          <span class="font-mono font-bold text-slate-200">{{ tenant.sender_number || 'N/A' }}</span>
-        </div>
-        <div class="flex items-center justify-between">
-          <span class="text-slate-400">Transaction ID (TrxID)</span>
-          <span class="font-mono font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{{ tenant.transaction_id || 'N/A' }}</span>
-        </div>
+        <!-- MFS Details -->
+        <template v-if="tenant.payment_method !== 'bank'">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-slate-400">Sender Phone</span>
+            <span class="font-mono font-bold text-slate-200">{{ tenant.sender_number || 'N/A' }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Transaction ID (TrxID)</span>
+            <span class="font-mono font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{{ tenant.transaction_id || 'N/A' }}</span>
+          </div>
+        </template>
+
+        <!-- Bank Details -->
+        <template v-else>
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-slate-400">Bank Name</span>
+            <span class="font-bold text-slate-200">{{ tenant.bank_name || 'N/A' }}</span>
+          </div>
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-slate-400">Account Holder</span>
+            <span class="font-bold text-slate-200">{{ tenant.account_holder || 'N/A' }}</span>
+          </div>
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+            <span class="text-slate-400">Account Last 4 Digits</span>
+            <span class="font-mono font-bold text-slate-200">****{{ tenant.account_last4 || 'N/A' }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Transfer Reference / Voucher</span>
+            <span class="font-mono font-black text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">{{ tenant.transaction_id || 'N/A' }}</span>
+          </div>
+        </template>
       </div>
 
       <!-- Instructions & SLA -->

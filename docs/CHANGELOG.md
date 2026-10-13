@@ -1,5 +1,25 @@
 # Changelog
 
+## [2026-10-13] — Platform Settings, Production Installer, Merchant Bank Transfer Harmonization & cPanel Deployment
+
+**What:**
+1. **Dynamic Platform Settings & Empty Defaults:** Created `PlatformSetting` model (`platform_settings` table) persisting system configuration. Platform payment receive values (bKash/Nagad/Rocket/Bank) default to empty strings; registration page displays an honest "Payment details not configured" notice until Super Admin inputs them. Super Admin configuration view validates phone regexes, audits old vs new value diffs, and provides structured bank receiving fields (`bank_name`, `bank_account_name`, `bank_account_number`, `bank_branch_name`, `bank_routing_number`, `bank_instructions`).
+2. **Production Installer Command (`php artisan pos:install`):** Built dedicated production installer command that runs database migrations, provisions SaaS subscription plans via `SaaSPlanSeeder` (`STARTER`, `GROWTH`, `ENTERPRISE`), and prompts interactively for Super Admin email and password (minimum 12 characters).
+3. **Demo Seeder Abort Guard:** Hardened `SabaPosSeeder` with an environment guard (`app()->environment('production') || config('app.env') === 'production'`) throwing `RuntimeException` with exit code 1 to strictly block running demo tenant seeders in production.
+4. **Host Header Forgery Rejection:** Configured `trustHosts` in `bootstrap/app.php` restricted to `pos.sababilling.net` and `sababilling.net`, with an exception handler returning HTTP 400 Bad Request on Symfony `SuspiciousOperationException`.
+5. **Public Registration Bot & Abuse Protection:** Added `throttle:5,60` (5 requests/hr per IP) on `POST /register`, an invisible honeypot field (`website_hp`) rejecting automated spam bots with HTTP 422, and unique business email validation.
+6. **Merchant Bank Transfer Harmonization & Sanitized Data:** Added structured Bank Wire option alongside MFS (bKash, Nagad, Rocket) during merchant self-service onboarding and subscription renewals. Sanitizes merchant bank details, storing only `bank_name`, `account_holder`, `account_last4` (4 digits), and `reference` (strictly zero full bank account numbers stored). Uploaded deposit slips (PNG/JPG/PDF, max 3 MB) are stored on private disk (`storage/app/subscription_proofs/`) off the public web root, downloadable only by Super Admin.
+7. **Subscription Renewals & Idempotent Approvals:** Created `subscription_payments` ledger tracking renewal submissions without modifying tenant `subscription_status` or `expires_at`. Rejects duplicate transaction references across all tenants and enforces exact plan pricing matches. Super Admin approval is idempotent, extending subscription cycles by 30 days from `max(expires_at, now)`, and logs an audit trail.
+8. **Comprehensive cPanel Production Deployment Guide (`DEPLOY_CPANEL.md`):** Authored detailed 13-section deployment manual for `pos.sababilling.net` and `~/sabapos` covering MultiPHP version selection (PHP 8.3/8.4), CLI PHP path in crons, private `.env` permissions (`chmod 600`), storage permissions (`chmod -R 775`), composer `--no-dev`, shared hosting queue worker cron with `--stop-when-empty`, AutoSSL, `mysqldump` permissions, rollback procedures, and post-deploy checklist with honest `[VERIFIED]` and `[NEEDS REAL SERVER]` tags.
+9. **Automated Feature Verification Suite:** Created `tests/Feature/MerchantRegistrationAndPlatformSettingsTest.php` (14 tests, 75 assertions green) validating installer, seeder guard, host forgery 400, throttling, honeypot, bank sanitization, renewal idempotency, settings persistence, and maintenance mode. Full suite verified: 149 tests, 906 assertions green, 0 Larastan Level 5 errors.
+
+**Why:** Ensure commercial SaaS security, prevent demo data corruption in live production, provide clean and safe bank wire options for enterprise merchants, enforce strict multi-tier approval safety, and provide an unambiguous deployment manual for cPanel shared hosting.
+**How:** Implemented database migrations, created `PlatformSetting` and `SubscriptionPayment` models, updated `Tenant` model, added `pos:install` Artisan command and `SaaSPlanSeeder`, added production abort guard in `SabaPosSeeder`, updated controllers (`AuthController`, `MerchantController`, `SuperAdminController`), updated Vue views (`Register.vue`, `Subscription.vue`, `Settings.vue`, `Dashboard.vue`, `Transactions.vue`), configured `trustHosts` in `bootstrap/app.php`, authored `DEPLOY_CPANEL.md`, and created test suite.
+**Where:** `app/Console/Commands/*`, `database/seeders/*`, `app/Models/*`, `app/Http/Controllers/*`, `resources/js/Pages/*`, `tests/Feature/MerchantRegistrationAndPlatformSettingsTest.php`, `DEPLOY_CPANEL.md`, `docs/ARCHITECTURE.md`, `docs/CHANGELOG.md`.
+**Impact:** Zero invented dummy credentials, zero full merchant account numbers, safe and idempotent renewal approvals, automated bot protection, and verified production stability.
+
+---
+
 ## [2026-10-13] — Counter-Verified MFS Reconciliation, Anti-Theft Shift Controls & Shelf Pickup Stock Deficit Policy
 
 **What:**

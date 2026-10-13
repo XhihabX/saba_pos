@@ -17,16 +17,25 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        $middleware->trustHosts(at: fn () => array_values(array_filter([
+            '^pos\.sababilling\.net$',
+            '^sababilling\.net$',
+            parse_url(config('app.url'), PHP_URL_HOST) ? '^'.preg_quote(parse_url(config('app.url'), PHP_URL_HOST)).'$' : null,
+        ])), subdomains: false);
         $middleware->alias([
             'throttle.pin' => ThrottleFailedPinAttempts::class,
         ]);
         $middleware->web(append: [
             HandleInertiaRequests::class,
             SecurityHeadersMiddleware::class,
+            \App\Http\Middleware\CheckPlatformMaintenanceMode::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function ($response, Throwable $e, Request $request) {
+            if ($e instanceof \Symfony\Component\HttpFoundation\Exception\SuspiciousOperationException) {
+                return response('Bad Request: Untrusted Host', 400);
+            }
             if (in_array($response->getStatusCode(), [500, 503, 404, 403])) {
                 if ($request->header('X-Inertia')) {
                     return Inertia::render('Error', [

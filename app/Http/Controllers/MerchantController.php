@@ -6,8 +6,11 @@ use App\Models\AuditLog;
 use App\Models\Customer;
 use App\Models\DiscrepancyAlert;
 use App\Models\Order;
+use App\Models\PlatformSetting;
+use App\Models\Product;
 use App\Models\SaaSPlan;
 use App\Models\Store;
+use App\Models\SubscriptionPayment;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\SmsService;
@@ -189,10 +192,91 @@ class MerchantController extends Controller
     {
         $tenantId = $this->getTenantId();
         $tenant = Tenant::findOrFail($tenantId);
+        $plans = SaaSPlan::where('is_active', true)->get();
+        $settings = PlatformSetting::getAll();
+        $history = SubscriptionPayment::with(['plan', 'reviewer'])
+            ->where('tenant_id', $tenantId)
+            ->latest()
+            ->take(20)
+            ->get();
 
         return Inertia::render('Merchant/Subscription', [
             'tenant' => $tenant,
+            'plans' => $plans,
+            'settings' => $settings,
+            'history' => $history,
         ]);
+    }
+
+    public function renewSubscription(Request $request)
+    {
+        $tenantId = $this->getTenantId();
+        $tenant = Tenant::findOrFail($tenantId);
+
+        $rules = [
+            'plan_id' => 'required|exists:saas_plans,id',
+            'payment_method' => 'required|string|in:bkash,nagad,rocket,bank',
+            'amount' => 'required|numeric|min:1',
+            'reference' => 'required|string|max:100',
+            'proof_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:3072',
+        ];
+
+        if ($request->input('payment_method') === 'bank') {
+            $rules['bank_name'] = 'required|string|max:100';
+            $rules['account_holder'] = 'required|string|max:100';
+            $rules['account_last4'] = 'required|string|regex:/^\d{4}$/';
+            $rules['sender_number'] = 'nullable|string';
+        } else {
+            $rules['sender_number'] = 'required|string|min:11|max:15';
+        }
+
+        $validated = $request->validate($rules);
+
+        // 1. Amount must match the plan price
+        $plan = SaaSPlan::findOrFail($validated['plan_id']);
+        if ((float) $validated['amount'] !== (float) $plan->monthly_price) {
+            return redirect()->back()->withErrors([
+                'amount' => "The renewal amount (৳{$validated['amount']}) must match the plan price (৳{$plan->monthly_price}).",
+            ]);
+        }
+
+        // 2. Reject duplicate reference across ANY tenant
+        $duplicate = SubscriptionPayment::where('reference', $validated['reference'])->exists() ||
+            Tenant::where('transaction_id', $validated['reference'])->exists();
+
+        if ($duplicate) {
+            return redirect()->back()->withErrors([
+                'reference' => 'This payment reference / TrxID has already been used by another transaction.',
+            ]);
+        }
+
+        $proofPath = null;
+        if ($request->hasFile('proof_file')) {
+            $proofPath = $request->file('proof_file')->store('subscription_proofs', 'local');
+        }
+
+        // 3. Create SubscriptionPayment - MUST NOT change tenants.subscription_status or expires_at!
+        $payment = SubscriptionPayment::create([
+            'tenant_id' => $tenant->id,
+            'plan_id' => $plan->id,
+            'amount' => $plan->monthly_price,
+            'method' => $validated['payment_method'],
+            'reference' => $validated['reference'],
+            'bank_name' => $validated['bank_name'] ?? null,
+            'account_holder' => $validated['account_holder'] ?? null,
+            'account_last4' => $validated['account_last4'] ?? null,
+            'proof_path' => $proofPath,
+            'status' => 'pending',
+        ]);
+
+        AuditLog::create([
+            'tenant_id' => $tenant->id,
+            'user_name' => auth()->user()->name ?? 'Merchant',
+            'action' => 'subscription_renewal_submitted',
+            'description' => "Merchant submitted renewal payment #{$payment->id} (৳{$payment->amount} via {$payment->method}, Ref: {$payment->reference}) for plan {$plan->name}. Awaiting Super Admin review.",
+        ]);
+
+        return redirect()->back()->with('success', 'Subscription renewal submitted successfully! Your payment is currently under Super Admin verification.');
     }
 
     public function settings()

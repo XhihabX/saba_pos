@@ -147,19 +147,49 @@
             </div>
 
             <!-- Payment Metadata Grid -->
-            <div class="grid grid-cols-3 gap-2 text-xs bg-slate-50 p-3 rounded-xl border border-slate-200">
+            <div v-if="tenant.payment_method === 'bank'" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase block">Method</span>
+                <span class="font-black text-indigo-600 uppercase">Bank Wire</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase block">Bank Name</span>
+                <span class="font-bold text-slate-800 dark:text-slate-200 truncate block">{{ tenant.bank_name || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase block">Holder / Last 4</span>
+                <span class="font-mono font-bold text-slate-800 dark:text-slate-200">{{ tenant.account_holder || 'N/A' }} (****{{ tenant.account_last4 || '----' }})</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase block">Reference</span>
+                <span class="font-mono font-black text-amber-600 bg-amber-50 dark:bg-amber-950 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800 truncate block">{{ tenant.transaction_id || 'N/A' }}</span>
+              </div>
+            </div>
+            <div v-else class="grid grid-cols-3 gap-2 text-xs bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
               <div>
                 <span class="text-[10px] text-slate-500 font-bold uppercase block">Method</span>
                 <span class="font-black text-pink-600 uppercase">{{ tenant.payment_method || 'bKash' }}</span>
               </div>
               <div>
                 <span class="text-[10px] text-slate-500 font-bold uppercase block">Sender Phone</span>
-                <span class="font-mono font-bold text-slate-800">{{ tenant.sender_number || 'N/A' }}</span>
+                <span class="font-mono font-bold text-slate-800 dark:text-slate-200">{{ tenant.sender_number || 'N/A' }}</span>
               </div>
               <div>
                 <span class="text-[10px] text-slate-500 font-bold uppercase block">TrxID</span>
-                <span class="font-mono font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">{{ tenant.transaction_id || 'N/A' }}</span>
+                <span class="font-mono font-black text-amber-600 bg-amber-50 dark:bg-amber-950 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">{{ tenant.transaction_id || 'N/A' }}</span>
               </div>
+            </div>
+
+            <!-- Proof Slip download if attached -->
+            <div v-if="tenant.proof_path" class="flex items-center gap-2 pt-1">
+              <a 
+                :href="'/super-admin/tenants/' + tenant.id + '/proof'" 
+                target="_blank" 
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold text-xs border border-indigo-200 dark:border-indigo-800 transition-all"
+              >
+                <FileText class="w-3.5 h-3.5" />
+                <span>Download Deposit Slip / Proof</span>
+              </a>
             </div>
 
             <!-- Action Buttons -->
@@ -175,6 +205,102 @@
               <button 
                 @click="rejectTenant(tenant)" 
                 class="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white font-extrabold text-xs border border-rose-200 transition-all cursor-pointer"
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 🔄 PENDING SUBSCRIPTION RENEWAL REQUESTS ROW -->
+      <div v-if="pendingSubscriptionPayments && pendingSubscriptionPayments.length > 0" class="p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-500/10 via-white to-indigo-500/5 dark:from-indigo-950/40 dark:via-slate-900 dark:to-indigo-950/20 border-2 border-indigo-300 dark:border-indigo-800 shadow-md space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-black shadow-md shadow-indigo-600/20 shrink-0">
+              <RefreshCw class="w-6 h-6" />
+            </div>
+            <div>
+              <h3 class="font-black text-lg font-heading text-slate-900 dark:text-white">Pending Subscription Renewal Requests</h3>
+              <p class="text-xs text-slate-600 dark:text-slate-400">Review merchant plan renewal proof and extend subscription cycles (30 days from max of expiry or today).</p>
+            </div>
+          </div>
+          <span class="px-4 py-1.5 rounded-full bg-indigo-600 text-white font-black text-xs uppercase tracking-wider shrink-0">
+            {{ pendingSubscriptionPayments.length }} Renewals Waiting
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div v-for="payment in pendingSubscriptionPayments" :key="payment.id" class="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-indigo-200 dark:border-indigo-700 shadow-sm hover:shadow-md transition-all space-y-4">
+            <div class="flex items-start justify-between border-b border-slate-100 dark:border-slate-700 pb-3">
+              <div>
+                <span class="font-black text-slate-900 dark:text-white text-base font-heading block">{{ payment.tenant?.name || 'Unknown Merchant' }}</span>
+                <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">{{ payment.tenant?.code }} • Current Expiry: {{ payment.tenant?.expires_at ? payment.tenant.expires_at.split('T')[0] : 'None' }}</span>
+              </div>
+              <span class="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 font-extrabold text-xs">
+                {{ payment.plan?.name || 'SaaS Plan' }} (৳{{ formatMoney(payment.amount) }})
+              </span>
+            </div>
+
+            <!-- Payment details -->
+            <div v-if="payment.method === 'bank'" class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase block">Method</span>
+                <span class="font-black text-indigo-600 uppercase">Bank Wire</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase block">Bank Name</span>
+                <span class="font-bold text-slate-800 dark:text-slate-200 truncate block">{{ payment.bank_name || 'N/A' }}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase block">Holder / Last 4</span>
+                <span class="font-mono font-bold text-slate-800 dark:text-slate-200">{{ payment.account_holder || 'N/A' }} (****{{ payment.account_last4 || '----' }})</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase block">Reference</span>
+                <span class="font-mono font-black text-amber-600 bg-amber-50 dark:bg-amber-950 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800 truncate block">{{ payment.reference }}</span>
+              </div>
+            </div>
+            <div v-else class="grid grid-cols-3 gap-2 text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase block">Method</span>
+                <span class="font-black text-pink-600 uppercase">{{ payment.method }}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase block">Reference / TrxID</span>
+                <span class="font-mono font-black text-amber-600 bg-amber-50 dark:bg-amber-950 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">{{ payment.reference }}</span>
+              </div>
+              <div>
+                <span class="text-[10px] text-slate-500 font-bold uppercase block">Amount</span>
+                <span class="font-mono font-extrabold text-emerald-600">৳{{ formatMoney(payment.amount) }}</span>
+              </div>
+            </div>
+
+            <!-- Proof slip download -->
+            <div v-if="payment.proof_path" class="flex items-center gap-2">
+              <a 
+                :href="'/super-admin/subscription-payments/' + payment.id + '/proof'" 
+                target="_blank" 
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 font-bold text-xs border border-indigo-200 dark:border-indigo-800 transition-all"
+              >
+                <FileText class="w-3.5 h-3.5" />
+                <span>Download Payment Slip</span>
+              </a>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center gap-2 pt-1">
+              <button 
+                @click="approvePayment(payment)" 
+                class="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <CheckCircle2 class="w-4 h-4" />
+                <span>Approve Renewal (+30 Days)</span>
+              </button>
+
+              <button 
+                @click="rejectPayment(payment)" 
+                class="px-4 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white font-extrabold text-xs border border-rose-200 dark:border-rose-800 transition-all cursor-pointer"
               >
                 Reject
               </button>
@@ -220,6 +346,13 @@
                   <div class="font-bold text-slate-900 text-sm font-heading">{{ tenant.name }}</div>
                   <div class="text-[10px] text-slate-500 font-mono">{{ tenant.code }} | {{ tenant.email }}</div>
                   <div v-if="tenant.transaction_id" class="text-[10px] text-amber-600 font-mono">TrxID: {{ tenant.transaction_id }}</div>
+                  <div v-if="tenant.bank_name" class="text-[10px] text-indigo-600 font-mono">Bank: {{ tenant.bank_name }} (****{{ tenant.account_last4 }})</div>
+                  <div v-if="tenant.proof_path" class="text-[10px] pt-0.5">
+                    <a :href="'/super-admin/tenants/' + tenant.id + '/proof'" target="_blank" class="text-indigo-600 hover:underline font-bold inline-flex items-center gap-1">
+                      <FileText class="w-3 h-3" />
+                      <span>View Slip</span>
+                    </a>
+                  </div>
                 </td>
                 <td class="py-4 px-4">
                   <span class="px-3 py-1 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-extrabold text-[11px]">
@@ -450,7 +583,10 @@ import {
   Clock,
   ShieldAlert,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  FileText,
+  RefreshCw,
+  Landmark
 } from 'lucide-vue-next';
 
 const props = defineProps({
@@ -464,6 +600,7 @@ const props = defineProps({
   totalProducts: Number,
   tenants: Array,
   pendingTenants: Array,
+  pendingSubscriptionPayments: Array,
   plans: Array,
   auditLogs: Array,
   systemHealth: Object,
@@ -569,6 +706,19 @@ const deleteTenant = (tenant) => {
 
 const impersonate = (tenant) => {
   router.post(`/super-admin/tenants/${tenant.id}/impersonate`);
+};
+
+const approvePayment = (payment) => {
+  if (confirm(`Approve subscription renewal payment #${payment.id} for '${payment.tenant?.name}' (Ref: ${payment.reference})?`)) {
+    router.post(`/super-admin/subscription-payments/${payment.id}/approve`);
+  }
+};
+
+const rejectPayment = (payment) => {
+  const notes = prompt(`Reason for rejecting payment #${payment.id}:`);
+  if (notes !== null) {
+    router.post(`/super-admin/subscription-payments/${payment.id}/reject`, { notes });
+  }
 };
 </script>
 

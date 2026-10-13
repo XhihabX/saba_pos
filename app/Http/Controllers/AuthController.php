@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\AuditLog;
+use App\Models\PlatformSetting;
 use App\Models\SaaSPlan;
 use App\Models\Store;
+use App\Models\SubscriptionPayment;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -82,10 +84,12 @@ class AuthController extends Controller
     public function showRegister(Request $request)
     {
         $plans = SaaSPlan::where('is_active', true)->get();
+        $settings = PlatformSetting::getAll();
 
         return Inertia::render('Auth/Register', [
             'selectedPlan' => $request->query('plan', 'growth'),
             'plans' => $plans,
+            'settings' => $settings,
         ]);
     }
 
@@ -111,7 +115,14 @@ class AuthController extends Controller
 
     public function register(Request $request)
     {
-        $validated = $request->validate([
+        // 1. Honeypot check
+        if ($request->filled('website_hp')) {
+            abort(422, 'Spam submission detected.');
+        }
+
+        // 2. Dynamic validation rules
+        $rules = [
+            'website_hp' => 'nullable|max:0',
             'business_name' => 'required|string|max:255',
             'owner_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email|unique:tenants,email',
@@ -119,11 +130,37 @@ class AuthController extends Controller
             'password' => 'required|string|min:6|confirmed',
             'plan_name' => 'required|string',
             'payment_method' => 'required|string|in:bkash,nagad,rocket,bank',
-            'sender_number' => 'required|string|min:11|max:15',
             'transaction_id' => 'required|string|max:100',
-        ]);
+            'proof_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:3072',
+        ];
 
-        return DB::transaction(function () use ($validated) {
+        if ($request->input('payment_method') === 'bank') {
+            $rules['bank_name'] = 'required|string|max:100';
+            $rules['account_holder'] = 'required|string|max:100';
+            $rules['account_last4'] = 'required|string|regex:/^\d{4}$/';
+            $rules['sender_number'] = 'nullable|string';
+        } else {
+            $rules['sender_number'] = 'required|string|min:11|max:15';
+        }
+
+        $validated = $request->validate($rules);
+
+        // 3. Duplicate reference check
+        $duplicate = Tenant::where('transaction_id', $validated['transaction_id'])->exists() ||
+            SubscriptionPayment::where('reference', $validated['transaction_id'])->exists();
+
+        if ($duplicate) {
+            return redirect()->back()->withErrors([
+                'transaction_id' => 'This payment reference / TrxID has already been submitted and cannot be reused.',
+            ]);
+        }
+
+        $proofPath = null;
+        if ($request->hasFile('proof_file')) {
+            $proofPath = $request->file('proof_file')->store('subscription_proofs', 'local');
+        }
+
+        return DB::transaction(function () use ($validated, $proofPath) {
             $planPrices = [
                 'Starter POS' => 1499.00,
                 'Growth Multi-Store' => 3999.00,
@@ -135,6 +172,7 @@ class AuthController extends Controller
 
             $dbPlan = SaaSPlan::where('name', 'LIKE', '%'.$validated['plan_name'].'%')->first();
             $mrr = $dbPlan ? (float) $dbPlan->monthly_price : ($planPrices[$validated['plan_name']] ?? 3999.00);
+            $planId = $dbPlan ? $dbPlan->id : (SaaSPlan::first()?->id);
             $code = 'TENANT-'.strtoupper(substr(uniqid(), -5));
 
             $tenant = Tenant::create([
@@ -146,10 +184,29 @@ class AuthController extends Controller
                 'subscription_status' => 'pending_approval',
                 'mrr_amount' => $mrr,
                 'payment_method' => $validated['payment_method'],
-                'sender_number' => $validated['sender_number'],
+                'sender_number' => $validated['sender_number'] ?? ($validated['account_last4'] ?? null),
                 'transaction_id' => $validated['transaction_id'],
+                'bank_name' => $validated['bank_name'] ?? null,
+                'account_holder' => $validated['account_holder'] ?? null,
+                'account_last4' => $validated['account_last4'] ?? null,
+                'proof_path' => $proofPath,
                 'expires_at' => null,
             ]);
+
+            if ($planId) {
+                SubscriptionPayment::create([
+                    'tenant_id' => $tenant->id,
+                    'plan_id' => $planId,
+                    'amount' => $mrr,
+                    'method' => $validated['payment_method'],
+                    'reference' => $validated['transaction_id'],
+                    'bank_name' => $validated['bank_name'] ?? null,
+                    'account_holder' => $validated['account_holder'] ?? null,
+                    'account_last4' => $validated['account_last4'] ?? null,
+                    'proof_path' => $proofPath,
+                    'status' => 'pending',
+                ]);
+            }
 
             $store = Store::create([
                 'tenant_id' => $tenant->id,
@@ -175,7 +232,7 @@ class AuthController extends Controller
                 'tenant_id' => $tenant->id,
                 'user_name' => $user->name,
                 'action' => 'merchant_registered_pending_payment',
-                'description' => "Merchant '{$tenant->name}' submitted registration with manual payment via {$validated['payment_method']} (TrxID: {$validated['transaction_id']}). Pending Super Admin verification.",
+                'description' => "Merchant '{$tenant->name}' submitted registration with payment via {$validated['payment_method']} (Ref/TrxID: {$validated['transaction_id']}). Pending Super Admin verification.",
             ]);
 
             Auth::login($user);

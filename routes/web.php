@@ -29,7 +29,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:30,1');
 Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:15,1');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,60');
 Route::get('/pending-approval', [AuthController::class, 'showPendingApproval'])->middleware('auth')->name('pending.approval');
 Route::get('/subscription-expired', [AuthController::class, 'showSubscriptionExpired'])->middleware('auth')->name('subscription.expired');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
@@ -82,6 +82,10 @@ Route::prefix('super-admin')->middleware(['auth', EnsureSuperAdmin::class])->gro
     Route::get('/announcements', [SuperAdminController::class, 'announcementsIndex'])->name('superadmin.announcements');
     Route::get('/settings', [SuperAdminController::class, 'settingsIndex'])->name('superadmin.settings');
     Route::post('/settings', [SuperAdminController::class, 'updateSettings'])->name('superadmin.settings.update');
+    Route::post('/subscription-payments/{id}/approve', [SuperAdminController::class, 'approveSubscriptionPayment'])->name('superadmin.subscription-payments.approve');
+    Route::post('/subscription-payments/{id}/reject', [SuperAdminController::class, 'rejectSubscriptionPayment'])->name('superadmin.subscription-payments.reject');
+    Route::get('/subscription-payments/{id}/proof', [SuperAdminController::class, 'downloadSubscriptionProof'])->name('superadmin.subscription-payments.proof');
+    Route::get('/tenants/{id}/proof', [SuperAdminController::class, 'downloadTenantProof'])->name('superadmin.tenants.proof');
 });
 
 
@@ -107,6 +111,7 @@ Route::prefix('merchant')->middleware(['auth', EnsureMerchant::class, EnsureActi
     Route::post('/purchases', [SupplierController::class, 'purchasesStore'])->name('merchant.purchases.store');
     Route::delete('/purchases/{id}', [SupplierController::class, 'deletePurchase'])->name('merchant.purchases.delete');
     Route::get('/subscription', [MerchantController::class, 'subscription'])->name('merchant.subscription');
+    Route::post('/subscription/renew', [MerchantController::class, 'renewSubscription'])->name('merchant.subscription.renew');
     Route::get('/settings', [MerchantController::class, 'settings'])->name('merchant.settings');
     Route::post('/settings', [MerchantController::class, 'updateSettings'])->name('merchant.settings.update');
     Route::get('/customers', [MerchantController::class, 'customersIndex'])->name('merchant.customers');

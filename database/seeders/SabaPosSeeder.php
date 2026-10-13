@@ -19,6 +19,13 @@ class SabaPosSeeder extends Seeder
 {
     public function run(): void
     {
+        if (app()->environment('production') || config('app.env') === 'production') {
+            throw new \RuntimeException('SabaPosSeeder contains demo accounts and cannot be run in production! Use php artisan pos:install instead.');
+        }
+
+        // Seed default SaaS Plan tiers first
+        $this->call(SaaSPlanSeeder::class);
+
         // 1. Create/Update Default SaaS Tenant
         $tenant = Tenant::withTrashed()->updateOrCreate(
             ['code' => 'TENANT-001'],
@@ -66,7 +73,7 @@ class SabaPosSeeder extends Seeder
                 'address' => 'Level 4, Jamuna Future Park, Dhaka',
                 'vat_number' => 'VAT-99201-BD',
                 'currency_symbol' => '৳',
-                'default_tax_rate' => 5.00,
+                'default_tax_rate' => 15.00,
                 'receipt_header' => 'Welcome to IOT POS Retail Flagship!',
                 'receipt_footer' => 'Thank you for shopping with us.',
                 'is_active' => true,
