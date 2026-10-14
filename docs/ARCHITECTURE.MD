@@ -14,7 +14,7 @@ IOT POS (International Office Technology Point of Sale & Cloud ERP) is an intern
 - **Backend Framework**: Laravel ^13.17 (PHP 8.3+) with Eloquent ORM, Global Query Scopes, Soft Deletes, Permanent Force Delete Purging, and Customer Due Settlement
 - **Inertia Adapter**: Inertia Laravel ^3.3, Vue 3.5.13, TailwindCSS 4 (Dual Light/Dark mode & Universal Responsive Breakpoints for Mobile `320px-640px`, Tablet `768px-1024px`, Laptop `1024px-1536px`, and Ultrawide `1536px+`), Lucide Vue Icons, Brand Logo Component (`ApplicationLogo.vue` & `/images/logo.png`)
 - **Asset Bundler & Routing**: Vite 5.x, Ziggy Route Engine (with dynamic `APP_URL` auto-healing and `URL::forceRootUrl` guardrails)
-- **Deployment & Hosting**: Linux cPanel Shared/VPS hosting (`xhihab.com`) with web setup tool (`public/cpanel_setup.php`) and ZIP packager (`build_cpanel_subdomain_zip.py`)
+- **Deployment & Hosting**: Linux cPanel Shared/VPS hosting under production subdomain `pos.sababilling.net` (web root) and isolated backend core `~/sabapos`, packaged via `scripts/package_cpanel_subdomain.py` with pre-bundled production vendor dependencies and automated post-deployment validation (`scripts/smoke_prod.sh`).
 
 ## Folder Structure
 - `app/Http/Controllers/`: Backend controllers handling business logic, transaction blocks, and Inertia response rendering for all 4 portal tiers (`SuperAdmin`, `Merchant`, `StoreManager`, `Cashier POS`).

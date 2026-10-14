@@ -108,96 +108,64 @@ Verify the CLI binary version:
 
 ## 5. Step 4: Code Deployment & Document Root Setup
 
-### 5.1 Upload Backend to `~/sabapos`
-1. On your local machine or build runner, ensure frontend assets are compiled:
-   ```bash
-   npm run build
-   ```
-2. Archive the project (excluding `node_modules`, `.git`, `.env`, and `tests`):
-   ```bash
-   tar -czf sabapos_deploy.tar.gz \
-     --exclude='node_modules' \
-     --exclude='.git' \
-     --exclude='.env' \
-     --exclude='tests' \
-     .
-   ```
-3. In cPanel **File Manager**:
-   - Go to `/home/<username>/` (your home directory).
-   - Create a new directory named `sabapos`.
-   - Upload `sabapos_deploy.tar.gz` into `/home/<username>/sabapos/` and **Extract** it.
-   - Delete `sabapos_deploy.tar.gz`.
+### 5.1 Generate Production Deployment ZIP Archives (On Local Machine)
+Because your cPanel hosting has no in-browser terminal and shared hosting often hits memory limits during `composer install`, the deployment process uses pre-bundled, verified ZIP packages.
 
-### 5.2 Install Composer Dependencies (Production Mode)
-In cPanel **Terminal** (or SSH):
+Run the automated packager on your local Mac:
 ```bash
-cd /home/<username>/sabapos
-/usr/local/bin/ea-php83 /usr/local/bin/composer install --no-dev --optimize-autoloader --prefer-dist
+python3 scripts/package_cpanel_subdomain.py
 ```
 
-### 5.3 Configure Document Root (`~/pos.sababilling.net`)
-Option A — **Recommended: Direct Document Root via cPanel**:
-If your cPanel allows pointing document root directly to `sabapos/public`, edit the domain in cPanel **Domains** and set the Document Root to:
-`/home/<username>/sabapos/public`
+This generates two clean, optimized ZIP archives in `cpanel_dist/`:
+1. **`pos_sababilling_net.zip`** (~1 MB): Contains the production frontend bundle (`build/`), PWA service worker (`sw.js`), favicon, robots.txt, `.htaccess`, and the bridge `index.php`.
+2. **`sabapos.zip`** (~30 MB): Contains the complete Laravel backend with **all production PHP `vendor/` dependencies pre-installed**, database migrations, artisan, and clean storage directories.
 
-Option B — **Symlink or Bridge in `~/pos.sababilling.net`**:
-If cPanel restricts document roots inside the home folder, place this `index.php` inside `/home/<username>/pos.sababilling.net/index.php`:
-```php
-<?php
+---
 
-use Illuminate\Http\Request;
+### 5.2 Upload & Extract via cPanel File Manager
 
-define('LARAVEL_START', microtime(true));
+#### 1. Deploy Frontend to Subdomain Document Root (`~/pos.sababilling.net`)
+1. In cPanel, open **File Manager**.
+2. Navigate to your subdomain directory: `/home/<username>/pos.sababilling.net/`.
+3. Click **Upload** and select `cpanel_dist/pos_sababilling_net.zip`.
+4. Right-click `pos_sababilling_net.zip` and select **Extract** (into `/home/<username>/pos.sababilling.net/`).
+5. Delete `pos_sababilling_net.zip` after extraction.
 
-// Determine if the application is in maintenance mode...
-if (file_exists($maintenance = __DIR__.'/../sabapos/storage/framework/maintenance.php')) {
-    require $maintenance;
-}
+#### 2. Deploy Backend to Core Directory (`~/sabapos`)
+1. In cPanel **File Manager**, navigate to your home directory: `/home/<username>/` (beside `public_html`).
+2. If the folder `sabapos` does not exist, click **+ Folder** and name it `sabapos`.
+3. Open `/home/<username>/sabapos/`.
+4. Click **Upload** and select `cpanel_dist/sabapos.zip`.
+5. Right-click `sabapos.zip` and select **Extract** (into `/home/<username>/sabapos/`).
+6. Delete `sabapos.zip` after extraction.
 
-// Register the Composer autoloader...
-require __DIR__.'/../sabapos/vendor/autoload.php';
+---
 
-// Bootstrap Laravel and handle the request...
-(require_once __DIR__.'/../sabapos/bootstrap/app.php')
-    ->handleRequest(Request::capture());
-```
+### 5.3 Configure Directory Permissions
+In cPanel **File Manager** (or via SSH):
+1. Navigate to `/home/<username>/sabapos/`.
+2. Select `storage` $\rightarrow$ Change Permissions $\rightarrow$ Set to **775** (User: Read/Write/Execute, Group: Read/Write/Execute, World: Read/Execute).
+3. Select `bootstrap/cache` $\rightarrow$ Change Permissions $\rightarrow$ Set to **775**.
 
-Copy the compiled build assets and public files:
+---
+
+### 5.4 Connecting to cPanel via SSH from Your Mac Terminal
+Since the cPanel web dashboard lacks an in-browser terminal, connect directly from your Mac's **Terminal.app** (or VS Code terminal):
+
 ```bash
-cd /home/<username>/pos.sababilling.net
-cp -r /home/<username>/sabapos/public/build .
-cp /home/<username>/sabapos/public/favicon.ico .
-cp /home/<username>/sabapos/public/robots.txt .
-cp /home/<username>/sabapos/public/.htaccess .
+# Connect using your cPanel username, server domain/IP, and SSH port
+ssh -p 22 <username>@sababilling.net
+# Note: If your hosting provider uses a custom SSH port (e.g. 21098 or 2222), specify -p <port>
 ```
 
-Verify `.htaccess` enforces HTTPS and clean URLs:
-```apache
-<IfModule mod_rewrite.c>
-    <IfModule mod_negotiation.c>
-        Options -MultiViews -Indexes
-    </IfModule>
+Once connected to your shell, verify your working directory:
+```bash
+pwd
+# Output should show: /home/<username>
 
-    RewriteEngine On
-
-    # Force HTTPS
-    RewriteCond %{HTTPS} off
-    RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
-
-    # Handle Authorization Header
-    RewriteCond %{HTTP:Authorization} .
-    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
-
-    # Redirect Trailing Slashes...
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_URI} (.+)/$
-    RewriteRule ^ %1 [L,R=301]
-
-    # Send Requests To Front Controller...
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteRule ^ index.php [L]
-</IfModule>
+cd sabapos
+ls -la
+# You will see: app, bootstrap, config, database, storage, vendor, artisan, etc.
 ```
 
 ---
@@ -283,13 +251,13 @@ chmod -R 775 storage bootstrap/cache
 
 ---
 
-## 8. Step 7: Production Installation & First Run
+## 8. Step 7: Production Installation & First Run (via SSH from Mac Terminal)
 
-Run the production installer command in cPanel Terminal:
+Inside your SSH session (connected from your Mac terminal):
 ```bash
 cd /home/<username>/sabapos
 
-# 1. Generate Application Key (if not already set)
+# 1. Generate Application Key (if not already set in .env)
 /usr/local/bin/ea-php83 artisan key:generate --force
 
 # 2. Run Production Installer (Migrates database, seeds SaaS Plans, prompts for Super Admin)

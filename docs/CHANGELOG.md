@@ -1,5 +1,31 @@
 # Changelog
 
+## [2026-10-14] — cPanel Subdomain Packaging Suite & Zero-Terminal Pre-Bundled Vendor Architecture
+
+**What:**
+1. **Automated Subdomain cPanel Packager (`scripts/package_cpanel_subdomain.py`):**
+   - Built dedicated packaging script generating two production deployment archives in `cpanel_dist/`:
+     - `pos_sababilling_net.zip` (~1 MB): Pre-compiled Vite production frontend assets (`build/`), PWA service worker (`sw.js`), favicon, robots.txt, `.htaccess` (with 301 HTTPS enforcement and Authorization header forwarding), and fallback-resilient bridge `index.php` pointing to `../sabapos`.
+     - `sabapos.zip` (~30 MB): Full Laravel backend core with **pre-bundled, optimized production `vendor/` dependencies**, clean storage tree (`storage/app/subscription_proofs`, `framework/cache`, `framework/sessions`, `framework/views`, `logs`), artisan, migrations, and `.env.production.example`.
+2. **Production `.env.production.example` Alignment:**
+   - Updated template to reflect `APP_URL=https://pos.sababilling.net`, database drivers (`QUEUE_CONNECTION=database`, `CACHE_STORE=database`, `SESSION_DRIVER=database`), anti-spoofing `TRUSTED_PROXIES` guidance, and clear cPanel database name/username prefixing documentation (`<username>_sabapos`, `<username>_posusr`).
+3. **cPanel Deployment Manual Update (`DEPLOY_CPANEL.md`):**
+   - Updated Step 4 and Step 7 to guide users with SSH access but no in-browser cPanel web terminal:
+     - Clear File Manager upload & extraction instructions for both ZIP files.
+     - Mac Terminal SSH connection instructions (`ssh -p <port> <username>@sababilling.net`).
+     - Zero-terminal deployment safety (no need to run `composer install` on server due to pre-bundled `vendor/`).
+     - Step-by-step commands to run `php artisan pos:install` via SSH.
+4. **Automated Verification:**
+   - Verified ZIP package creation and tested ZIP checksums and archive integrity (`testzip()` passing with 0 corruptions).
+   - Larastan Level 5 static analysis passing with 0 errors.
+
+**Why:** Enable effortless, error-free deployment on cPanel hosting where the in-browser terminal is disabled by the hosting provider, and prevent out-of-memory (OOM) failures by pre-bundling production PHP dependencies locally.
+**How:** Authored `scripts/package_cpanel_subdomain.py`, updated `.env.production.example`, updated `DEPLOY_CPANEL.md`, and updated architecture documentation.
+**Where:** `scripts/package_cpanel_subdomain.py`, `.env.production.example`, `DEPLOY_CPANEL.md`, `docs/ARCHITECTURE.MD`, `docs/CHANGELOG.md`.
+**Impact:** Zero-headache deployment to `pos.sababilling.net` in under 10 minutes without fighting server-side Composer or Node.js limits.
+
+---
+
 ## [2026-10-13] — Payment Logic Harmonization, Register Drawer Integrity, Due Returns & Tenant Approval Concurrency
 
 **What:**
